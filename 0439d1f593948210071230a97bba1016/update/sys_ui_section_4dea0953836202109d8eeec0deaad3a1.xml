@@ -2,6 +2,7 @@
     <sys_ui_section caption="" section_id="4dea0953836202109d8eeec0deaad3a1" sys_domain="global" table="u_ai_summarizer" version="3" view="">
         <sys_ui_annotation action="INSERT_OR_UPDATE">
             <is_plain_text>false</is_plain_text>
+            <name/>
             <sys_created_by>admin</sys_created_by>
             <sys_created_on>2025-01-11 06:13:33</sys_created_on>
             <sys_id>32d7859d838796104adbe970deaad30b</sys_id>
@@ -15,6 +16,7 @@ Include the following; Role, Instruction, Steps, Expectation, Narrowing. &lt;a h
         </sys_ui_annotation>
         <sys_ui_annotation action="INSERT_OR_UPDATE">
             <is_plain_text>false</is_plain_text>
+            <name/>
             <sys_created_by>admin</sys_created_by>
             <sys_created_on>2025-01-11 06:13:33</sys_created_on>
             <sys_id>7ad7859d838796104adbe970deaad30b</sys_id>

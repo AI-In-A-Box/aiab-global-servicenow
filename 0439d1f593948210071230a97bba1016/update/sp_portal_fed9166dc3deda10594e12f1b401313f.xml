@@ -5,8 +5,10 @@
         <css_variables/>
         <dark_theme/>
         <default>false</default>
+        <embeddable_macroponents/>
         <enable_ais>false</enable_ais>
         <enable_certificate_based_authentication>false</enable_certificate_based_authentication>
+        <enable_embeddables>false</enable_embeddables>
         <enable_favorites>false</enable_favorites>
         <hide_portal_name>false</hide_portal_name>
         <homepage display_value="aiab_command_center">4772eac4c33be21052e098bc05013106</homepage>
@@ -16,6 +18,7 @@
         <kb_knowledge_page/>
         <login_page/>
         <logo/>
+        <logo_alt_text/>
         <notfound_page/>
         <quick_start_config/>
         <rtl_enabled>false</rtl_enabled>

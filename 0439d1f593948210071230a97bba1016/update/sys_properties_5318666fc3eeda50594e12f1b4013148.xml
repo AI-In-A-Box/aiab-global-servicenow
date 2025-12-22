@@ -14,16 +14,16 @@ If this is on a PDI and you're trying this out, set this to &lt;b&gt;tryaiinabox
         <sys_created_by>aiinaboxadmin</sys_created_by>
         <sys_created_on>2024-12-24 16:29:07</sys_created_on>
         <sys_id>5318666fc3eeda50594e12f1b4013148</sys_id>
-        <sys_mod_count>26</sys_mod_count>
+        <sys_mod_count>27</sys_mod_count>
         <sys_name>ai_in_a_box.config.midserver</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_properties_5318666fc3eeda50594e12f1b4013148</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2025-09-07 06:24:08</sys_updated_on>
+        <sys_updated_on>2025-12-22 14:35:51</sys_updated_on>
         <type>string</type>
-        <value>aiinabox-mid</value>
+        <value/>
         <write_roles/>
     </sys_properties>
     <sys_translated_text action="delete_multiple" query="documentkey=5318666fc3eeda50594e12f1b4013148"/>
