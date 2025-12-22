@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_fix">
+    <sys_script_fix action="INSERT_OR_UPDATE">
+        <before>false</before>
+        <description/>
+        <name>Test Fetch Inference</name>
+        <record_for_rollback>true</record_for_rollback>
+        <script><![CDATA[var inferenceGR = new GlideRecord('u_ai_inference');
+var foundRecord = inferenceGR.get('c93ab471c333221052e098bc05013177');
+var model = inferenceGR.getValue('u_model');
+if (foundRecord) {
+    var messages = [];
+    messages.push({
+        role: 'system',
+        content: 'You are a helpful assistant that helps people find information.'
+    });
+    messages.push({
+        role: 'user',
+        content: "Who is Fred Luddy?"
+    });
+    messages.push({
+        role: 'assistant',
+        content: "Fred Luddy founded ServiceNow, and now works with StarLifter."
+    });
+    messages.push({
+        role: 'user',
+        content: "Who is Frank Slootman?"
+    });
+
+    var aiabRest = new global.aiabRest();
+    var response = aiabRest.send({
+        body: {
+            messages: messages,
+            model: model,
+        },
+        path: '/openai/v1/chat/completions',
+        method: 'post',
+        headers: {
+            'ai_in_a_box.inference.id': inferenceGR.getValue('sys_id')
+        }
+    });
+    gs.info('Fetch Inference Response: ' + JSON.stringify(response, null, ' '));
+}
+]]></script>
+        <sys_class_name>sys_script_fix</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2025-09-07 03:33:58</sys_created_on>
+        <sys_id>c33717c2c37ba21052e098bc05013191</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>Test Fetch Inference</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_script_fix_c33717c2c37ba21052e098bc05013191</sys_update_name>
+        <sys_updated_by>jacebenson</sys_updated_by>
+        <sys_updated_on>2025-09-07 03:46:15</sys_updated_on>
+        <unloadable>false</unloadable>
+    </sys_script_fix>
+</record_update>

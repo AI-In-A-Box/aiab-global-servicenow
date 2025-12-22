@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function() {
+  /*global api*/
+  var c = this;
+  
+  // Simple controller - just manages the data display
+  c.data.ready = true;
+  
+  // Optional: Add any client-side interactions
+  c.openExternalLink = function(url) {
+    if (url) {
+      window.open(url, '_blank');
+    }
+  };
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css/>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id>aiab_get_help</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>AIAB GetHelp</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+  /*global gs, data, sn_ws, console*/
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2025-08-31 18:21:15</sys_created_on>
+        <sys_id>c82f1e40c33be21052e098bc05013108</sys_id>
+        <sys_mod_count>12</sys_mod_count>
+        <sys_name>AIAB GetHelp</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sp_widget_c82f1e40c33be21052e098bc05013108</sys_update_name>
+        <sys_updated_by>jacebenson</sys_updated_by>
+        <sys_updated_on>2025-09-01 20:53:04</sys_updated_on>
+        <template><![CDATA[<div class="aiab-help-widget">
+  <div class="panel panel-default" style="box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-radius: 8px;">
+    
+    <!-- Header -->
+    <div class="panel-heading" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px 8px 0 0;">
+      <h3 class="panel-title" style="display: flex; align-items: center;">
+        <i class="fa fa-question-circle" style="margin-right: 10px; font-size: 1.2em;"></i>
+        Customer Support
+      </h3>
+    </div>
+    
+    <!-- Body -->
+    <div class="panel-body" style="padding: 20px;">
+      
+      <!-- Error Display -->
+      <div ng-if="data.error" class="alert alert-danger">
+        <i class="fa fa-exclamation-triangle"></i> {{data.error}}
+      </div>
+      
+      <!-- Description -->
+      <p class="text-muted" style="margin-bottom: 20px;">
+        Get dedicated support for AI In A Box
+      </p>
+      
+      <!-- Primary Action for Customers -->
+      <div class="text-center" style="margin-bottom: 20px;">
+        <a ng-href="https://meetings.hubspot.com/jace-benson" 
+           class="btn btn-primary btn-lg" 
+           target="_blank"
+           style="text-decoration: none;">
+          <i class="fa fa-calendar" style="margin-right: 8px;"></i>
+          Schedule Support Call
+        </a>
+      </div>
+      
+      <!-- Help Resources List -->
+      <div>
+        <h5 style="margin-bottom: 15px; color: #333;">Available Resources</h5>
+        <div class="list-group" style="border: none;">
+          <div class="list-group-item" 
+               style="border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 8px; padding: 12px 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong style="color: #333;">Docs</strong>
+                <div class="text-muted" style="font-size: 0.9em; margin-top: 2px;">
+                  These are the docs for AI In A Box
+                </div>
+              </div>
+              <a ng-href="https://tryaiinabox.com/docs"
+                 class="btn btn-link"
+                 target="_blank"
+                 style="white-space: nowrap;">
+                <i class="fa fa-book" style="margin-right: 4px;"></i>
+                View Documentation
+              </a>
+            </div>
+          </div>
+          <div class="list-group-item" 
+               style="border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 8px; padding: 12px 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <strong style="color: #333;">Email</strong>
+                <div class="text-muted" style="font-size: 0.9em; margin-top: 2px;">
+                  Contact us for help via email
+                </div>
+              </div>
+              <a ng-href="mailto:jace@benson.run"
+                 class="btn btn-link"
+                 target="_blank"
+                 style="white-space: nowrap;">
+                <i class="fa fa-envelope" style="margin-right: 4px;"></i>
+                Email Support
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Footer Note -->
+      <div class="text-center" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
+        <small class="text-muted">
+          <i class="fa fa-heart" style="color: #e74c3c;"></i>
+          AI In A Box - Bringing AI to ServiceNow
+        </small>
+      </div>
+      
+    </div>
+  </div>
+</div>
+
+<style>
+.aiab-help-widget .list-group-item {
+  transition: all 0.2s ease;
+}
+
+.aiab-help-widget .list-group-item:hover {
+  background-color: #f8f9fa;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.aiab-help-widget .btn {
+  transition: all 0.2s ease;
+}
+
+.aiab-help-widget .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+</style>]]></template>
+    </sp_widget>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>c82f1e40c33be21052e098bc05013108</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2025-08-31 18:21:14</sys_created_on>
+        <sys_id>104f5e00c33be21052e098bc05013154</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2025-08-31 18:21:14</sys_updated_on>
+        <table>sp_widget</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
+</record_update>

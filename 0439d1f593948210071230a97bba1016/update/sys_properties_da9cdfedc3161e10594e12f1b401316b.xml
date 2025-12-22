@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
+    <sys_properties action="INSERT_OR_UPDATE">
+        <choices/>
+        <description>This is the authorization string passed to your Large Language Model Server. This will depend on your LLM Server Set up.  &lt;br/&gt;&#13;
+Ollama, has no authentication&lt;br/&gt;&#13;
+LlamaFile and Llamacpp takes a parameter of `--api-key`&lt;br/&gt;&#13;
+OpenAI, Anthropic, and others have it on their sites and generally start with `&lt;b&gt;sk-sometext&lt;/b&gt;`&#13;
+&lt;br/&gt;&#13;
+&lt;br/&gt;&#13;
+If this is on a PDI and you're trying this out, set this to &lt;b&gt;genaiisspendy&lt;/b&gt;</description>
+        <ignore_cache>true</ignore_cache>
+        <is_private>false</is_private>
+        <name>ai_in_a_box.config.server.llm.auth</name>
+        <read_roles/>
+        <suffix/>
+        <sys_class_name>sys_properties</sys_class_name>
+        <sys_created_by>aiinaboxadmin</sys_created_by>
+        <sys_created_on>2024-12-06 04:54:49</sys_created_on>
+        <sys_id>da9cdfedc3161e10594e12f1b401316b</sys_id>
+        <sys_mod_count>19</sys_mod_count>
+        <sys_name>ai_in_a_box.config.server.llm.auth</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_properties_da9cdfedc3161e10594e12f1b401316b</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2025-07-21 04:57:55</sys_updated_on>
+        <type>password2</type>
+        <value>{{dflt-gpaes}}46W/QR3on+kHQw5zxXcypYONlTZD91YZBwHsAEVDNGe1M4taWfrcUN2psnfYlmzCncbWkdnX1l/0&#13;
+CYKn1usDCMiLbKfsOi8flM7wDur6c8iofzPm7UXcvjCjqSmn69vZMl6nYCUkqTNbeHMsmEoVyIW8&#13;
+c5QrvXf7027ppEHatuBbyNE+MuVmEHqtx+/sRADpNTLtk0XEFcwd43Iw6bVBzJHvvWhxskv00l1r&#13;
+WoRSz6k=</value>
+        <write_roles/>
+    </sys_properties>
+    <sys_translated_text action="delete_multiple" query="documentkey=da9cdfedc3161e10594e12f1b401316b"/>
+</record_update>

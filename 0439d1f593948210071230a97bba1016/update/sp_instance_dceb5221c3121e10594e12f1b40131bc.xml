@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_instance">
+    <sp_instance action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <class_name/>
+        <color>default</color>
+        <css/>
+        <glyph/>
+        <id/>
+        <order>1</order>
+        <roles/>
+        <short_description/>
+        <size>md</size>
+        <sp_column display_value="1">f88bd2edc3deda10594e12f1b4013170</sp_column>
+        <sp_widget display_value="AIIAB Welcome Widget">99bb9aedc3deda10594e12f1b401313b</sp_widget>
+        <sys_class_name>sp_instance</sys_class_name>
+        <sys_created_by>aiinaboxadmin</sys_created_by>
+        <sys_created_on>2024-12-06 00:12:03</sys_created_on>
+        <sys_id>dceb5221c3121e10594e12f1b40131bc</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name/>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sp_instance_dceb5221c3121e10594e12f1b40131bc</sys_update_name>
+        <sys_updated_by>aiinaboxadmin</sys_updated_by>
+        <sys_updated_on>2024-12-06 00:12:03</sys_updated_on>
+        <title/>
+        <url/>
+        <widget_parameters/>
+    </sp_instance>
+    <sys_translated_text action="delete_multiple" query="documentkey=dceb5221c3121e10594e12f1b40131bc"/>
+</record_update>

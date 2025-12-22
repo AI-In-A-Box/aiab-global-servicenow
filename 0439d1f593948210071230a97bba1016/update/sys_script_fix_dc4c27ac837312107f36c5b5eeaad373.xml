@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_fix">
+    <sys_script_fix action="INSERT_OR_UPDATE">
+        <before>false</before>
+        <description/>
+        <name>Uninstall or Delete AI In A Box</name>
+        <record_for_rollback>false</record_for_rollback>
+        <script><![CDATA[var appdata = new GlideRecord('sys_metadata');
+appdata.addQuery('sys_scope', '0439d1f593948210071230a97bba1016');
+appdata.deleteMultiple();
+//creates deleted application files.
+var appdata2 = new GlideRecord('sys_metadata');
+appdata2.addQuery('sys_scope', '0439d1f593948210071230a97bba1016');
+appdata2.deleteMultiple();
+//deletes deleted application files.
+var app = new GlideRecord('sys_app');
+if (app.get('0439d1f593948210071230a97bba1016')) {
+    app.deleteRecord();
+}]]></script>
+        <sys_class_name>sys_script_fix</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2025-02-15 17:03:51</sys_created_on>
+        <sys_id>dc4c27ac837312107f36c5b5eeaad373</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Uninstall or Delete AI In A Box</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_script_fix_dc4c27ac837312107f36c5b5eeaad373</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2025-02-15 17:03:51</sys_updated_on>
+        <unloadable>false</unloadable>
+    </sys_script_fix>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>dc4c27ac837312107f36c5b5eeaad373</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2025-02-15 17:03:50</sys_created_on>
+        <sys_id>f15ca7ac837312107f36c5b5eeaad3c4</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2025-02-15 17:03:50</sys_updated_on>
+        <table>sys_script_fix</table>
+        <use_es_latest>false</use_es_latest>
+    </sys_es_latest_script>
+</record_update>

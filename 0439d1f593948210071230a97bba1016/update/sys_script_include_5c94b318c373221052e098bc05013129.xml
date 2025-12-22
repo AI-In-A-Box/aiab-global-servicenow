@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>global.aiabRest</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description/>
+        <mobile_callable>false</mobile_callable>
+        <name>aiabRest</name>
+        <sandbox_callable>false</sandbox_callable>
+        <script><![CDATA[var aiabRest = Class.create();
+aiabRest.prototype = {
+    initialize: function() {},
+    send: function(restObj) {
+        var restMessage = new sn_ws.RESTMessageV2();
+        var midServerEnabled = gs.getProperty('ai_in_a_box.config.midserver.enabled', 'true');
+        var method = restObj.method || 'get';
+        var path = restObj.path || '/';
+        var body = restObj.body || {};
+        var headers = restObj.headers || {};
+        var host = gs.getProperty('ai_in_a_box.config.server.aiab.url', 'http://192.168.1.215:3333');
+        restMessage.setHttpMethod(method);
+        restMessage.setEndpoint(host + path);
+        if (midServerEnabled == "true") {
+            var midServerName = gs.getProperty('ai_in_a_box.config.midserver', '676578c1fc77-mid.docker');
+            restMessage.setMIDServer(midServerName);
+        }
+        //can't use auth profiles cause we can't decrpyt them.
+        //restMessage.setAuthenticationProfile('basic','d3d
+        var aiabAuth = gs.getProperty('ai_in_a_box.config.server.aiiab.auth');
+        aiabAuth = 'Basic ' + GlideStringUtil.base64Encode(aiabAuth);
+        restMessage.setRequestHeader('authorization', aiabAuth);
+        var llmAuth = gs.getProperty('ai_in_a_box.config.server.llm.auth');
+        restMessage.setRequestHeader('llm_auth', 'Bearer ' + llmAuth);
+        restMessage.setRequestHeader('Content-type', 'application/json');
+        // lets get all the features
+        var properties = new GlideRecord('sys_properties');
+        var propertyQuery = 'nameSTARTSWITHai_in_a_box.feature.';
+        propertyQuery += '^ORnameSTARTSWITHai_in_a_box.config.';
+        properties.addQuery(propertyQuery);
+        properties.query();
+        while (properties.next()) {
+            var name = properties.getValue('name');
+            var value = gs.getProperty(name);
+            restMessage.setRequestHeader(name, value);
+        }
+        restMessage.setRequestHeader('ai_in_a_box.config.endpoint', 'https://' + gs.getProperty('instance_name') + '.service-now.com');
+        for (var header in headers) {
+            restMessage.setRequestHeader(header, headers[header]);
+        }
+        if (typeof body.stream == "undefined") {
+            body.stream = gs.getProperty('ai_in_a_box.feature.stream.enabled') == "true";
+        }
+        if (typeof body.model == "undefined") {
+            body.model = gs.getProperty('ai_in_a_box.config.server.llm.model');
+        }
+        restMessage.setRequestBody(JSON.stringify(body));
+        var response = restMessage.executeAsync();
+        var error = response.haveError();
+        var statusCode = response.getStatusCode();
+        if (error) {
+            var errorCode = response.getErrorCode();
+            var errorMsg = response.getErrorMessage();
+            gs.error("AIAB REST ERROR MESSAGE: " + errorMsg);
+            gs.error("AIAB REST ERROR CODE: " + errorCode);
+            gs.error("AIAB REST ERROR: " + error);
+
+            return {
+                body: JSON.stringify({
+                    contents: errorMsg,
+                    error: errorCode,
+                    headers: restMessage.getRequestHeaders(),
+                    status: statusCode
+                }),
+            };
+        } else {
+            var responseBody = response.getBody();
+            //gs.info(statusCode);
+            //gs.info(responseBody);
+            //gs.info(typeof responseBody);
+            return {
+                body: responseBody,
+                status: statusCode
+            };
+        }
+    },
+    type: 'aiabRest'
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>jacebenson</sys_created_by>
+        <sys_created_on>2025-09-01 19:12:27</sys_created_on>
+        <sys_id>5c94b318c373221052e098bc05013129</sys_id>
+        <sys_mod_count>10</sys_mod_count>
+        <sys_name>aiabRest</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_script_include_5c94b318c373221052e098bc05013129</sys_update_name>
+        <sys_updated_by>jacebenson</sys_updated_by>
+        <sys_updated_on>2025-09-07 03:41:57</sys_updated_on>
+    </sys_script_include>
+</record_update>

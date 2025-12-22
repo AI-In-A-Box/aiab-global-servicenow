@@ -1,0 +1,625 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($scope, spUtil, $timeout) {
+  /* widget controller */
+  var c = this;
+  
+  // Initialize controller data
+  c.midserverUsername = c.data.midserverUserName || "tryaiinabox-mid-user";
+  
+  // Provision serverless demo
+  c.requestServerlessDemo = function() {
+    c.data.requesting = true;
+    c.data.requestServerlessDemo = true;
+    c.data.requestMidserverDemo = false;
+    
+    c.server.update({
+      requestServerlessDemo: true
+    }).then(function() {
+      c.data.requesting = false;
+    }).catch(function(error) {
+      c.data.requesting = false;
+      c.data.error = "Failed to provision serverless demo: " + error.message;
+    });
+  };
+  
+  // Provision midserver demo
+  c.requestMidserverDemo = function() {
+    console.log("AIAB Demo Server: Requesting midserver demo for user:", c.midserverUsername);
+    c.data.requesting = true;
+    c.data.requestServerlessDemo = false;
+    c.data.requestMidserverDemo = true;
+    
+    c.server.update({
+      requestMidserverDemo: true,
+      midserverUser: c.midserverUsername
+    }).then(function() {
+      console.log("AIAB Demo Server: Server update completed");
+      c.data.requesting = false;
+      // Close the modal programmatically using a small delay to ensure the UI updates
+      $timeout(function() {
+        $('#midserverModal').modal('hide');
+      }, 100);
+      // Start timer if midserver provisioning started
+      if (c.data.startTimerServer) {
+        console.log("AIAB Demo Server: Starting provisioning timer");
+        c.startProvisioningTimer();
+      }
+    }).catch(function(error) {
+      console.error("AIAB Demo Server: Server update failed:", error);
+      c.data.requesting = false;
+      c.data.error = "Failed to provision midserver demo: " + error.message;
+      // Close the modal even on error so user can see the error message
+      $('#midserverModal').modal('hide');
+    });
+  };
+  
+  // Timer for midserver provisioning progress
+  var provisioningTimer = null; // Store timer reference
+  
+  c.startProvisioningTimer = function() {
+    // Clear any existing timer to prevent duplicates
+    if (provisioningTimer) {
+      clearInterval(provisioningTimer);
+    }
+    
+    provisioningTimer = setInterval(function() {
+      if (c.data.timePassed >= c.data.estimatedTimeToComplete) {
+        clearInterval(provisioningTimer);
+        provisioningTimer = null;
+        c.data.startTimerServer = false;
+        c.data.midserverRequested = "Midserver demo server is ready!";
+        $scope.$apply();
+        return;
+      }
+      
+      c.data.timePassed += 1;
+      c.data.timePercent = Math.round((c.data.timePassed / c.data.estimatedTimeToComplete) * 100);
+      
+      // Update server with timer progress every 30 seconds to avoid excessive calls
+      if (c.data.timePassed % 30 === 0) {
+        c.server.update({
+          timerStarted: true,
+          timePassed: c.data.timePassed,
+          estimatedTimeToComplete: c.data.estimatedTimeToComplete
+        });
+      }
+      
+      $scope.$apply();
+    }, 1000);
+  };
+  
+  // Initialize timer if already in progress
+  if (c.data.startTimerServer && c.data.timePassed < c.data.estimatedTimeToComplete) {
+    c.startProvisioningTimer();
+  }
+  
+  // Cleanup timer when scope is destroyed
+  $scope.$on('$destroy', function() {
+    if (provisioningTimer) {
+      clearInterval(provisioningTimer);
+      provisioningTimer = null;
+    }
+  });
+  
+  // Watch for real-time updates on midserver status
+  var midQuery = 'name=' + c.midserverUsername;
+  spUtil.recordWatch($scope, 'ecc_agent', midQuery, function (response) {
+    // Stop requesting and update server, preserving timer state
+    c.data.requesting = false;
+    
+    // Preserve timer state when updating server
+    var updateParams = {};
+    if (c.data.startTimerServer) {
+      updateParams.timerStarted = true;
+      updateParams.timePassed = c.data.timePassed;
+      updateParams.estimatedTimeToComplete = c.data.estimatedTimeToComplete;
+    }
+    
+    c.server.update(updateParams);
+    
+    if (response.data.record && response.data.record.status) {
+      c.data.midserverRequested = response.data.record.status.value;
+    }
+    if (response.data.record && response.data.record.validated) {
+      if (response.data.record.validated.value != 'true') {
+        c.data.midserverRequested = 'Address Midserver issues';
+      }
+    }
+  });
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>.aiab-demo-server-widget {&#13;
+  &#13;
+  .panel {&#13;
+    border-radius: 8px;&#13;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);&#13;
+    &#13;
+    .panel-heading {&#13;
+      border-radius: 8px 8px 0 0;&#13;
+      &#13;
+      .panel-title {&#13;
+        font-weight: 600;&#13;
+        &#13;
+        i {&#13;
+          margin-right: 8px;&#13;
+        }&#13;
+      }&#13;
+    }&#13;
+  }&#13;
+  &#13;
+  .panel-info {&#13;
+    border-color: #5bc0de;&#13;
+    &#13;
+    .panel-heading {&#13;
+      background-color: #d9edf7;&#13;
+      border-color: #5bc0de;&#13;
+      color: #31708f;&#13;
+    }&#13;
+  }&#13;
+  &#13;
+  .panel-warning {&#13;
+    border-color: #f0ad4e;&#13;
+    &#13;
+    .panel-heading {&#13;
+      background-color: #fcf8e3;&#13;
+      border-color: #f0ad4e;&#13;
+      color: #8a6d3b;&#13;
+    }&#13;
+  }&#13;
+  &#13;
+  .panel-success {&#13;
+    border-color: #5cb85c;&#13;
+    &#13;
+    .panel-heading {&#13;
+      background-color: #dff0d8;&#13;
+      border-color: #5cb85c;&#13;
+      color: #3c763d;&#13;
+    }&#13;
+  }&#13;
+  &#13;
+  .list-unstyled {&#13;
+    margin-bottom: 20px;&#13;
+    &#13;
+    li {&#13;
+      padding: 4px 0;&#13;
+      &#13;
+      i.fa-check {&#13;
+        margin-right: 8px;&#13;
+      }&#13;
+    }&#13;
+  }&#13;
+  &#13;
+  .btn-block {&#13;
+    font-weight: 600;&#13;
+    padding: 12px;&#13;
+    border-radius: 6px;&#13;
+    &#13;
+    i {&#13;
+      margin-right: 6px;&#13;
+    }&#13;
+  }&#13;
+  &#13;
+  .progress-container {&#13;
+    margin-top: 15px;&#13;
+    &#13;
+    .progress {&#13;
+      height: 25px;&#13;
+      margin-bottom: 10px;&#13;
+      background-color: #f5f5f5;&#13;
+      border-radius: 4px;&#13;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);&#13;
+      &#13;
+      .progress-bar {&#13;
+        font-size: 14px;&#13;
+        font-weight: 600;&#13;
+        line-height: 25px;&#13;
+        text-align: center;&#13;
+        transition: width 0.6s ease;&#13;
+      }&#13;
+    }&#13;
+  }&#13;
+  &#13;
+  .modal {&#13;
+    .modal-dialog {&#13;
+      margin-top: 50px;&#13;
+    }&#13;
+    &#13;
+    .modal-header {&#13;
+      background-color: #f8f9fa;&#13;
+      border-bottom: 1px solid #dee2e6;&#13;
+      border-radius: 6px 6px 0 0;&#13;
+      &#13;
+      .modal-title {&#13;
+        font-weight: 600;&#13;
+        color: #495057;&#13;
+      }&#13;
+    }&#13;
+    &#13;
+    .modal-body {&#13;
+      padding: 20px;&#13;
+      &#13;
+      .form-group {&#13;
+        margin-bottom: 20px;&#13;
+        &#13;
+        label {&#13;
+          font-weight: 600;&#13;
+          color: #495057;&#13;
+          margin-bottom: 8px;&#13;
+        }&#13;
+        &#13;
+        .form-control {&#13;
+          border-radius: 4px;&#13;
+          border: 1px solid #ced4da;&#13;
+          padding: 10px 12px;&#13;
+          &#13;
+          &amp;:focus {&#13;
+            border-color: #80bdff;&#13;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);&#13;
+          }&#13;
+        }&#13;
+        &#13;
+        .form-text {&#13;
+          font-size: 12px;&#13;
+          margin-top: 4px;&#13;
+        }&#13;
+      }&#13;
+    }&#13;
+    &#13;
+    .modal-footer {&#13;
+      background-color: #f8f9fa;&#13;
+      border-top: 1px solid #dee2e6;&#13;
+      border-radius: 0 0 6px 6px;&#13;
+      padding: 15px 20px;&#13;
+    }&#13;
+  }&#13;
+  &#13;
+  .alert {&#13;
+    border-radius: 6px;&#13;
+    padding: 12px 16px;&#13;
+    &#13;
+    i {&#13;
+      margin-right: 8px;&#13;
+    }&#13;
+  }&#13;
+  &#13;
+  .label {&#13;
+    font-size: 12px;&#13;
+    font-weight: 600;&#13;
+    padding: 4px 8px;&#13;
+    border-radius: 4px;&#13;
+  }&#13;
+  &#13;
+  .text-muted {&#13;
+    color: #6c757d !important;&#13;
+  }&#13;
+  &#13;
+  .text-success {&#13;
+    color: #28a745 !important;&#13;
+  }&#13;
+  &#13;
+  // Responsive adjustments&#13;
+  @media (max-width: 768px) {&#13;
+    .row {&#13;
+      margin: 0;&#13;
+      &#13;
+      [class*="col-"] {&#13;
+        padding-left: 5px;&#13;
+        padding-right: 5px;&#13;
+        margin-bottom: 15px;&#13;
+      }&#13;
+    }&#13;
+  }&#13;
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>false</has_preview>
+        <id>aiab_demo_server</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>AIAB Demo Server</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+  /*global gs, data, input, $sp, sn_ws*/
+  
+  try {
+    // Initialize the infrastructure handler
+    var aiiab = new global.aiabReqInfra();
+    
+    // Set default values
+    data.serverlessRequested = false;
+    data.midserverRequested = false;
+    data.requesting = false;
+    data.startTimerServer = false;
+    data.currentDemo = null;
+    data.error = null;
+    
+    // Default midserver username
+    data.midserverUserName = "tryaiinabox-mid-user";
+    
+    // Handle serverless demo provisioning
+    if (input && input.requestServerlessDemo) {
+      console.log('AIAB Demo Server: Requesting serverless demo');
+      console.log(JSON.stringify(input));
+      aiiab.SetupServerlessProperties();
+      try {
+        var serverlessResult = true;
+          aiiab.SetupServerlessProperties();
+        if (serverlessResult) {
+          data.serverlessRequested = serverlessResult.message;
+        } else {
+          data.error = serverlessResult.message;
+        }
+      } catch (error) {
+        data.error = "Failed to provision serverless demo: " + error.message;
+      }
+    }
+    
+    // Handle midserver demo provisioning
+    
+    // Check for requesting parameter and use data.midserverUserName as fallback
+    if (input && input.requestMidserverDemo && input.requesting && data.midserverUserName) {
+      try {
+        // Generate password for midserver user
+        var password = aiiab.GeneratePassword();
+        aiiab.SetupServerfulProperties();
+        // Create midserver user (note: this method creates 'tryaiinabox-mid-user' regardless of parameter)
+        var miduser = aiiab.CreateMidUser(password);
+        
+        if (miduser.status == "success") {
+          // Use the hardcoded username that CreateMidUser actually creates
+          var actualUsername = "tryaiinabox-mid-user";
+          var infra = aiiab.RequestDemoInfra(actualUsername, password);
+          
+          // Check if infrastructure request was successful
+          if (infra.status && infra.status != "error") {
+            data.midserverRequested = "Midserver demo provisioning initiated. Server will be ready in ~5 minutes...";
+            data.startTimerServer = true;
+            data.timePassed = 0;
+            data.estimatedTimeToComplete = 300; // 5 minutes estimated
+          } else {
+            data.error = "Failed to request demo infrastructure: " + (infra.message || 'Unknown error');
+          }
+        } else {
+          data.error = "Failed to create midserver user: " + miduser.message;
+        }
+        
+        // Reset the requesting flag to prevent multiple executions
+        data.requesting = false;
+        
+      } catch (error) {
+        data.error = "Failed to provision midserver demo: " + error.message;
+        data.requesting = false;
+      }
+    }
+    
+    // Check if user already exists
+    var sys_user = new GlideRecord('sys_user');
+    if (sys_user.get('user_name', data.midserverUserName)) {
+      data.checkUserResponse = {
+        exists: true,
+        message: "User already exists"
+      };
+    } else {
+      data.checkUserResponse = {
+        exists: false,
+        message: null
+      };
+    }
+    
+  } catch (error) {
+    data.error = "Widget initialization error: " + error.message;
+    gs.error("AIAB Demo Server Widget Error: " + error.message);
+  }
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>jacebenson</sys_created_by>
+        <sys_created_on>2025-09-04 02:56:39</sys_created_on>
+        <sys_id>e3f1bf05c33fe21052e098bc050131d4</sys_id>
+        <sys_mod_count>28</sys_mod_count>
+        <sys_name>AIAB Demo Server</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sp_widget_e3f1bf05c33fe21052e098bc050131d4</sys_update_name>
+        <sys_updated_by>jacebenson</sys_updated_by>
+        <sys_updated_on>2025-09-07 06:23:04</sys_updated_on>
+        <template><![CDATA[<div class="aiab-demo-server-widget">
+  <div class="panel panel-default">
+    
+    <!-- Header -->
+    <div class="panel-heading">
+      <h3 class="panel-title">
+        <i class="fa fa-server"></i>
+        AI in a Box Demo Server Provisioning
+      </h3>
+    </div>
+    
+    <!-- Body -->
+    <div class="panel-body">
+      
+      <!-- Error Display -->
+      <div ng-if="data.error" class="alert alert-danger">
+        <i class="fa fa-exclamation-triangle"></i> {{data.error}}
+      </div>
+      
+      <!-- Description -->
+      <p class="text-muted">Provision a new AI in a Box demo server. Choose between serverless or midserver deployment options based on your requirements.</p>
+      
+      <!-- Demo Options -->
+      <div class="row">
+        
+        <!-- Serverless Demo Option -->
+        <div class="col-md-6">
+          <div class="panel panel-info">
+            <div class="panel-heading">
+              <h4 class="panel-title">
+                <i class="fa fa-cloud"></i>
+                Serverless Demo
+              </h4>
+            </div>
+            <div class="panel-body">
+              <p class="text-muted">Use a pre-configured serverless demo environment for quick and easy access to AI in a Box features.</p>
+              
+              <ul class="list-unstyled">
+                <li><i class="fa fa-check text-success"></i> No midserver required</li>
+              </ul>
+              
+              <div ng-if="data.serverlessRequested">
+                <div class="alert alert-success">
+                  <i class="fa fa-check-circle"></i> {{data.serverlessRequested}}
+                </div>
+              </div>
+              
+              <div ng-if="!data.serverlessRequested">
+                <button type="button" 
+                        class="btn btn-primary btn-block" 
+                        ng-click="c.requestServerlessDemo()"
+                        ng-disabled="data.requesting">
+                  <i class="fa fa-cogs" ng-if="!data.requesting"></i>
+                  <i class="fa fa-spinner fa-spin" ng-if="data.requesting"></i>
+                  Provision Serverless Demo
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Midserver Demo Option -->
+        <div class="col-md-6">
+          <div class="panel panel-warning">
+            <div class="panel-heading">
+              <h4 class="panel-title">
+                <i class="fa fa-server"></i>
+                Midserver Demo
+              </h4>
+            </div>
+            <div class="panel-body">
+              <p class="text-muted">Use a requested dedicated midserver demo environment for enhanced security and full feature access.</p>
+              
+              <ul class="list-unstyled">
+                <li><i class="fa fa-check text-success"></i> Dedicated midserver</li>
+                <li><i class="fa fa-clock-o text-info"></i> Provisioning: 5 minutes</li>
+              </ul>
+              
+              <div ng-if="data.midserverRequested">
+                <div class="alert alert-success">
+                  <i class="fa fa-check-circle"></i> {{data.midserverRequested}}
+                </div>
+                
+              </div>
+              
+              <div ng-if="!data.midserverRequested">
+                <button type="button" 
+                        class="btn btn-warning btn-block" 
+                        data-toggle="modal" 
+                        data-target="#midserverModal"
+                        ng-disabled="data.requesting">
+                  <i class="fa fa-cogs"></i>
+                  Provision Midserver Demo
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+      
+      <!-- Current Status -->
+      <div class="row" ng-if="data.currentDemo">
+        <div class="col-md-12">
+          <div class="panel panel-success">
+            <div class="panel-heading">
+              <h4 class="panel-title">
+                <i class="fa fa-info-circle"></i>
+                Current Demo Status
+              </h4>
+            </div>
+            <div class="panel-body">
+              <div class="row">
+                <div class="col-sm-4">
+                  <strong>Demo Type:</strong><br>
+                  <span class="text-muted">{{data.currentDemo.type}}</span>
+                </div>
+                <div class="col-sm-4">
+                  <strong>Status:</strong><br>
+                  <span class="label label-success">{{data.currentDemo.status}}</span>
+                </div>
+                <div class="col-sm-4">
+                  <strong>Time Remaining:</strong><br>
+                  <span class="text-muted">{{data.currentDemo.timeRemaining}}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+  <!-- Midserver Request Modal -->
+  <div class="modal fade" id="midserverModal" tabindex="-1" role="dialog" aria-labelledby="midserverModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="midserverModalLabel">Provision Midserver Demo</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-info">
+            <i class="fa fa-info-circle"></i>
+            <strong>Midserver Demo Provisioning</strong><br>
+            This will provision a dedicated midserver demo environment with enhanced security and full feature access.
+          </div>
+          
+          <form>
+            <div class="form-group">
+              <label for="midserver-username" class="col-form-label">
+                <i class="fa fa-user"></i> Midserver Username:
+              </label>
+              <input type="text" 
+                     class="form-control" 
+                     id="midserver-username" 
+                     ng-model="c.midserverUsername"
+                     readonly="true">
+              <small class="form-text text-muted">
+                This username will be used for the midserver connection. A secure password will be automatically generated.
+              </small>
+            </div>
+            
+            <div class="alert alert-warning">
+              <i class="fa fa-clock-o"></i>
+              <strong>Provisioning Time:</strong> Please allow ~5 minutes for the midserver environment to be fully provisioned and ready for use.
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button type="button" 
+                  class="btn btn-warning" 
+                  ng-click="c.requestMidserverDemo()"
+                  ng-disabled="data.requesting">
+            <i class="fa fa-cogs" ng-if="!data.requesting"></i>
+            <i class="fa fa-spinner fa-spin" ng-if="data.requesting"></i>
+            {{data.requesting ? 'Provisioning...' : 'Provision Midserver Demo'}}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+</div>]]></template>
+    </sp_widget>
+</record_update>

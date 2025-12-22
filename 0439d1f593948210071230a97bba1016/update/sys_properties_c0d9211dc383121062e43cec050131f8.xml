@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties">
+    <sys_properties action="INSERT_OR_UPDATE">
+        <choices/>
+        <description>Enable "Chat" on desktop interface</description>
+        <ignore_cache>true</ignore_cache>
+        <is_private>false</is_private>
+        <name>ai_in_a_box.feature.chat.enabled</name>
+        <read_roles/>
+        <suffix/>
+        <sys_class_name>sys_properties</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2025-01-11 08:42:03</sys_created_on>
+        <sys_id>c0d9211dc383121062e43cec050131f8</sys_id>
+        <sys_mod_count>5</sys_mod_count>
+        <sys_name>ai_in_a_box.feature.chat.enabled</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_properties_c0d9211dc383121062e43cec050131f8</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2025-02-15 15:48:45</sys_updated_on>
+        <type>boolean</type>
+        <value>false</value>
+        <write_roles/>
+    </sys_properties>
+    <sys_translated_text action="delete_multiple" query="documentkey=c0d9211dc383121062e43cec050131f8"/>
+</record_update>

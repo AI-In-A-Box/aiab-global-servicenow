@@ -1,0 +1,507 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function() {
+  /*global api*/
+  var c = this;
+  
+  // Initialize controller
+  c.data.ready = true;
+  
+  // Helper function to refresh server status
+  c.refreshStatus = function() {
+    c.server.refresh();
+  };
+  
+  // Helper function to get status icon class for styling
+  c.getStatusClass = function(status) {
+    if (status && status.includes('✅')) return 'text-success';
+    if (status && status.includes(']]>🔥<![CDATA[')) return 'text-danger';
+    if (status && status.includes('⚠️')) return 'text-warning';
+    if (status && status.includes('⚙️')) return 'text-info';
+    if (status && status.includes('❓')) return 'text-muted';
+    return 'text-default';
+  };
+  
+  // Helper function to get clean status text without emoji for badges
+  c.getCleanStatus = function(status) {
+    if (!status) return '';
+    return status.replace(/[✅]]>🔥<![CDATA[⚠️⚙️❓]/g, '').trim();
+  };
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>// AIAB Server Widget Styles&#13;
+&#13;
+.aiab-server-widget {&#13;
+  .panel {&#13;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);&#13;
+    border-radius: 8px;&#13;
+    border: none;&#13;
+    transition: all 0.2s ease;&#13;
+&#13;
+    &amp;:hover {&#13;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);&#13;
+    }&#13;
+  }&#13;
+&#13;
+  .panel-heading {&#13;
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);&#13;
+    color: white;&#13;
+    border-radius: 8px 8px 0 0;&#13;
+  }&#13;
+&#13;
+  .panel-title {&#13;
+    display: flex;&#13;
+    align-items: center;&#13;
+    margin: 0;&#13;
+    font-size: 18px;&#13;
+    &#13;
+    i {&#13;
+      margin-right: 10px;&#13;
+      font-size: 1.2em;&#13;
+    }&#13;
+  }&#13;
+&#13;
+  .panel-body {&#13;
+    padding: 20px;&#13;
+  }&#13;
+&#13;
+  .description {&#13;
+    margin-bottom: 20px;&#13;
+  }&#13;
+&#13;
+  .server-status {&#13;
+    background-color: #f8f9fa;&#13;
+    border: 1px solid #e9ecef;&#13;
+    border-radius: 6px;&#13;
+    padding: 20px;&#13;
+    transition: all 0.2s ease;&#13;
+    height: 120px; // Ensure consistent height&#13;
+    margin-bottom: 15px; // Add bottom margin for mobile stacking&#13;
+&#13;
+    &amp;:hover {&#13;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);&#13;
+    }&#13;
+  }&#13;
+&#13;
+  // New compact server status styles&#13;
+  .server-status-stack {&#13;
+    display: flex;&#13;
+    flex-direction: column;&#13;
+    gap: 10px;&#13;
+  }&#13;
+&#13;
+  .server-status-compact {&#13;
+    background-color: #f8f9fa;&#13;
+    border: 1px solid #e9ecef;&#13;
+    border-radius: 6px;&#13;
+    padding: 12px;&#13;
+    transition: all 0.2s ease;&#13;
+&#13;
+    &amp;:hover {&#13;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);&#13;
+    }&#13;
+  }&#13;
+&#13;
+  .server-header {&#13;
+    display: flex;&#13;
+    align-items: center;&#13;
+    justify-content: space-between;&#13;
+    margin-bottom: 5px;&#13;
+&#13;
+    i {&#13;
+      color: #007bff;&#13;
+      margin-right: 8px;&#13;
+      min-width: 16px;&#13;
+    }&#13;
+&#13;
+    .server-name {&#13;
+      font-weight: bold;&#13;
+      color: #333;&#13;
+      flex-grow: 1;&#13;
+      font-size: 14px;&#13;
+    }&#13;
+&#13;
+    .server-status-badge {&#13;
+      font-weight: bold;&#13;
+      font-size: 12px;&#13;
+      padding: 2px 6px;&#13;
+      border-radius: 3px;&#13;
+      background-color: rgba(255,255,255,0.8);&#13;
+    }&#13;
+  }&#13;
+&#13;
+  .server-message-compact {&#13;
+    font-size: 11px;&#13;
+    color: #666;&#13;
+    line-height: 1.3;&#13;
+    margin-left: 24px; // Align with server name&#13;
+  }&#13;
+&#13;
+  .server-info {&#13;
+    display: flex;&#13;
+    justify-content: space-between;&#13;
+    align-items: center;&#13;
+  }&#13;
+&#13;
+  .server-details {&#13;
+    flex-grow: 1;&#13;
+  }&#13;
+&#13;
+  .server-icon-wrapper {&#13;
+    display: flex;&#13;
+    align-items: center;&#13;
+  }&#13;
+&#13;
+  .server-icon {&#13;
+    margin-right: 15px;&#13;
+    font-size: 2em;&#13;
+    color: #007bff;&#13;
+  }&#13;
+&#13;
+  .server-name {&#13;
+    margin: 0;&#13;
+    color: #333;&#13;
+    font-size: 1.4em;&#13;
+  }&#13;
+&#13;
+  .server-status-text {&#13;
+    margin-top: 8px;&#13;
+    font-size: 1.2em;&#13;
+    font-weight: bold;&#13;
+  }&#13;
+&#13;
+  .server-message {&#13;
+    margin-top: 5px;&#13;
+  }&#13;
+&#13;
+  .midserver-config {&#13;
+    margin-top: 20px;&#13;
+    border-left: 4px solid #007bff;&#13;
+  }&#13;
+&#13;
+  // Communication Flow Animation Styles&#13;
+  .communication-flow {&#13;
+    margin-top: 20px;&#13;
+    padding: 15px;&#13;
+    background-color: #f8f9fa;&#13;
+    border-radius: 8px;&#13;
+    border: 1px solid #e9ecef;&#13;
+&#13;
+    .flow-title {&#13;
+      color: #333;&#13;
+      margin-bottom: 15px;&#13;
+      font-size: 16px;&#13;
+      &#13;
+      i {&#13;
+        color: #007bff;&#13;
+        margin-right: 8px;&#13;
+      }&#13;
+    }&#13;
+&#13;
+    .flow-diagram {&#13;
+      max-width: 100%;&#13;
+      height: auto;&#13;
+      border-radius: 6px;&#13;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);&#13;
+      margin-bottom: 10px;&#13;
+    }&#13;
+&#13;
+    .flow-description {&#13;
+      font-size: 12px;&#13;
+      margin: 10px 0 0 0;&#13;
+      font-style: italic;&#13;
+    }&#13;
+&#13;
+    .flow-with-mid {&#13;
+      .flow-title {&#13;
+        color: #28a745; // Green for enabled&#13;
+      }&#13;
+    }&#13;
+&#13;
+    .flow-without-mid {&#13;
+      .flow-title {&#13;
+        color: #6c757d; // Gray for disabled/direct&#13;
+      }&#13;
+    }&#13;
+  }&#13;
+&#13;
+  .config-content {&#13;
+    display: flex;&#13;
+    justify-content: space-between;&#13;
+    align-items: center;&#13;
+  }&#13;
+&#13;
+  .config-info {&#13;
+    .config-title {&#13;
+      font-weight: bold;&#13;
+      &#13;
+      i {&#13;
+        margin-right: 8px;&#13;
+      }&#13;
+    }&#13;
+&#13;
+    .config-description {&#13;
+      margin-top: 5px;&#13;
+    }&#13;
+  }&#13;
+&#13;
+  .footer-note {&#13;
+    margin-top: 20px;&#13;
+    padding-top: 15px;&#13;
+    border-top: 1px solid #eee;&#13;
+    text-align: center;&#13;
+    &#13;
+    .refresh-icon {&#13;
+      color: #28a745;&#13;
+      margin-right: 5px;&#13;
+    }&#13;
+  }&#13;
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id>aiab_server</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>AIAB Server</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+  /*global gs, data*/
+  
+  try {
+    // Initialize widget data
+    data.title = 'AI Server Status';
+    data.description = 'Monitor your AI infrastructure servers';
+    
+    // Get configuration - use same logic as AIAB Settings widget
+    var midserverEnabled = gs.getProperty('ai_in_a_box.config.midserver.enabled') == 'true';
+    data.midserverEnabled = midserverEnabled;
+    
+    // Initialize status checker
+    var aiabStatus = new global.aiabStatus();
+    
+    // Initialize default server data
+    data.aiabServer = { name: "AIAB Server" };
+    data.midserver = { name: "MID Server" };
+    
+    // Get midserver status based on configuration
+    if (!midserverEnabled) {
+      // If midserver is explicitly disabled in configuration
+      data.midserver.status = '⚙️ Disabled';
+      data.midserver.message = 'MID Server is disabled in configuration';
+    } else {
+      // If midserver is enabled, check the actual MID server directly
+      // Don't rely on statusMidServer() since it has its own disabled logic
+      var midservername = gs.getProperty('ai_in_a_box.config.midserver', 'aiinabox-mid');
+      data.midserver.name = midservername;
+      var eccAgent = new GlideRecord('ecc_agent');
+      eccAgent.addQuery('name', midservername);
+      eccAgent.query();
+      
+      if (eccAgent.next()) {
+        // Found a midserver with this name - check its status
+        if (eccAgent.status == 'Up' && eccAgent.validated == 'true') {
+          // Check for issues
+          var eccAgentIssues = new GlideRecord('ecc_agent_issue');
+          eccAgentIssues.addQuery('mid_server.name', midservername);
+          eccAgentIssues.addQuery('state', 'new');
+          eccAgentIssues.query();
+          
+          if (eccAgentIssues.next()) {
+            data.midserver.status = '⚠️ Issues';
+            data.midserver.message = 'MID Server has unresolved issues';
+          } else {
+            data.midserver.status = '✅ Up';
+            data.midserver.message = 'MID Server is running normally';
+          }
+        } else if (eccAgent.status != 'Up') {
+          data.midserver.status = ']]>🔥<![CDATA[ Down';
+          data.midserver.message = 'MID Server is not running';
+        } else if (eccAgent.validated != 'true') {
+          data.midserver.status = '⚠️ Not Validated';
+          data.midserver.message = 'MID Server is not validated';
+        }
+      } else {
+        data.midserver.status = '❓ Missing';
+        data.midserver.message = 'MID Server "' + midservername + '" not found';
+      }
+    }
+    
+    // Check AIAB Server status based on midserver mode
+    if (!midserverEnabled) {
+      // Direct connection mode - check AIAB server directly
+      var aiabState = aiabStatus.statusAIABServer();
+      
+      if (aiabState && aiabState.status == 'up') {
+        data.aiabServer.status = '✅ Up';
+        data.aiabServer.message = 'Server is running normally';
+      } else {
+        data.aiabServer.status = ']]>🔥<![CDATA[ Down';
+        data.aiabServer.message = 'Server is not responding - check configuration';
+      }
+      
+    } else {
+      // Midserver mode - check midserver first, then AIAB server
+      var midState = aiabStatus.statusMidServer();
+      var midServerIsUp = midState && midState.status == 'up';
+      
+      if (!midServerIsUp) {
+        data.aiabServer.status = '❓ Unknown';
+        data.aiabServer.message = 'Cannot check - MID Server is down';
+      } else {
+        // Midserver is up, check AIAB server through it
+        var aiabState = aiabStatus.statusAIABServer();
+        
+        if (aiabState && aiabState.status == 'up') {
+          data.aiabServer.status = '✅ Up';
+          data.aiabServer.message = 'Server is running normally via MID Server';
+        } else {
+          data.aiabServer.status = ']]>🔥<![CDATA[ Down';
+          data.aiabServer.message = 'Server is not responding through MID Server';
+        }
+      }
+    }
+    
+  } catch (error) {
+    data.error = 'Error checking server status: ' + error.message;
+    data.aiabServer = {
+      name: "AIAB Server",
+      status: '⚠️ Error',
+      message: 'Unable to determine server status'
+    };
+  }
+  
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2025-08-31 18:31:34</sys_created_on>
+        <sys_id>1191ae04c33be21052e098bc0501315c</sys_id>
+        <sys_mod_count>36</sys_mod_count>
+        <sys_name>AIAB Server</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sp_widget_1191ae04c33be21052e098bc0501315c</sys_update_name>
+        <sys_updated_by>jacebenson</sys_updated_by>
+        <sys_updated_on>2025-09-07 04:31:30</sys_updated_on>
+        <template><![CDATA[<div class="aiab-server-widget">
+  <div class="panel panel-default">
+    
+    <!-- Header -->
+    <div class="panel-heading">
+      <h3 class="panel-title">
+        <i class="fa fa-server"></i>
+        {{data.title}}
+      </h3>
+    </div>
+    
+    <!-- Body -->
+    <div class="panel-body">
+      
+      <!-- Description -->
+      <p class="text-muted description">{{data.description}}</p>
+      
+      <!-- Server Status Stack -->
+      <div class="server-status-stack">
+        
+        <!-- AIAB Server Status -->
+        <div class="server-status-compact">
+          <div class="server-header">
+            <i class="fa fa-server"></i>
+            <span class="server-name">{{data.aiabServer.name}}</span>
+            <span class="server-status-badge" ng-class="c.getStatusClass(data.aiabServer.status)">{{data.aiabServer.status}}</span>
+          </div>
+          <div class="server-message-compact">{{data.aiabServer.message}}</div>
+        </div>
+        
+        <!-- MID Server Status -->
+        <div class="server-status-compact">
+          <div class="server-header">
+            <i class="fa fa-exchange"></i>
+            <span class="server-name"><a target="_blank" href="/ecc_agent_list.do?sysparm_query=name={{data.midserver.name}}">{{data.midserver.name}}</a></span>
+            <span class="server-status-badge" ng-class="c.getStatusClass(data.midserver.status)">{{data.midserver.status}}</span>
+          </div>
+          <div class="server-message-compact">{{data.midserver.message}}</div>
+        </div>
+        
+      </div>
+      
+      <!-- Midserver Configuration -->
+      <div class="alert alert-info midserver-config">
+        <div class="config-content">
+          <div class="config-info">
+            <div class="config-title">
+              <i class="fa fa-server"></i>Midserver Configuration
+            </div>
+            <div class="text-muted config-description">
+              <span ng-if="data.midserverEnabled">Midserver is currently <strong>enabled</strong> and required for AI operations</span>
+              <span ng-if="!data.midserverEnabled">Midserver is currently <strong>disabled</strong> - AI operations run directly</span>
+            </div>
+          </div>
+          <div>
+            <a href="/sys_properties.do?sys_id=ai_in_a_box.config.midserver.enabled" 
+               class="btn btn-sm btn-outline-primary"
+               target="_blank"
+               title="Toggle midserver requirement">
+              <i class="fa fa-cog"></i> Configure
+            </a>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Communication Flow Animation -->
+      <div class="communication-flow">
+        <div class="text-center">
+          <div ng-if="data.midserverEnabled" class="flow-with-mid">
+            <h5 class="flow-title">
+              <i class="fa fa-exchange"></i> Communication Flow (with MID Server)
+            </h5>
+            <img src="aiab-with-mid.gif" 
+                 alt="Communication flow with MID Server" 
+                 class="flow-diagram"
+                 width="384" 
+                 height="216"/>
+            <p class="text-muted flow-description">
+              ServiceNow → MID Server → AI in a Box → LLM
+            </p>
+          </div>
+          
+          <div ng-if="!data.midserverEnabled" class="flow-without-mid">
+            <h5 class="flow-title">
+              <i class="fa fa-arrow-right"></i> Communication Flow (direct)
+            </h5>
+            <img src="aiab-without-mid.gif" 
+                 alt="Direct communication flow" 
+                 class="flow-diagram"
+                 width="384" 
+                 height="216"/>
+            <p class="text-muted flow-description">
+              ServiceNow → AI in a Box → LLM (direct)
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      <span ng-if="data.midserverEnabled">Midserver is currently <strong>enabled</strong> and required for AI operations</span>
+      <!-- Footer Note -->
+      <div class="footer-note">
+        <small class="text-muted">
+          <i class="fa fa-refresh refresh-icon"></i>
+          Status updates automatically
+        </small>
+      </div>
+      
+    </div>
+  </div>
+</div>]]></template>
+    </sp_widget>
+</record_update>

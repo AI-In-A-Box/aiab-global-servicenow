@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_db_object">
+    <sys_db_object action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <actions_access>false</actions_access>
+        <alter_access>false</alter_access>
+        <caller_access/>
+        <client_scripts_access>false</client_scripts_access>
+        <configuration_access>false</configuration_access>
+        <create_access>false</create_access>
+        <create_access_controls>true</create_access_controls>
+        <delete_access>false</delete_access>
+        <filter_extension/>
+        <is_df_table>false</is_df_table>
+        <is_extendable>false</is_extendable>
+        <label>AI Inference</label>
+        <live_feed_enabled>false</live_feed_enabled>
+        <name>u_ai_inference</name>
+        <number_ref display_value="INF">11d826bf93b28210d2d070918bba10b0</number_ref>
+        <provider_class/>
+        <read_access>true</read_access>
+        <scriptable_table>false</scriptable_table>
+        <super_class/>
+        <sys_class_name>sys_db_object</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2024-06-22 01:15:11</sys_created_on>
+        <sys_id>9d586a7f93b28210d2d070918bba1030</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>AI Inference</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_db_object_9d586a7f93b28210d2d070918bba1030</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2024-06-22 02:47:48</sys_updated_on>
+        <update_access>false</update_access>
+        <user_role display_value="u_ai_in_a_box_admin" name="u_ai_in_a_box_admin">6faac59f832202109d8eeec0deaad3c8</user_role>
+        <ws_access>true</ws_access>
+    </sys_db_object>
+</record_update>

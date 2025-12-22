@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>global.aiabReqInfra</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description/>
+        <mobile_callable>false</mobile_callable>
+        <name>aiabReqInfra</name>
+        <sandbox_callable>false</sandbox_callable>
+        <script><![CDATA[var aiabReqInfra = Class.create();
+aiabReqInfra.prototype = {
+    initialize: function() {},
+    CreateMidUser: function(password) {
+        var user_name = 'tryaiinabox-mid-user';
+        
+        var sys_user = new GlideRecord('sys_user');
+        if (sys_user.get('user_name', user_name)) {
+            sys_user.deleteRecord();
+        }
+        
+        sys_user.newRecord();
+        sys_user.setValue('user_name', user_name);
+        sys_user.user_password.setDisplayValue(password);
+        sys_user.setValue('password_needs_reset', false);
+        
+        var userGR = sys_user.insert();
+        
+        // add mid_server role
+        var giveRole = new GlideRecord('sys_user_has_role');
+        giveRole.newRecord();
+        giveRole.setValue('user', userGR);
+        giveRole.setDisplayValue('role', 'mid_server');
+        var roleGR = giveRole.insert();
+        
+        return {
+            status: "success",
+            message: "create user and gave role",
+            user_id: userGR
+        };
+    },
+    GeneratePassword: function() {
+        var password = '',
+            size = 8, // Default minimum length if the policy does not specify one.
+            chars = [
+                'abcdefghijklmnopqrstuvwxyz',
+                'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+                '0123456789'
+            ];
+
+        // Get the password policy with the largest minimum-length value
+        var policy = new global.GlideQuery.parse('password_policy', 'ORDERBYDESCminimun_password_length')
+            .limit(1)
+            .select('minimun_password_length', 'whitelisted_special_characters')
+            .reduce(function(obj, rec) {
+                obj.size = rec.minimun_password_length;
+                obj.chars = rec.whitelisted_special_characters;
+                return obj;
+            }, {});
+
+        chars.push(policy.chars);
+        chars = chars.join('');
+        size = policy.size || size;
+
+        while (password.length <= size) {
+            var character = chars[Math.floor(Math.random() * chars.length)];
+            if (character == '$' || character == '%' || character == '^' || character == '&') {
+                continue; //skip these characters
+            }
+            password += character;
+        }
+        
+        return password;
+    },
+    RequestDemoInfra: function(username, password) {
+        // first we're going to check if the server's been requested before
+        // we are storing the history in a unusual place, the preferences table
+        // the response for this will be a return object
+        // containing a status, and message
+        // first lets "down" the current midserver
+        var eccAgent = GlideRecord('ecc_agent');
+        eccAgent.addQuery('name', 'aiinabox-mid');
+        eccAgent.query();
+        if (eccAgent.next()) {
+            eccAgent.deleteRecord();
+        }
+        
+        var host = 'https://tryaiinabox.com/';
+        var url = host + '.redwood/functions/requestDemoInfra';
+        
+        var instanceName = gs.getProperty('instance_name');
+        
+        var body = {
+            installString: '950-yellow-skink',
+            midUserName: username,
+            midPassword: password,
+            instance: instanceName + '.service-now.com'
+        };
+        
+        //gs.print(JSON.stringify(body, null, ' '));
+        var restMessage = new sn_ws.RESTMessageV2();
+        restMessage.setHttpMethod('post');
+        restMessage.setEndpoint(url);
+        restMessage.setRequestHeader('Content-type', 'application/json');
+        restMessage.setRequestBody(JSON.stringify(body));
+        
+        var response = restMessage.execute();
+        
+        var error = response.haveError();
+        var statusCode = response.getStatusCode();
+        var responseBody = response.getBody();
+        gs.info("  - Status Code: " + statusCode);
+        gs.info("  - Has Error: " + error);
+        gs.info("  - Response Body: " + (responseBody || 'EMPTY'));
+        
+        if (error) {
+            var errorCode = response.getErrorCode();
+            var errorMsg = response.getErrorMessage();
+            
+            gs.error("aiabReqInfra: Request failed:");
+            gs.error("  - Error Code: " + errorCode);
+            gs.error("  - Error Message: " + errorMsg);
+            gs.addErrorMessage(errorMsg);
+            
+            return {
+                status: "error",
+                message: errorMsg
+            };
+        } else {
+            gs.info("aiabReqInfra: Request successful - Status Code: " + statusCode);
+            return {
+                status: statusCode,
+                message: "Request recieved, this will take a 3-5 minutes to process.  Monitor the mid server list for the new mid server."
+            };
+        }
+    },
+    SetupServerfulProperties: function() {
+        gs.setProperty('ai_in_a_box.config.server.aiab.url', 'http://172.17.0.1:3333');
+        gs.setProperty('ai_in_a_box.config.midserver.enabled', 'true');
+        gs.setProperty('ai_in_a_box.config.midserver', 'aiinabox-mid');
+    },
+    SetupServerlessProperties: function() {
+        gs.setProperty('ai_in_a_box.config.server.aiab.url', 'https://2025-08-30-azure-aiab.azurewebsites.net');
+        gs.setProperty('ai_in_a_box.config.midserver.enabled', 'false');
+        gs.setProperty('ai_in_a_box.config.midserver', '');
+    },
+    type: 'aiabReqInfra'
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>jacebenson</sys_created_by>
+        <sys_created_on>2025-09-01 18:05:54</sys_created_on>
+        <sys_id>0a456790c333221052e098bc0501313e</sys_id>
+        <sys_mod_count>6</sys_mod_count>
+        <sys_name>aiabReqInfra</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_script_include_0a456790c333221052e098bc0501313e</sys_update_name>
+        <sys_updated_by>jacebenson</sys_updated_by>
+        <sys_updated_on>2025-09-07 05:01:38</sys_updated_on>
+    </sys_script_include>
+</record_update>

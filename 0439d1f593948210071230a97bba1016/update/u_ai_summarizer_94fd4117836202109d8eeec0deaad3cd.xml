@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="u_ai_summarizer">
+    <u_ai_summarizer action="INSERT_OR_UPDATE">
+        <sys_class_name>u_ai_summarizer</sys_class_name>
+        <sys_created_by>jacebenson</sys_created_by>
+        <sys_created_on>2024-06-07 19:05:40</sys_created_on>
+        <sys_id>94fd4117836202109d8eeec0deaad3cd</sys_id>
+        <sys_mod_count>7</sys_mod_count>
+        <sys_name>sc_req_item</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>u_ai_summarizer_94fd4117836202109d8eeec0deaad3cd</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2024-12-30 20:17:14</sys_updated_on>
+        <u_active>true</u_active>
+        <u_prompt>Summarize this Requested Item</u_prompt>
+        <u_record_a>aeed229047801200e0ef563dbb9a71c2</u_record_a>
+        <u_record_a_data>Number: RITM0000001&#13;
+Item: Apple iPad 3&#13;
+For: &#13;
+State: Open&#13;
+Stage: fulfillment&#13;
+Approvals: Approver: Alfonso Griglen&#13;
+&gt;State: Not Yet Requested&#13;
+&#13;
+Approver: Alene Rabeck&#13;
+&gt;State: Not Yet Requested&#13;
+&#13;
+Approver: Aileen Mottern&#13;
+&gt;State: Not Yet Requested&#13;
+&#13;
+Approver: Alejandro Mascall&#13;
+&gt;State: Not Yet Requested&#13;
+&#13;
+Approver: Alejandra Prenatt&#13;
+&gt;State: Not Yet Requested&#13;
+&#13;
+Approver: Alissa Mountjoy&#13;
+&gt;State: Not Yet Requested&#13;
+Variables:&#13;
+&#13;
+</u_record_a_data>
+        <u_record_a_summary>System Administrator is waiting on an approval from these five indivudals;&#13;
+- Alfonso Griglen&#13;
+- Alene Rabeck&#13;
+- Aileen Mottern&#13;
+- Alejandro Mascall&#13;
+- Alejandra Prenatt&#13;
+- Alissa Mountjoy</u_record_a_summary>
+        <u_record_b>c787d906eb43011008f2951ff1522836</u_record_b>
+        <u_record_b_data>Number: RITM0000003&#13;
+Item: Standard Laptop&#13;
+For: System Administrator&#13;
+State: Work in Progress&#13;
+Stage: Request Approved&#13;
+Approvals: &#13;
+Variables:&#13;
+&#13;
+</u_record_b_data>
+        <u_record_b_summary>System Administrator is still waiting for work to be finished on this request.</u_record_b_summary>
+        <u_record_template>Number: {{number}}&#13;
+Item: {{cat_item}}&#13;
+For: {{requested_for}}&#13;
+State: {{state}}&#13;
+Stage: {{stage}}&#13;
+Approvals: {{__related__sysapproval_approver__sysapproval=[[sys_id]]__approver,state}}&#13;
+{{__all_variables__}}&#13;
+{{comments}}</u_record_template>
+        <u_table>sc_req_item</u_table>
+    </u_ai_summarizer>
+</record_update>

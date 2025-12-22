@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_app_module">
+    <sys_app_module action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <application display_value="AI In A Box">c8ba0553836202109d8eeec0deaad34a</application>
+        <assessment/>
+        <device_type/>
+        <filter/>
+        <hint/>
+        <homepage/>
+        <image/>
+        <link_type>DIRECT</link_type>
+        <map_page/>
+        <mobile_title>AI In A Box Settings</mobile_title>
+        <mobile_view_name>Mobile</mobile_view_name>
+        <name/>
+        <order>200</order>
+        <override_menu_roles>false</override_menu_roles>
+        <query>/system_properties_ui.do?sysparm_title=Properties&amp;sysparm_category=AI%20In%20A%20Box&amp;sysparm_domain_restore=false&amp;sysparm_stack=no</query>
+        <report/>
+        <require_confirmation>false</require_confirmation>
+        <roles>u_ai_in_a_box_admin</roles>
+        <sys_class_name>sys_app_module</sys_class_name>
+        <sys_created_by>jacebenson</sys_created_by>
+        <sys_created_on>2024-06-09 18:48:18</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>79fcd77b8326c2109d8eeec0deaad3f9</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>AI In A Box Settings</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_app_module_79fcd77b8326c2109d8eeec0deaad3f9</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2025-01-01 06:36:00</sys_updated_on>
+        <timeline_page/>
+        <title>AI In A Box Settings</title>
+        <uncancelable>false</uncancelable>
+        <view_name/>
+        <window_name/>
+    </sys_app_module>
+</record_update>

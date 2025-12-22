@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_macro">
+    <sys_ui_macro action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <category>general</category>
+        <description/>
+        <media_type/>
+        <name>ai-in-a-box-inference-viewer</name>
+        <scoped_name/>
+        <sys_class_name>sys_ui_macro</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2024-11-11 16:07:53</sys_created_on>
+        <sys_id>032641f5c3fdd210594e12f1b4013189</sys_id>
+        <sys_mod_count>47</sys_mod_count>
+        <sys_name>ai-in-a-box-inference-viewer</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_ui_macro_032641f5c3fdd210594e12f1b4013189</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2025-01-11 04:01:19</sys_updated_on>
+        <xml><![CDATA[<?xml version="1.0" encoding="utf-8" ?>
+<j:jelly trim="false"
+    xmlns:j="jelly:core"
+    xmlns:g="glide"
+    xmlns:g2="glideui">
+    <div id="dynamic_content" style="font-family: Arial, sans-serif;">
+        <!-- System Message Section -->
+        <div id="system_message" style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+            <strong style="font-size: 1.2em; color: black;">System Message:</strong>
+            <p id="system_message_content" style="margin-top: 10px;"></p>
+        </div>
+
+        <!-- Chat Section -->
+        <div id="chat_container" style="border: 1px solid #ddd; border-radius: 5px; padding: 15px;margin: auto;">
+            <div id="chat_content"></div>
+        </div>
+    </div>
+
+    <script>
+        addLoadEvent(function() {
+			function buildMessagesArray(dialogValue){
+				try {
+                    var parsedData = JSON.parse(dialogValue);
+                    parsedData.push({ role: "assistant", content: g_form.getValue('u_response') });
+					return parsedData;
+                    //console.log({ parsedData });
+                } catch (e) {
+                    console.log("error", e);
+                    document.getElementById('system_message_content').innerText = "Invalid JSON format.";
+                }
+			}
+            function updateCurrentValue() {
+                var finished = g_form.getValue('u_state') === "finished";
+                var cancelled = g_form.getValue('u_state') === "cancelled";
+				var newState = g_form.getValue('u_state') === "new";
+				var dialogValue = g_form.getValue('u_prompt');
+				var parsedData = buildMessagesArray(dialogValue)
+                if (finished || cancelled || newState) {
+                    if(interval){
+						console.log("cleared interval")
+                        clearInterval(interval);
+                    }
+					if(finished){
+						renderChat(parsedData);
+					}
+                    return;
+                }
+				renderChat(parsedData);
+            }
+
+            // Function to render chat content
+            // they payload is always a Array of objects
+            // the question is, is there a system message or not
+            function renderChat(data) {
+                var userMessageColor = "#28a745";
+                var assistantMessageColor = "#007bff";
+                // Display system message
+                var systemMessageContent = data.find(entry => entry.role === "system")?.content;
+                if(systemMessageContent){
+                    document.getElementById('system_message').style.display = "block";
+                    document.getElementById('system_message_content').innerText = systemMessageContent;
+                } else {
+                    document.getElementById('system_message').style.display = "none";
+                }
+
+
+                // Display chat messages
+                var chatContentDiv = document.getElementById('chat_content');
+                chatContentDiv.innerHTML = ''; // Clear previous chat
+
+                data.forEach(function(entry) {
+                    if (entry.role !== "system") {
+                        var chatBubble = document.createElement('div');
+                        chatBubble.style.marginBottom = "15px";
+                        chatBubble.style.display = "flex";
+                        chatBubble.style.flexDirection = "column";
+                        chatBubble.style.alignItems = entry.role === "user" ? "flex-end" : "flex-start";
+
+                        // Add sender label
+                        var senderLabel = document.createElement('span');
+                        senderLabel.style.fontSize = "12px";
+                        senderLabel.style.fontWeight = "bold";
+                        senderLabel.style.marginBottom = "5px";
+                        senderLabel.style.color = entry.role === "user" ? userMessageColor : assistantMessageColor;
+                        senderLabel.innerText = entry.role === "user" ? "User" : "Assistant";
+
+                        var bubbleContent = document.createElement('div');
+                        bubbleContent.style.minWidth = "100%";
+                        bubbleContent.style.padding = "10px 15px";
+                        bubbleContent.style.borderRadius = "10px";
+                        bubbleContent.style.fontSize = "14px";
+                        bubbleContent.style.color = "#fff";
+                        bubbleContent.style.backgroundColor = entry.role === "user" ? userMessageColor : assistantMessageColor;
+
+                        bubbleContent.innerText = entry.content;
+
+                        chatBubble.appendChild(senderLabel);
+                        chatBubble.appendChild(bubbleContent);
+                        chatContentDiv.appendChild(chatBubble);
+                    }
+                });
+            }
+
+            // Render chat initially, and on every 500ms until state is cancelled or finished
+            updateCurrentValue();
+            try{
+                var interval = setInterval(updateCurrentValue, 500);
+            } catch(e){
+                console.log("error", e);
+            }
+        });
+    </script>
+</j:jelly>
+]]></xml>
+    </sys_ui_macro>
+</record_update>

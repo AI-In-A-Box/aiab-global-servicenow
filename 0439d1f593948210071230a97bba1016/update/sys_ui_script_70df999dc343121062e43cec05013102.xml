@@ -1,0 +1,353 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_script">
+    <sys_ui_script action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <description/>
+        <global>true</global>
+        <ignore_in_now_experience>false</ignore_in_now_experience>
+        <name>AI In A Box Chat</name>
+        <script><![CDATA[var mockChat = [{
+    role: 'assistant',
+    content: 'Hi, how can I help you?'
+}];
+
+var messageIds = [];
+
+function chatArea() {
+    var element = document.createElement('div');
+    element.id = 'chatArea';
+    element.style.position = 'fixed';
+    element.style.bottom = '0px';
+    element.style.right = '20px';
+    element.style.zIndex = '1000';
+    element.style.display = 'flex';
+    element.style.flexDirection = 'column';
+    element.style.alignItems = 'flex-end';
+    element.style.backgroundColor = 'white';
+    element.style.border = '1px solid blue';
+    element.style.padding = '5px';
+    return element;
+}
+
+function chatOpenButton() {
+    var element = document.createElement('button');
+    element.id = 'chatButton';
+    element.style.backgroundColor = 'blue';
+    element.style.color = 'white';
+    element.style.border = 'none';
+    element.style.padding = '10px';
+    element.style.cursor = 'pointer';
+    element.innerHTML = 'Chat';
+    return element;
+}
+
+function chatDialog() {
+    var element = document.createElement('div');
+    element.id = 'chatDialog';
+    element.style.display = 'none';
+    element.style.width = '300px';
+    element.style.height = '400px';
+    element.style.border = '1px solid blue';
+    element.style.backgroundColor = 'white';
+    element.style.flexDirection = 'column';
+    element.style.padding = '10px';
+    return element;
+}
+
+function chatDialogHeader() {
+    var element = document.createElement('div');
+    element.id = 'chatDialogHeader';
+    element.style.display = 'flex';
+    element.style.justifyContent = 'space-between';
+    element.style.alignItems = 'center';
+    element.style.borderBottom = '1px solid blue';
+    element.style.paddingBottom = '5px';
+    return element;
+}
+
+function chatDialogHeaderTitle() {
+    var element = document.createElement('h5');
+    element.id = 'chatDialogHeaderTitle';
+    element.innerHTML = 'Chat Dialog';
+    return element;
+}
+
+function chatDialogCloseButton(chatDialog, chatOpenButton) {
+    var element = document.createElement('button');
+    element.id = 'chatDialogCloseButton';
+    element.style.backgroundColor = 'red';
+    element.style.color = 'white';
+    element.style.border = 'none';
+    element.style.padding = '5px';
+    element.style.cursor = 'pointer';
+    element.innerHTML = 'Close';
+    element.addEventListener('click', function () {
+        chatDialog.style.display = 'none';
+        chatOpenButton.style.display = 'block';
+    });
+    return element;
+}
+
+function chatDialogBody() {
+    var element = document.createElement('div');
+    element.id = 'chatDialogBody';
+    element.style.overflowY = 'auto';
+    element.style.height = 'calc(100% - 56px)';
+    element.style.padding = '5px';
+    element.style.display = 'flex';
+    element.style.flexDirection = 'column';
+    element.style.justifyContent = 'flex-end';
+    return element;
+}
+function chatDialogMessages() {
+    var element = document.createElement('div');
+    element.id = 'chatDialogMessages';
+    element.style.display = 'flex';
+    element.style.flexDirection = 'column';
+    element.style.padding = '5px';
+    return element;
+}
+
+function chatInputRow() {
+    var element = document.createElement('div');
+    element.id = 'chatInputRow';
+    element.style.display = 'flex';
+    element.style.marginTop = '10px';
+    return element;
+}
+function chatInput() {
+    var element = document.createElement('input');
+    element.id = 'chatInput';
+    element.type = 'text';
+    element.style.width = '100%';
+    element.style.padding = '5px';
+    element.style.marginTop = '10px';
+    element.placeholder = 'Type a message...';
+    // on enter key press, send the message
+    element.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            // send the message
+            // hide send button
+            top.document.getElementById('send').click();
+        }
+    });
+    return element;
+}
+
+var watchRecord = function (table, filter, callback) {
+    try {
+        console.log('watchRecord', table, filter);
+        function getFilterString(filter) {
+            return btoa(filter.replace(/\^EQ/g, '').replace(/\^ORDERBY(?:DESC)?[^^]*/g, '').replace(/^GOTO/, '')).replace(/=/g, '-');
+        }
+        if (table === "sys_amb_message" || table.startsWith("sys_rw")) return null;
+        //console.log(">>> init " + table + "?" + filter);
+        var amb = top.window.top.g_ambClient;
+        var watcherChannel = amb.getChannel('/rw/default/' + table + '/' + getFilterString(filter));
+        watcherChannel.subscribe(callback);
+        amb.connect();
+        return watcherChannel;
+    } catch (e) {
+        console.log(e);
+    }
+};
+
+function chatSendButton(chatInput, chatDialogMessages) {
+    var element = document.createElement('button');
+    element.id = 'send';
+    element.style.backgroundColor = 'blue';
+    element.style.color = 'white';
+    element.style.border = 'none';
+    element.style.padding = '10px';
+    element.style.marginTop = '10px';
+    element.style.cursor = 'pointer';
+    element.innerHTML = 'Send';
+    element.addEventListener('click', function () {
+        // hide send button
+        top.document.getElementById('send').style.display = 'none';
+        top.document.getElementById('stop').style.display = 'block';
+        console.log('chatInput', chatInput.value);
+        console.log('chatDialogMessages', chatDialogMessages);
+        console.log(chatInput);
+        if (chatInput.value) {
+            var messageDiv = document.createElement('div');
+            messageDiv.style.marginBottom = '10px';
+            //messageDiv.innerHTML = '<strong>User:</strong> ' + message;
+            messageDiv.style.textAlign = 'right';
+            messageDiv.innerHTML = chatInput.value;
+            chatDialogMessages.appendChild(messageDiv);
+
+            var ga = new GlideAjax('aiabAjax');
+            //createAIChat
+            ga.addParam('sysparm_name', 'createAIChat');
+            // now we need to package the message and send it to the server
+            /**[{role: user, content: '...'}] */
+            ga.addParam('sysparm_messages', JSON.stringify([{
+                role: 'user',
+                content: chatInput.value
+            }]));
+            ga.getXMLAnswer(function (response) {
+                messageIds.push(response);
+                chatInput.value = '';
+                //console.log('response', response);
+                var responseDiv = document.createElement('div');
+                responseDiv.id = response;
+                //messageDiv.innerHTML = '<strong>Assistant:</strong> ' + response;
+                responseDiv.style.textAlign = 'left';
+                chatDialogMessages.appendChild(responseDiv);
+
+                watchRecord('u_ai_inference', 'sys_id=' + response, function (message) {
+                    //console.log('message', message);
+                    var response = message.data.record.u_response;
+                    //console.log({record:message.data.record});
+                    var responseFound = typeof response !== 'undefined';
+                    if (responseFound) {
+                        // now we keep getting more and more of the whole response, so will replace the whole message
+                        var responseValue = response.value;
+                        // replace new lines with br
+                        responseValue = responseValue.replace(/\n/g, '<br>');
+                        top.document.getElementById(responseDiv.id).innerHTML = responseValue;
+                    }
+                    var state = message.data.record.u_state;
+                    var stateFound = typeof state !== 'undefined';
+                    if (stateFound) {
+                        var stateValue = state.value;
+                        if (stateValue === 'finished') {
+                            /// use a feild message instead of a info message
+                            //g_form.showFieldMsg(field, "Summary complete", "info", true);
+                            //g_form.addInfoMessage("Summary complete");
+                            console.log('stateValue', stateValue);
+                            // hide stop button
+
+                            top.document.getElementById('send').style.display = 'block';
+                            top.document.getElementById('stop').style.display = 'none';
+                        }
+                    }
+                });
+            });
+
+        }
+    });
+    function chatStopButton() {
+        var element = document.createElement('button');
+        element.id = 'stop';
+        element.style.backgroundColor = 'red';
+        element.style.color = 'white';
+        element.style.border = 'none';
+        element.style.padding = '10px';
+        element.style.marginTop = '10px';
+        element.style.display = 'none';
+        element.style.cursor = 'pointer';
+        element.innerHTML = 'Stop';
+        element.addEventListener('click', function () {
+
+
+            var ga = new GlideAjax('aiabAjax');
+            ga.addParam('sysparm_name', 'cancelAIInference');
+            ga.addParam('sysparm_inference_id', messageIds[messageIds.length - 1]);
+            ga.getXMLAnswer(function (response) {
+                console.log('response', response);
+
+                top.document.getElementById('send').style.display = 'block';
+                top.document.getElementById('stop').style.display = 'none';
+            });
+        });
+        return element;
+    }
+    var container = document.createElement('div');
+    container.appendChild(element);
+    container.appendChild(chatStopButton());
+    return container;
+    //return element;
+}
+
+// now append all
+var chatArea = chatArea();
+var chatOpenButton = chatOpenButton();
+var chatDialog = chatDialog();
+var chatDialogHeader = chatDialogHeader();
+var chatDialogHeaderTitle = chatDialogHeaderTitle();
+var chatDialogCloseButton = chatDialogCloseButton(chatDialog, chatOpenButton);
+var chatDialogBody = chatDialogBody();
+var chatDialogMessages = chatDialogMessages();
+var chatInput = chatInput();
+var chatSendButton = chatSendButton(chatInput, chatDialogMessages);
+
+var chatInputRow = chatInputRow();
+
+
+
+chatDialogHeader.appendChild(chatDialogHeaderTitle);
+chatDialogHeader.appendChild(chatDialogCloseButton);
+chatDialog.appendChild(chatDialogHeader);
+chatDialog.appendChild(chatDialogBody);
+chatArea.appendChild(chatOpenButton);
+chatArea.appendChild(chatDialog);
+chatDialogBody.appendChild(chatDialogMessages);
+
+// glideajax to see if this feature is enabled
+var ga = new GlideAjax('aiabAjax');
+ga.addParam('sysparm_name', 'isChatEnabled');
+ga.getXMLAnswer(function (response) {
+    console.log('response for isChatEnabled', response);
+    if (response === 'true') {
+        // if it does, we need to recreate it
+        if(top.document.getElementById('chatArea')) {
+            top.document.getElementById('chatArea').remove();
+        }
+
+        if (!top.document.getElementById('chatArea')) {
+            top.document.body.appendChild(chatArea);
+        }
+
+    }
+});
+
+
+
+
+// Add event listener to chat open button
+chatOpenButton.addEventListener('click', function () {
+    chatDialog.style.display = 'block';
+    chatDialogMessages.innerHTML = ''; // Clear previous messages
+    chatOpenButton.style.display = 'none';
+    mockChat.forEach(function (message) {
+        var messageDiv = document.createElement('div');
+        messageDiv.style.marginBottom = '10px';
+        // show chat bubbles, if role is user, show on right,
+        // if role is assistant show on left
+        if (message.role === 'user') {
+            messageDiv.style.textAlign = 'right';
+        } else {
+            messageDiv.style.textAlign = 'left';
+        }
+        messageDiv.innerHTML = message.content;
+        //messageDiv.innerHTML = '<strong>' + message.role + ':</strong> ' + message.content;
+        chatDialogMessages.appendChild(messageDiv);
+        // lets make a simple glideajax call to get the response
+
+
+        // add scroll to bottom
+    });
+    // add chatinputrow
+    chatDialogBody.appendChild(chatInputRow);
+    chatInputRow.appendChild(chatInput);
+    chatInputRow.appendChild(chatSendButton);
+});
+]]></script>
+        <script_name/>
+        <sys_class_name>sys_ui_script</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2025-01-11 07:58:26</sys_created_on>
+        <sys_id>70df999dc343121062e43cec05013102</sys_id>
+        <sys_mod_count>30</sys_mod_count>
+        <sys_name>AI In A Box Chat</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_ui_script_70df999dc343121062e43cec05013102</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2025-01-12 21:04:55</sys_updated_on>
+        <ui_type>0</ui_type>
+        <use_scoped_format>false</use_scoped_format>
+    </sys_ui_script>
+</record_update>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ux_form_action_layout_item">
+    <sys_ux_form_action_layout_item action="INSERT_OR_UPDATE">
+        <action display_value="Summarize">d7aec15b93768210d2d070918bba10a2</action>
+        <active>true</active>
+        <animate_icon>false</animate_icon>
+        <color>secondary</color>
+        <description/>
+        <icon/>
+        <item_type>action</item_type>
+        <label>Summarize</label>
+        <layout_group/>
+        <name>Summarize</name>
+        <order>100</order>
+        <overflow>false</overflow>
+        <sys_class_name>sys_ux_form_action_layout_item</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2024-06-20 05:24:21</sys_created_on>
+        <sys_id>d3aec15b93768210d2d070918bba10a6</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Summarize</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_ux_form_action_layout_item_d3aec15b93768210d2d070918bba10a6</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2024-06-20 05:24:21</sys_updated_on>
+        <table>task</table>
+    </sys_ux_form_action_layout_item>
+</record_update>

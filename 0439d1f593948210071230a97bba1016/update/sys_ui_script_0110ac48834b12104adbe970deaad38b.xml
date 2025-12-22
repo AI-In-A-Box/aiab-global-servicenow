@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_script">
+    <sys_ui_script action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <description>Source: https://snpro.dev/2023/11/20/workspace-modals-working-with-ui-pages/</description>
+        <global>false</global>
+        <ignore_in_now_experience>false</ignore_in_now_experience>
+        <name>iframeHelper</name>
+        <script><![CDATA[var iframeHelper = (function () {
+    function createPayload(action, modalId, data) {
+        return {
+            messageType: 'IFRAME_MODAL_MESSAGE_TYPE',
+            modalAction: action,
+            modalId: modalId,
+            data: (data ? data : {})
+        };
+    }
+
+    function pm(window, payload) {
+        if (window.parent === window) {
+            console.warn('Parent is missing. Is this called inside an iFrame?');
+            return;
+        }
+        window.parent.postMessage(payload, location.origin);
+    }
+
+    function IFrameHelper(window) {
+        this.window = window;
+        this.src = location.href;
+        this.messageHandler = this.messageHandler.bind(this);
+        this.window.addEventListener('message', this.messageHandler);
+    }
+
+    IFrameHelper.prototype.messageHandler = function (e) {
+        if (e.data.messageType !== 'IFRAME_MODAL_MESSAGE_TYPE' || e.data.modalAction !== 'IFRAME_MODAL_ACTION_INIT') {
+            return;
+        }
+        this.modalId = e.data.modalId;
+    };
+
+    IFrameHelper.prototype.confirm = function (data) {
+        var payload = createPayload('IFRAME_MODAL_ACTION_CONFIRMED', this.modalId, data);
+        pm(this.window, payload);
+    };
+
+    IFrameHelper.prototype.cancel = function (data) {
+        var payload = createPayload('IFRAME_MODAL_ACTION_CANCELED', this.modalId, data);
+        pm(this.window, payload);
+    };
+
+    IFrameHelper.prototype.hideCloseButton = function () {
+        var iframeRootNode = this.window.frameElement?.getRootNode();
+        if (iframeRootNode) {
+            var scriptedModal = iframeRootNode.querySelector('sn-scripted-modal');
+            if (scriptedModal) {
+                var nowModal = scriptedModal.shadowRoot?.querySelector('now-modal');
+                if (nowModal) {
+                    var modalFooter = nowModal.shadowRoot?.querySelector('.now-modal-footer');
+                    if (modalFooter) {
+                        modalFooter.style = 'display: none;';
+                    }
+                }
+            }
+        }
+    }
+
+    IFrameHelper.prototype.autoResize = function (add) {
+        var iframeRootNode = this.window.frameElement?.getRootNode();
+        var slotEl = iframeRootNode.querySelector('.slot-content');
+        var body = document.body;
+        var html = document.documentElement;
+
+        var height = Math.max(body.scrollHeight, body.offsetHeight,
+            html.clientHeight, html.scrollHeight, html.offsetHeight);
+        slotEl.style.height = (height + 40) + 'px';
+    }
+    IFrameHelper.prototype.setHeight = function (height) {
+        // this will resize the frame to the height given + 40px
+        var iframeRootNode = this.window.frameElement?.getRootNode();
+        var slotEl = iframeRootNode.querySelector('.slot-content');
+        console.log('setting hgith to ', height + 40 + 'px', slotEl)
+        slotEl.style.height = (height + 40) + 'px';
+
+    }
+
+    return new IFrameHelper(window);
+}());]]></script>
+        <script_name/>
+        <sys_class_name>sys_ui_script</sys_class_name>
+        <sys_created_by>jacebenson</sys_created_by>
+        <sys_created_on>2025-01-07 06:07:38</sys_created_on>
+        <sys_id>0110ac48834b12104adbe970deaad38b</sys_id>
+        <sys_mod_count>10</sys_mod_count>
+        <sys_name>iframeHelper</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_ui_script_0110ac48834b12104adbe970deaad38b</sys_update_name>
+        <sys_updated_by>jacebenson</sys_updated_by>
+        <sys_updated_on>2025-01-07 06:41:38</sys_updated_on>
+        <ui_type>0</ui_type>
+        <use_scoped_format>false</use_scoped_format>
+    </sys_ui_script>
+</record_update>
