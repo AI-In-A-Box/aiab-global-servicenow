@@ -4,22 +4,22 @@
         <license_condition/>
         <license_model>none</license_model>
         <license_roles/>
-        <name>u_ai_inference</name>
+        <name>u_ai_summarizer</name>
         <op_delete>true</op_delete>
         <op_insert>true</op_insert>
         <op_update>true</op_update>
         <owner_condition/>
         <sys_class_name>ua_table_licensing_config</sys_class_name>
-        <sys_created_by>jacebenson</sys_created_by>
-        <sys_created_on>2024-07-08 03:49:18</sys_created_on>
-        <sys_id>8027eb9483823210807fb2b6feaad327</sys_id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2024-06-14 20:26:20</sys_created_on>
+        <sys_id>90420845831afe104d4fccb6feaad395</sys_id>
         <sys_mod_count>0</sys_mod_count>
-        <sys_name>u_ai_inference</sys_name>
+        <sys_name>u_ai_summarizer</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
-        <sys_update_name>ua_table_licensing_config_8027eb9483823210807fb2b6feaad327</sys_update_name>
-        <sys_updated_by>jacebenson</sys_updated_by>
-        <sys_updated_on>2024-07-08 03:49:18</sys_updated_on>
+        <sys_update_name>ua_table_licensing_config_90420845831afe104d4fccb6feaad395</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2024-06-14 20:26:20</sys_updated_on>
     </ua_table_licensing_config>
 </record_update>
