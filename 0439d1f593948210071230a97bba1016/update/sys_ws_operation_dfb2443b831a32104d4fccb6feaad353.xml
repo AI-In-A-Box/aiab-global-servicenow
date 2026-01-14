@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ws_operation">
+    <sys_ws_operation action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <consumes>application/json,application/xml,text/xml</consumes>
+        <consumes_customized>false</consumes_customized>
+        <default_operation_uri/>
+        <enforce_acl/>
+        <http_method>POST</http_method>
+        <name>Execute Tool</name>
+        <operation_script><![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
+    
+    // Auth check - reuse the same secret as streaming
+    var serverSecret = gs.getProperty('ai_in_a_box.feature.stream.auth', '');
+    var requestSecret = request.getHeader('x-aiab-secret') || (request.body.data && request.body.data.secret);
+    
+    if (!serverSecret || !requestSecret || requestSecret !== serverSecret) {
+        response.setStatus(401);
+        return { error: 'Unauthorized' };
+    }
+    
+    // Get request body
+    var body = request.body.data;
+    var toolName = body.tool_name;
+    var toolArguments = body.arguments || {};
+    var userId = body.user_id;  // sys_id of user to impersonate
+    var inferenceId = body.inference_id;  // for context/logging
+    
+    if (!toolName) {
+        response.setStatus(400);
+        return { error: 'tool_name is required' };
+    }
+    
+    // Look up the tool definition (Phase 2c will add u_ai_tool table)
+    // For now, we'll hardcode some test tools
+    var result;
+    var error;
+    
+    try {
+        // TODO: Replace with u_ai_tool lookup in Phase 2c
+        if (toolName === 'get_incident') {
+            result = executeGetIncident(toolArguments, userId);
+        } else if (toolName === 'get_current_user') {
+            result = executeGetCurrentUser(userId);
+        } else {
+            response.setStatus(404);
+            return { error: 'Unknown tool: ' + toolName };
+        }
+    } catch (e) {
+        error = e.message || String(e);
+        response.setStatus(500);
+        return { error: error };
+    }
+    
+    return {
+        tool_name: toolName,
+        result: result
+    };
+    
+    // --- Tool implementations ---
+    
+    function executeGetIncident(args, impersonateUserId) {
+        var number = args.number;
+        if (!number) {
+            throw new Error('number argument is required');
+        }
+        
+        // Impersonate user to respect ACLs
+        var originalUser = null;
+        if (impersonateUserId) {
+            originalUser = gs.getUserID();
+            gs.setCurrentUser(impersonateUserId);
+        }
+        
+        try {
+            var gr = new GlideRecord('incident');
+            gr.addQuery('number', number);
+            gr.setLimit(1);
+            gr.query();
+            
+            if (!gr.next()) {
+                return { found: false, message: 'Incident not found: ' + number };
+            }
+            
+            // Check if user can read this record
+            if (!gr.canRead()) {
+                return { found: false, message: 'Access denied to incident: ' + number };
+            }
+            
+            return {
+                found: true,
+                sys_id: gr.getUniqueValue(),
+                number: gr.getValue('number'),
+                short_description: gr.getValue('short_description'),
+                state: gr.getDisplayValue('state'),
+                priority: gr.getDisplayValue('priority'),
+                assigned_to: gr.getDisplayValue('assigned_to'),
+                caller_id: gr.getDisplayValue('caller_id')
+            };
+        } finally {
+            // Restore original user
+            if (originalUser) {
+                gs.setCurrentUser(originalUser);
+            }
+        }
+    }
+    
+    function executeGetCurrentUser(impersonateUserId) {
+        if (impersonateUserId) {
+            gs.setCurrentUser(impersonateUserId);
+        }
+        
+        return {
+            sys_id: gs.getUserID(),
+            user_name: gs.getUserName(),
+            name: gs.getUserDisplayName(),
+            email: gs.getUser().getEmail()
+        };
+    }
+    
+})(request, response);]]></operation_script>
+        <operation_uri>/api/8821/ai_in_a_box_partials/tools/execute</operation_uri>
+        <produces>application/json,application/xml,text/xml</produces>
+        <produces_customized>false</produces_customized>
+        <relative_path>/tools/execute</relative_path>
+        <request_example/>
+        <requires_acl_authorization>true</requires_acl_authorization>
+        <requires_authentication>false</requires_authentication>
+        <requires_snc_internal_role>true</requires_snc_internal_role>
+        <short_description/>
+        <sys_class_name>sys_ws_operation</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-01-14 05:11:51</sys_created_on>
+        <sys_id>dfb2443b831a32104d4fccb6feaad353</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>Execute Tool</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_ws_operation_dfb2443b831a32104d4fccb6feaad353</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-14 05:13:32</sys_updated_on>
+        <web_service_definition display_value="AI in a Box Partials">6f21415793368210d2d070918bba1002</web_service_definition>
+        <web_service_version/>
+    </sys_ws_operation>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>dfb2443b831a32104d4fccb6feaad353</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-01-14 05:11:51</sys_created_on>
+        <sys_id>07c2443b831a32104d4fccb6feaad35e</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-14 05:11:51</sys_updated_on>
+        <table>sys_ws_operation</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
+</record_update>
