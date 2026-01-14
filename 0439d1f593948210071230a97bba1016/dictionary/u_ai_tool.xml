@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="e6f84077835a32104d4fccb6feaad302" max_length="40" name="u_ai_tool" type="collection">
+        <element label="Script" max_length="40" name="u_script" type="script"/>
+        <element label="Description" max_length="4000" name="u_description" type="string"/>
+        <element display="true" label="Name" max_length="100" name="u_name" type="string"/>
+        <element default="{&#13;&#10;     type: &quot;function&quot;,&#13;&#10;     function: {&#13;&#10;         name: &quot;get_incident&quot;,&#13;&#10;         description: &quot;Get details about a ServiceNow incident by its number&quot;,&#13;&#10;         parameters: {&#13;&#10;             type: &quot;object&quot;,&#13;&#10;             properties: {&#13;&#10;                 number: {&#13;&#10;                     type: &quot;string&quot;,&#13;&#10;                     description: &quot;The incident number, e.g. INC0000001&quot;&#13;&#10;                 },&#13;&#10;                 include_comments: {&#13;&#10;                     type: &quot;boolean&quot;,&#13;&#10;                      description: &quot;Whether to include work notes and comments&quot;&#13;&#10;                 }&#13;&#10;             },&#13;&#10;             required: [&quot;number&quot;]&#13;&#10;         }&#13;&#10;     }&#13;&#10; }" label="Parameters" max_length="4000" name="u_parameters" type="string"/>
+        <element default="servicenow" label="Execute In" max_length="40" name="u_execute_in" type="choice">
+            <choice>
+                <element inactive_on_update="false" label="ServiceNow" sequence="0" value="servicenow"/>
+                <element inactive_on_update="false" label="Built-In" sequence="1" value="built-in"/>
+            </choice>
+        </element>
+        <element label="Roles" max_length="1024" name="u_roles" reference="sys_security_acl_role" type="glide_list"/>
+        <element default="true" label="Active" max_length="40" name="u_active" type="boolean"/>
+    </element>
+</database>
