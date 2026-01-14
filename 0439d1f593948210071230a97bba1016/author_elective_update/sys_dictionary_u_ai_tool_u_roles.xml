@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update>
+    <sys_dictionary action="DELETE" element="u_roles" table="u_ai_tool">
+        <active>true</active>
+        <array>false</array>
+        <attributes/>
+        <audit>false</audit>
+        <calculation/>
+        <choice>0</choice>
+        <choice_field/>
+        <choice_table/>
+        <column_label>Roles</column_label>
+        <comments/>
+        <create_roles/>
+        <default_value/>
+        <defaultsort/>
+        <delete_roles/>
+        <dependent/>
+        <dependent_on_field/>
+        <display>false</display>
+        <dynamic_creation>false</dynamic_creation>
+        <dynamic_creation_script/>
+        <dynamic_default_value/>
+        <dynamic_ref_qual/>
+        <element>u_roles</element>
+        <element_reference>false</element_reference>
+        <foreign_database/>
+        <formula/>
+        <function_definition/>
+        <function_field>false</function_field>
+        <internal_type display_value="">glide_list</internal_type>
+        <mandatory>false</mandatory>
+        <max_length>1024</max_length>
+        <name>u_ai_tool</name>
+        <next_element/>
+        <primary>false</primary>
+        <read_only>false</read_only>
+        <read_roles/>
+        <reference display_value="" name="sys_security_acl_role">sys_security_acl_role</reference>
+        <reference_cascade_rule/>
+        <reference_floats>false</reference_floats>
+        <reference_key/>
+        <reference_qual/>
+        <reference_qual_condition/>
+        <reference_type/>
+        <spell_check>false</spell_check>
+        <staged>false</staged>
+        <sys_class_name>sys_dictionary</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-01-14 05:42:57</sys_created_on>
+        <sys_id>a2e9ccb7835a32104d4fccb6feaad3f6</sys_id>
+        <sys_name>Roles</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_dictionary_u_ai_tool_u_roles</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-14 05:42:59</sys_updated_on>
+        <table_reference>false</table_reference>
+        <text_index>false</text_index>
+        <unique>false</unique>
+        <use_dependent_field>false</use_dependent_field>
+        <use_dynamic_default>false</use_dynamic_default>
+        <use_reference_qualifier>simple</use_reference_qualifier>
+        <virtual>false</virtual>
+        <virtual_type>script</virtual_type>
+        <widget/>
+        <write_roles/>
+        <xml_view>false</xml_view>
+    </sys_dictionary>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="AI in a Box">0439d1f593948210071230a97bba1016</application>
+        <file_path/>
+        <instance_id>3e01943a1b79f9901024eb9b2d4bcb05</instance_id>
+        <instance_name>dev184755</instance_name>
+        <name>sys_dictionary_u_ai_tool_u_roles</name>
+        <payload><![CDATA[<?xml version="1.0" encoding="UTF-8"?><record_update><sys_dictionary action="INSERT_OR_UPDATE" element="u_roles" table="u_ai_tool"><active>true</active><array>false</array><attributes/><audit>false</audit><calculation/><choice>0</choice><choice_field/><choice_table/><column_label>Roles</column_label><comments/><create_roles/><default_value/><defaultsort/><delete_roles/><dependent/><dependent_on_field/><display>false</display><dynamic_creation>false</dynamic_creation><dynamic_creation_script/><dynamic_default_value/><dynamic_ref_qual/><element>u_roles</element><element_reference>false</element_reference><foreign_database/><formula/><function_definition/><function_field>false</function_field><internal_type display_value="">glide_list</internal_type><mandatory>false</mandatory><max_length>1024</max_length><name>u_ai_tool</name><next_element/><primary>false</primary><read_only>false</read_only><read_roles/><reference display_value="" name="sys_security_acl_role">sys_security_acl_role</reference><reference_cascade_rule/><reference_floats>false</reference_floats><reference_key/><reference_qual/><reference_qual_condition/><reference_type/><spell_check>false</spell_check><staged>false</staged><sys_class_name>sys_dictionary</sys_class_name><sys_created_by>admin</sys_created_by><sys_created_on>2026-01-14 05:42:57</sys_created_on><sys_id>a2e9ccb7835a32104d4fccb6feaad3f6</sys_id><sys_name>Roles</sys_name><sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package><sys_policy/><sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope><sys_update_name>sys_dictionary_u_ai_tool_u_roles</sys_update_name><sys_updated_by>admin</sys_updated_by><sys_updated_on>2026-01-14 05:42:59</sys_updated_on><table_reference>false</table_reference><text_index>false</text_index><unique>false</unique><use_dependent_field>false</use_dependent_field><use_dynamic_default>false</use_dynamic_default><use_reference_qualifier>simple</use_reference_qualifier><virtual>false</virtual><virtual_type>script</virtual_type><widget/><write_roles/><xml_view>false</xml_view></sys_dictionary></record_update>]]></payload>
+        <payload_hash>530638356</payload_hash>
+        <record_name>AI Tool Definition.Roles</record_name>
+        <reverted_from/>
+        <source>fb79436b835232104d4fccb6feaad310</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-01-14 05:42:59</sys_created_on>
+        <sys_id>0fe940f7835a32104d4fccb6feaad334</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>19bbb0759c90000001</sys_recorded_at>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-14 05:42:59</sys_updated_on>
+        <type>Dictionary</type>
+        <update_guid>0fe940f7055a321007f2964e3d4b1c33</update_guid>
+        <update_guid_history>0fe940f7055a321007f2964e3d4b1c33:530638356,4be900f7a25a3210a4f8c4a59ecf31af:-1789807541</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete/>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-01-14 07:08:43</sys_created_on>
+        <sys_db_object display_value="" name="sys_dictionary">sys_dictionary</sys_db_object>
+        <sys_id>4a2e182440a445be9c5b63d37e354029</sys_id>
+        <sys_metadata>a2e9ccb7835a32104d4fccb6feaad3f6</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Roles</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_parent display_value="">e6f84077835a32104d4fccb6feaad302</sys_parent>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_scope_delete display_value="">c1a48f6b4a924506a5b1a6becbc665a1</sys_scope_delete>
+        <sys_update_name>sys_dictionary_u_ai_tool_u_roles</sys_update_name>
+        <sys_update_version display_value="sys_dictionary_u_ai_tool_u_roles">0fe940f7835a32104d4fccb6feaad334</sys_update_version>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-14 07:08:43</sys_updated_on>
+    </sys_metadata_delete>
+    <sys_claim action="INSERT_OR_UPDATE">
+        <claim_owner_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</claim_owner_scope>
+        <claim_timestamp>19bbb5b271b0000001</claim_timestamp>
+        <metadata_update_name>sys_dictionary_u_ai_tool_u_roles</metadata_update_name>
+        <previous_claim_app_version>3.0.3</previous_claim_app_version>
+        <previous_claim_name>AI in a Box</previous_claim_name>
+        <previous_claim_scope>0439d1f593948210071230a97bba1016</previous_claim_scope>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-01-14 07:14:31</sys_created_on>
+        <sys_id>c0ee1cf3831e32104d4fccb6feaad33b</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-14 07:14:31</sys_updated_on>
+    </sys_claim>
+</record_update>

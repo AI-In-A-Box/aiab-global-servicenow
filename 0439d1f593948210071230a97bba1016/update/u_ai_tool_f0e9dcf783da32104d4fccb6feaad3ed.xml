@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="u_ai_tool">
+    <u_ai_tool action="INSERT_OR_UPDATE">
+        <sys_class_name>u_ai_tool</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-01-14 06:52:44</sys_created_on>
+        <sys_id>f0e9dcf783da32104d4fccb6feaad3ed</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>search_servicenow_docs</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>u_ai_tool_f0e9dcf783da32104d4fccb6feaad3ed</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-14 07:13:52</sys_updated_on>
+        <u_active>true</u_active>
+        <u_description>Search ServiceNow technical documentation and developer guides at sn.jace.pro. Use this to find information about GlideRecord, scripting, APIs, and ServiceNow development topics.</u_description>
+        <u_execute_in>servicenow</u_execute_in>
+        <u_name>search_servicenow_docs</u_name>
+        <u_parameters>{"type": "object", "properties": {"query": {"type": "string", "description": "Search keywords like GlideRecord, business rule, client script, REST API, etc."}, "limit": {"type": "integer", "description": "Max results to return (default 5, max 10)"}}, "required": ["query"]}</u_parameters>
+    </u_ai_tool>
+</record_update>

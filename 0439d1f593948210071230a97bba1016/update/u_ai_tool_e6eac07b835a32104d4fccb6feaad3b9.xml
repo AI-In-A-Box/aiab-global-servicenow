@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="u_ai_tool">
+    <u_ai_tool action="INSERT_OR_UPDATE">
+        <sys_class_name>u_ai_tool</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-01-14 05:47:46</sys_created_on>
+        <sys_id>e6eac07b835a32104d4fccb6feaad3b9</sys_id>
+        <sys_mod_count>9</sys_mod_count>
+        <sys_name>get_incident</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>u_ai_tool_e6eac07b835a32104d4fccb6feaad3b9</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-14 07:13:51</sys_updated_on>
+        <u_active>true</u_active>
+        <u_description>Search for incidents in ServiceNow. Can search by number, caller, assigned user, state, priority, or find recent incidents. Returns up to 5 matching incidents</u_description>
+        <u_execute_in>servicenow</u_execute_in>
+        <u_name>get_incident</u_name>
+        <u_parameters>{
+ "type": "object",
+ "properties": {
+  "number": {
+   "type": "string",
+   "description": "Incident number like INC0000001"
+  },
+  "caller": {
+   "type": "string",
+   "description": "Name of the person who reported the incident"
+  },
+  "assigned_to": {
+   "type": "string",
+   "description": "Name of the person assigned to the incident"
+  },
+  "assignment_group": {
+   "type": "string",
+   "description": "Name of the group assigned to the incident"
+  },
+  "state": {
+   "type": "string",
+   "enum": [
+    "new",
+    "in_progress",
+    "on_hold",
+    "resolved",
+    "closed"
+   ],
+   "description": "Incident state"
+  },
+  "priority": {
+   "type": "string",
+   "enum": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5"
+   ],
+   "description": "Priority level (1=Critical, 5=Planning)"
+  },
+  "opened_today": {
+   "type": "boolean",
+   "description": "If true, only return incidents opened today"
+  },
+  "short_description_contains": {
+   "type": "string",
+   "description": "Search for text in the short description"
+  },
+  "limit": {
+   "type": "integer",
+   "description": "Max number of incidents to return (default 5, max 9)"
+  }
+ },
+ "required": []
+}</u_parameters>
+    </u_ai_tool>
+</record_update>

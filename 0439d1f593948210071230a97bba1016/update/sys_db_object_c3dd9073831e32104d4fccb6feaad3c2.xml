@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?><record_update table="sys_db_object">
     <sys_db_object action="INSERT_OR_UPDATE">
         <access/>
-        <actions_access>true</actions_access>
-        <alter_access>true</alter_access>
+        <actions_access>false</actions_access>
+        <alter_access>false</alter_access>
         <caller_access/>
-        <client_scripts_access>true</client_scripts_access>
+        <client_scripts_access>false</client_scripts_access>
         <configuration_access>false</configuration_access>
-        <create_access>true</create_access>
+        <create_access>false</create_access>
         <create_access_controls>false</create_access_controls>
         <delete_access>false</delete_access>
         <filter_extension/>
@@ -19,20 +19,20 @@
         <provider_class/>
         <read_access>true</read_access>
         <scriptable_table>false</scriptable_table>
-        <super_class/>
+        <super_class display_value="Application File" name="sys_metadata">e3110022482132108bb2a3a8cef797a2</super_class>
         <sys_class_name>sys_db_object</sys_class_name>
         <sys_created_by>admin</sys_created_by>
-        <sys_created_on>2026-01-14 05:38:51</sys_created_on>
-        <sys_id>e6f84077835a32104d4fccb6feaad302</sys_id>
+        <sys_created_on>2026-01-14 07:10:05</sys_created_on>
+        <sys_id>c3dd9073831e32104d4fccb6feaad3c2</sys_id>
         <sys_mod_count>0</sys_mod_count>
-        <sys_name>Ai Tool</sys_name>
+        <sys_name>AI Tool Definition</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
-        <sys_update_name>sys_db_object_e6f84077835a32104d4fccb6feaad302</sys_update_name>
+        <sys_update_name>sys_db_object_c3dd9073831e32104d4fccb6feaad3c2</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-01-14 05:38:51</sys_updated_on>
-        <update_access>true</update_access>
+        <sys_updated_on>2026-01-14 07:10:05</sys_updated_on>
+        <update_access>false</update_access>
         <user_role/>
         <ws_access>true</ws_access>
     </sys_db_object>

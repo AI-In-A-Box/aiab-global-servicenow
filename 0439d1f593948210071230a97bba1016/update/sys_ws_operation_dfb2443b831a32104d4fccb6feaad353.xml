@@ -8,116 +8,302 @@
         <http_method>POST</http_method>
         <name>Execute Tool</name>
         <operation_script><![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
-    
-    // Auth check - reuse the same secret as streaming
+
+    // Auth check
     var serverSecret = gs.getProperty('ai_in_a_box.feature.stream.auth', '');
     var requestSecret = request.getHeader('x-aiab-secret') || (request.body.data && request.body.data.secret);
-    
+
     if (!serverSecret || !requestSecret || requestSecret !== serverSecret) {
         response.setStatus(401);
         return { error: 'Unauthorized' };
     }
-    
-    // Get request body
+
     var body = request.body.data;
     var toolName = body.tool_name;
-    var toolArguments = body.arguments || {};
-    var userId = body.user_id;  // sys_id of user to impersonate
-    var inferenceId = body.inference_id;  // for context/logging
-    
+    var args = body.arguments || {};
+    var userId = body.user_id;
+
     if (!toolName) {
         response.setStatus(400);
         return { error: 'tool_name is required' };
     }
-    
-    // Look up the tool definition (Phase 2c will add u_ai_tool table)
-    // For now, we'll hardcode some test tools
+
+    gs.info('AIAB Execute Tool: ' + toolName + ' args: ' + JSON.stringify(args));
+
     var result;
-    var error;
-    
     try {
-        // TODO: Replace with u_ai_tool lookup in Phase 2c
-        if (toolName === 'get_incident') {
-            result = executeGetIncident(toolArguments, userId);
-        } else if (toolName === 'get_current_user') {
-            result = executeGetCurrentUser(userId);
-        } else {
-            response.setStatus(404);
-            return { error: 'Unknown tool: ' + toolName };
+        switch (toolName) {
+            case 'get_incident':
+                result = executeGetIncident(args);
+                break;
+            case 'search_knowledge':
+                result = executeSearchKnowledge(args);
+                break;
+            case 'search_catalog':
+                result = executeSearchCatalog(args);
+                break;
+            case 'search_servicenow_docs':
+                result = executeSearchDocs(args);
+                break;
+            case 'get_current_user':
+                result = executeGetCurrentUser(userId);
+                break;
+            default:
+                response.setStatus(404);
+                return { error: 'Unknown tool: ' + toolName };
         }
     } catch (e) {
-        error = e.message || String(e);
+        gs.error('AIAB Tool Error: ' + e);
         response.setStatus(500);
-        return { error: error };
+        return { error: e.message || String(e) };
     }
-    
-    return {
-        tool_name: toolName,
-        result: result
-    };
-    
-    // --- Tool implementations ---
-    
-    function executeGetIncident(args, impersonateUserId) {
-        var number = args.number;
-        if (!number) {
-            throw new Error('number argument is required');
+
+    return { tool_name: toolName, result: result };
+
+    // === TOOL IMPLEMENTATIONS ===
+
+    function executeGetIncident(args) {
+        var gr = new GlideRecord('incident');
+        var hasQuery = false;
+
+        if (args.number) {
+            gr.addQuery('number', args.number);
+            hasQuery = true;
         }
-        
-        // Impersonate user to respect ACLs
-        var originalUser = null;
-        if (impersonateUserId) {
-            originalUser = gs.getUserID();
-            gs.setCurrentUser(impersonateUserId);
+        if (args.caller) {
+            var callerGR = new GlideRecord('sys_user');
+            callerGR.addQuery('name', 'CONTAINS', args.caller);
+            callerGR.setLimit(1);
+            callerGR.query();
+            if (callerGR.next()) {
+                gr.addQuery('caller_id', callerGR.getUniqueValue());
+                hasQuery = true;
+            } else {
+                return { found: false, message: 'No user found: ' + args.caller };
+            }
         }
-        
-        try {
-            var gr = new GlideRecord('incident');
-            gr.addQuery('number', number);
-            gr.setLimit(1);
-            gr.query();
-            
-            if (!gr.next()) {
-                return { found: false, message: 'Incident not found: ' + number };
+        if (args.assigned_to) {
+            var assigneeGR = new GlideRecord('sys_user');
+            assigneeGR.addQuery('name', 'CONTAINS', args.assigned_to);
+            assigneeGR.setLimit(1);
+            assigneeGR.query();
+            if (assigneeGR.next()) {
+                gr.addQuery('assigned_to', assigneeGR.getUniqueValue());
+                hasQuery = true;
+            } else {
+                return { found: false, message: 'No user found: ' + args.assigned_to };
             }
-            
-            // Check if user can read this record
-            if (!gr.canRead()) {
-                return { found: false, message: 'Access denied to incident: ' + number };
+        }
+        if (args.assignment_group) {
+            var groupGR = new GlideRecord('sys_user_group');
+            groupGR.addQuery('name', 'CONTAINS', args.assignment_group);
+            groupGR.setLimit(1);
+            groupGR.query();
+            if (groupGR.next()) {
+                gr.addQuery('assignment_group', groupGR.getUniqueValue());
+                hasQuery = true;
+            } else {
+                return { found: false, message: 'No group found: ' + args.assignment_group };
             }
-            
-            return {
-                found: true,
-                sys_id: gr.getUniqueValue(),
+        }
+        if (args.state) {
+            var stateMap = { 'new': 1, 'in_progress': 2, 'on_hold': 3, 'resolved': 6, 'closed': 7 };
+            if (stateMap[args.state.toLowerCase()]) {
+                gr.addQuery('state', stateMap[args.state.toLowerCase()]);
+                hasQuery = true;
+            }
+        }
+        if (args.priority) {
+            gr.addQuery('priority', args.priority);
+            hasQuery = true;
+        }
+        if (args.opened_today === true) {
+            gr.addQuery('opened_at', '>=', gs.beginningOfToday());
+            hasQuery = true;
+        }
+        if (args.short_description_contains) {
+            gr.addQuery('short_description', 'CONTAINS', args.short_description_contains);
+            hasQuery = true;
+        }
+
+        gr.orderByDesc('opened_at');
+        gr.setLimit(Math.min(args.limit || 5, 10));
+        gr.query();
+
+        var incidents = [];
+        while (gr.next()) {
+            incidents.push({
                 number: gr.getValue('number'),
                 short_description: gr.getValue('short_description'),
                 state: gr.getDisplayValue('state'),
                 priority: gr.getDisplayValue('priority'),
                 assigned_to: gr.getDisplayValue('assigned_to'),
-                caller_id: gr.getDisplayValue('caller_id')
+                caller_id: gr.getDisplayValue('caller_id'),
+                opened_at: gr.getValue('opened_at')
+            });
+        }
+
+        if (incidents.length === 0) {
+            return { found: false, count: 0, message: 'No incidents found' };
+        }
+        if (args.number && incidents.length === 1) {
+            gr.get('number', args.number);
+            return {
+                found: true,
+                incident: {
+                    number: gr.getValue('number'),
+                    short_description: gr.getValue('short_description'),
+                    description: gr.getValue('description'),
+                    state: gr.getDisplayValue('state'),
+                    priority: gr.getDisplayValue('priority'),
+                    assigned_to: gr.getDisplayValue('assigned_to'),
+                    caller_id: gr.getDisplayValue('caller_id'),
+                    opened_at: gr.getValue('opened_at'),
+                    resolved_at: gr.getValue('resolved_at'),
+                    close_notes: gr.getValue('close_notes')
+                }
             };
-        } finally {
-            // Restore original user
-            if (originalUser) {
-                gs.setCurrentUser(originalUser);
+        }
+        return { found: true, count: incidents.length, incidents: incidents };
+    }
+
+    function executeSearchKnowledge(args) {
+        var gr = new GlideRecord('kb_knowledge');
+        gr.addQuery('workflow_state', 'published');
+
+        if (args.query) {
+            var qc = gr.addQuery('short_description', 'CONTAINS', args.query);
+            qc.addOrCondition('text', 'CONTAINS', args.query);
+        }
+        if (args.category) {
+            var catGR = new GlideRecord('kb_category');
+            catGR.addQuery('label', 'CONTAINS', args.category);
+            catGR.setLimit(1);
+            catGR.query();
+            if (catGR.next()) {
+                gr.addQuery('kb_category', catGR.getUniqueValue());
             }
         }
-    }
-    
-    function executeGetCurrentUser(impersonateUserId) {
-        if (impersonateUserId) {
-            gs.setCurrentUser(impersonateUserId);
+        if (args.published_recently === true) {
+            var thirtyDaysAgo = new GlideDateTime();
+            thirtyDaysAgo.addDaysLocalTime(-30);
+            gr.addQuery('published', '>=', thirtyDaysAgo);
         }
-        
-        return {
-            sys_id: gs.getUserID(),
-            user_name: gs.getUserName(),
-            name: gs.getUserDisplayName(),
-            email: gs.getUser().getEmail()
-        };
+
+        gr.orderByDesc('sys_view_count');
+        gr.setLimit(Math.min(args.limit || 5, 10));
+        gr.query();
+
+        var articles = [];
+        while (gr.next()) {
+            var text = gr.getValue('text') || '';
+            articles.push({
+                number: gr.getValue('number'),
+                title: gr.getValue('short_description'),
+                category: gr.getDisplayValue('kb_category'),
+                views: gr.getValue('sys_view_count'),
+                excerpt: text.substring(0, 200) + '...'
+            });
+        }
+
+        if (articles.length === 0) {
+            return { found: false, message: 'No knowledge articles found' };
+        }
+        return { found: true, count: articles.length, articles: articles };
     }
-    
-})(request, response);]]></operation_script>
+
+    function executeSearchCatalog(args) {
+        var gr = new GlideRecord('sc_cat_item');
+        gr.addQuery('active', true);
+
+        if (args.query) {
+            var qc = gr.addQuery('name', 'CONTAINS', args.query);
+            qc.addOrCondition('short_description', 'CONTAINS', args.query);
+            qc.addOrCondition('description', 'CONTAINS', args.query);
+        }
+        if (args.category) {
+            var catGR = new GlideRecord('sc_category');
+            catGR.addQuery('title', 'CONTAINS', args.category);
+            catGR.setLimit(1);
+            catGR.query();
+            if (catGR.next()) {
+                gr.addQuery('category', catGR.getUniqueValue());
+            }
+        }
+
+        gr.orderByDesc('sys_mod_count');
+        gr.setLimit(Math.min(args.limit || 5, 10));
+        gr.query();
+
+        var items = [];
+        while (gr.next()) {
+            items.push({
+                name: gr.getValue('name'),
+                short_description: gr.getValue('short_description'),
+                category: gr.getDisplayValue('category'),
+                price: gr.getValue('price')
+            });
+        }
+
+        if (items.length === 0) {
+            return { found: false, message: 'No catalog items found' };
+        }
+        return { found: true, count: items.length, items: items };
+    }
+
+    function executeSearchDocs(args) {
+        if (!args.query) {
+            return { error: 'query is required' };
+        }
+
+        var restMessage = new sn_ws.RESTMessageV2();
+        restMessage.setHttpMethod('GET');
+        restMessage.setEndpoint('https://sn.jace.pro/core/assets/js/search_index.json');
+        var resp = restMessage.execute();
+        var body = resp.getBody();
+        var docs = JSON.parse(body);
+
+        var query = args.query.toLowerCase();
+        var limit = Math.min(args.limit || 5, 10);
+        var matches = [];
+        
+        for (var i = 0; i < docs.length; i++) {
+            var doc = docs[i];
+            var titleMatch = doc.title && doc.title.toLowerCase().indexOf(query) > -1;
+            var contentMatch = doc.content && doc.content.toLowerCase().indexOf(query) > -1;
+            if (titleMatch || contentMatch) {
+                matches.push({
+                    title: doc.title,
+                    url: 'https://sn.jace.pro' + doc.url,
+                    excerpt: doc.content ? doc.content.substring(0, 200) + '...' : ''
+                });
+            }
+            if (matches.length >= limit) break;
+        }
+
+        if (matches.length === 0) {
+            return { found: false, message: 'No documentation found for: ' + args.query };
+        }
+        return { found: true, count: matches.length, results: matches };
+    }
+
+    function executeGetCurrentUser(userId) {
+        if (!userId) return { error: 'No user context' };
+        var userGR = new GlideRecord('sys_user');
+        if (userGR.get(userId)) {
+            return {
+                sys_id: userGR.getUniqueValue(),
+                user_name: userGR.getValue('user_name'),
+                name: userGR.getValue('name'),
+                email: userGR.getValue('email'),
+                department: userGR.getDisplayValue('department')
+            };
+        }
+        return { error: 'User not found' };
+    }
+
+})(request, response);
+]]></operation_script>
         <operation_uri>/api/8821/ai_in_a_box_partials/tools/execute</operation_uri>
         <produces>application/json,application/xml,text/xml</produces>
         <produces_customized>false</produces_customized>
@@ -131,14 +317,14 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2026-01-14 05:11:51</sys_created_on>
         <sys_id>dfb2443b831a32104d4fccb6feaad353</sys_id>
-        <sys_mod_count>4</sys_mod_count>
+        <sys_mod_count>8</sys_mod_count>
         <sys_name>Execute Tool</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_ws_operation_dfb2443b831a32104d4fccb6feaad353</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-01-14 05:19:52</sys_updated_on>
+        <sys_updated_on>2026-01-14 06:57:32</sys_updated_on>
         <web_service_definition display_value="AI in a Box Partials">6f21415793368210d2d070918bba1002</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>
