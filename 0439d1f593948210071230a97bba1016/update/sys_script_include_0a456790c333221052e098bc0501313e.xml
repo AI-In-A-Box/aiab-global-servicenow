@@ -92,7 +92,6 @@ aiabReqInfra.prototype = {
         var instanceName = gs.getProperty('instance_name');
         
         var body = {
-            installString: '950-yellow-skink',
             midUserName: username,
             midPassword: password,
             instance: instanceName + '.service-now.com'
@@ -151,13 +150,13 @@ aiabReqInfra.prototype = {
         <sys_created_by>jacebenson</sys_created_by>
         <sys_created_on>2025-09-01 18:05:54</sys_created_on>
         <sys_id>0a456790c333221052e098bc0501313e</sys_id>
-        <sys_mod_count>6</sys_mod_count>
+        <sys_mod_count>7</sys_mod_count>
         <sys_name>aiabReqInfra</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_script_include_0a456790c333221052e098bc0501313e</sys_update_name>
-        <sys_updated_by>jacebenson</sys_updated_by>
-        <sys_updated_on>2025-09-07 05:01:38</sys_updated_on>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-14 01:05:41</sys_updated_on>
     </sys_script_include>
 </record_update>

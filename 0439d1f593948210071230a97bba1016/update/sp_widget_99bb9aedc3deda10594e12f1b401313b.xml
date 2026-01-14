@@ -128,7 +128,6 @@
 		}
 
 		data.features = [
-			status.installString,
 			status.streaming,
 			status.summarize,
 		];
@@ -144,8 +143,6 @@
 			status.email
 		];
     var requestBody = {
-      installString:
-        gs.getProperty('ai_in_a_box.install_string') || '950-yellow-skink',
       instance: gs.getProperty('instance_name') || 'instance_name not set',
       aiiab_version: gs.getProperty('ai_in_a_box.version') || 'version not set',
       instance_version:
@@ -180,14 +177,14 @@
         <sys_created_by>aiinaboxadmin</sys_created_by>
         <sys_created_on>2024-12-06 00:11:44</sys_created_on>
         <sys_id>99bb9aedc3deda10594e12f1b401313b</sys_id>
-        <sys_mod_count>444</sys_mod_count>
+        <sys_mod_count>445</sys_mod_count>
         <sys_name>AIIAB Welcome Widget</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sp_widget_99bb9aedc3deda10594e12f1b401313b</sys_update_name>
-        <sys_updated_by>jacebenson</sys_updated_by>
-        <sys_updated_on>2025-08-31 18:21:25</sys_updated_on>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-14 01:04:54</sys_updated_on>
         <template><![CDATA[<div class="container-fluid"
      style="background-color: #f8f8f8; padding: 20px; border-radius: 5px; margin-top: 20px; margin-bottom: 20px;">
   <div class="row">
