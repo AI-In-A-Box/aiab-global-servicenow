@@ -9,305 +9,80 @@
         <name>Execute Tool</name>
         <operation_script><![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
 
-    // Auth check
-    var serverSecret = gs.getProperty('ai_in_a_box.feature.stream.auth', '');
-    var requestSecret = request.getHeader('x-aiab-secret') || (request.body.data && request.body.data.secret);
+    var serverSecret = gs.getProperty("ai_in_a_box.feature.stream.auth", "");
+    var requestSecret = request.getHeader("x-aiab-secret") || (request.body.data && request.body.data.secret);
 
     if (!serverSecret || !requestSecret || requestSecret !== serverSecret) {
         response.setStatus(401);
-        return { error: 'Unauthorized' };
+        return { error: "Unauthorized" };
     }
 
     var body = request.body.data;
     var toolName = body.tool_name;
     var args = body.arguments || {};
     var userId = body.user_id;
+    var inferenceId = body.inference_id;
 
     if (!toolName) {
         response.setStatus(400);
-        return { error: 'tool_name is required' };
+        return { error: "tool_name is required" };
     }
 
-    gs.info('AIAB Execute Tool: ' + toolName + ' args: ' + JSON.stringify(args));
+    gs.info("AIAB Execute Tool: " + toolName + " for user: " + userId);
+
+    // Impersonate the requesting user to respect ACLs
+    // Using global Script Include since gs.impersonate() is global-scope only
+    var impersonator = new global.AIABGlobalHelper();
+    var originalUser = null;
+
+    if (userId) {
+        originalUser = impersonator.impersonate(userId);
+        if (originalUser) {
+            gs.info("AIAB: Impersonating user " + userId);
+        } else {
+            gs.warn("AIAB: Failed to impersonate user " + userId + ", running as current user");
+        }
+    }
+
+    var toolGR = new GlideRecord("u_ai_tool");
+    toolGR.addQuery("u_name", toolName);
+    toolGR.addQuery("u_active", true);
+    toolGR.setLimit(1);
+    toolGR.query();
+
+    if (!toolGR.next()) {
+        if (originalUser) impersonator.revert(originalUser);
+        response.setStatus(404);
+        return { error: "Unknown tool: " + toolName };
+    }
+
+    var script = toolGR.getValue("u_script");
+    if (!script || script.trim() === "") {
+        if (originalUser) impersonator.revert(originalUser);
+        response.setStatus(501);
+        return { error: "Tool has no script: " + toolName };
+    }
 
     var result;
     try {
-        switch (toolName) {
-            case 'get_incident':
-                result = executeGetIncident(args);
-                break;
-            case 'search_knowledge':
-                result = executeSearchKnowledge(args);
-                break;
-            case 'search_catalog':
-                result = executeSearchCatalog(args);
-                break;
-            case 'search_servicenow_docs':
-                result = executeSearchDocs(args);
-                break;
-            case 'get_current_user':
-                result = executeGetCurrentUser(userId);
-                break;
-            case 'odd_or_even':
-                result = executeOddOrEven();
-                break;
-            default:
-                response.setStatus(404);
-                return { error: 'Unknown tool: ' + toolName };
-        }
+        var evaluator = new GlideScopedEvaluator();
+        evaluator.putVariable("args", args);
+        evaluator.putVariable("userId", userId);
+        result = evaluator.evaluateScript(toolGR, "u_script");
     } catch (e) {
-        gs.error('AIAB Tool Error: ' + e);
+        gs.error("AIAB Tool Error (" + toolName + "): " + e);
+        if (originalUser) impersonator.revert(originalUser);
         response.setStatus(500);
         return { error: e.message || String(e) };
     }
 
+    // Revert impersonation
+    if (originalUser) {
+        impersonator.revert(originalUser);
+        gs.info("AIAB: Reverted impersonation to " + originalUser);
+    }
+
     return { tool_name: toolName, result: result };
-
-    // === TOOL IMPLEMENTATIONS ===
-
-    function executeOddOrEven() {
-        var now = new GlideDateTime();
-        var timeStr = now.getValue(); // "2026-01-14 07:29:59"
-        var seconds = parseInt(timeStr.substring(17, 19), 10);
-        var isEven = seconds % 2 === 0;
-        return {
-            seconds: seconds,
-            result: isEven ? 'even' : 'odd',
-            message: 'The current second is ' + seconds + ', which is ' + (isEven ? 'even' : 'odd') + '!',
-            timestamp: timeStr
-        };
-    }
-
-    function executeGetIncident(args) {
-        var gr = new GlideRecord('incident');
-
-        if (args.number) {
-            gr.addQuery('number', args.number);
-        }
-        if (args.caller) {
-            var callerGR = new GlideRecord('sys_user');
-            callerGR.addQuery('name', 'CONTAINS', args.caller);
-            callerGR.setLimit(1);
-            callerGR.query();
-            if (callerGR.next()) {
-                gr.addQuery('caller_id', callerGR.getUniqueValue());
-            } else {
-                return { found: false, message: 'No user found: ' + args.caller };
-            }
-        }
-        if (args.assigned_to) {
-            var assigneeGR = new GlideRecord('sys_user');
-            assigneeGR.addQuery('name', 'CONTAINS', args.assigned_to);
-            assigneeGR.setLimit(1);
-            assigneeGR.query();
-            if (assigneeGR.next()) {
-                gr.addQuery('assigned_to', assigneeGR.getUniqueValue());
-            } else {
-                return { found: false, message: 'No user found: ' + args.assigned_to };
-            }
-        }
-        if (args.assignment_group) {
-            var groupGR = new GlideRecord('sys_user_group');
-            groupGR.addQuery('name', 'CONTAINS', args.assignment_group);
-            groupGR.setLimit(1);
-            groupGR.query();
-            if (groupGR.next()) {
-                gr.addQuery('assignment_group', groupGR.getUniqueValue());
-            } else {
-                return { found: false, message: 'No group found: ' + args.assignment_group };
-            }
-        }
-        if (args.state) {
-            var stateMap = { 'new': 1, 'in_progress': 2, 'on_hold': 3, 'resolved': 6, 'closed': 7 };
-            if (stateMap[args.state.toLowerCase()]) {
-                gr.addQuery('state', stateMap[args.state.toLowerCase()]);
-            }
-        }
-        if (args.priority) {
-            gr.addQuery('priority', args.priority);
-        }
-        if (args.opened_today === true) {
-            gr.addQuery('opened_at', '>=', gs.beginningOfToday());
-        }
-        if (args.short_description_contains) {
-            gr.addQuery('short_description', 'CONTAINS', args.short_description_contains);
-        }
-
-        gr.orderByDesc('opened_at');
-        gr.setLimit(Math.min(args.limit || 5, 10));
-        gr.query();
-
-        var incidents = [];
-        while (gr.next()) {
-            incidents.push({
-                number: gr.getValue('number'),
-                short_description: gr.getValue('short_description'),
-                state: gr.getDisplayValue('state'),
-                priority: gr.getDisplayValue('priority'),
-                assigned_to: gr.getDisplayValue('assigned_to'),
-                caller_id: gr.getDisplayValue('caller_id'),
-                opened_at: gr.getValue('opened_at')
-            });
-        }
-
-        if (incidents.length === 0) {
-            return { found: false, count: 0, message: 'No incidents found' };
-        }
-        if (args.number && incidents.length === 1) {
-            gr.get('number', args.number);
-            return {
-                found: true,
-                incident: {
-                    number: gr.getValue('number'),
-                    short_description: gr.getValue('short_description'),
-                    description: gr.getValue('description'),
-                    state: gr.getDisplayValue('state'),
-                    priority: gr.getDisplayValue('priority'),
-                    assigned_to: gr.getDisplayValue('assigned_to'),
-                    caller_id: gr.getDisplayValue('caller_id'),
-                    opened_at: gr.getValue('opened_at'),
-                    resolved_at: gr.getValue('resolved_at'),
-                    close_notes: gr.getValue('close_notes')
-                }
-            };
-        }
-        return { found: true, count: incidents.length, incidents: incidents };
-    }
-
-    function executeSearchKnowledge(args) {
-        var gr = new GlideRecord('kb_knowledge');
-        gr.addQuery('workflow_state', 'published');
-
-        if (args.query) {
-            var qc = gr.addQuery('short_description', 'CONTAINS', args.query);
-            qc.addOrCondition('text', 'CONTAINS', args.query);
-        }
-        if (args.category) {
-            var catGR = new GlideRecord('kb_category');
-            catGR.addQuery('label', 'CONTAINS', args.category);
-            catGR.setLimit(1);
-            catGR.query();
-            if (catGR.next()) {
-                gr.addQuery('kb_category', catGR.getUniqueValue());
-            }
-        }
-        if (args.published_recently === true) {
-            var thirtyDaysAgo = new GlideDateTime();
-            thirtyDaysAgo.addDaysLocalTime(-30);
-            gr.addQuery('published', '>=', thirtyDaysAgo);
-        }
-
-        gr.orderByDesc('sys_view_count');
-        gr.setLimit(Math.min(args.limit || 5, 10));
-        gr.query();
-
-        var articles = [];
-        while (gr.next()) {
-            var text = gr.getValue('text') || '';
-            articles.push({
-                number: gr.getValue('number'),
-                title: gr.getValue('short_description'),
-                category: gr.getDisplayValue('kb_category'),
-                views: gr.getValue('sys_view_count'),
-                excerpt: text.substring(0, 200) + '...'
-            });
-        }
-
-        if (articles.length === 0) {
-            return { found: false, message: 'No knowledge articles found' };
-        }
-        return { found: true, count: articles.length, articles: articles };
-    }
-
-    function executeSearchCatalog(args) {
-        var gr = new GlideRecord('sc_cat_item');
-        gr.addQuery('active', true);
-
-        if (args.query) {
-            var qc = gr.addQuery('name', 'CONTAINS', args.query);
-            qc.addOrCondition('short_description', 'CONTAINS', args.query);
-            qc.addOrCondition('description', 'CONTAINS', args.query);
-        }
-        if (args.category) {
-            var catGR = new GlideRecord('sc_category');
-            catGR.addQuery('title', 'CONTAINS', args.category);
-            catGR.setLimit(1);
-            catGR.query();
-            if (catGR.next()) {
-                gr.addQuery('category', catGR.getUniqueValue());
-            }
-        }
-
-        gr.orderByDesc('sys_mod_count');
-        gr.setLimit(Math.min(args.limit || 5, 10));
-        gr.query();
-
-        var items = [];
-        while (gr.next()) {
-            items.push({
-                name: gr.getValue('name'),
-                short_description: gr.getValue('short_description'),
-                category: gr.getDisplayValue('category'),
-                price: gr.getValue('price')
-            });
-        }
-
-        if (items.length === 0) {
-            return { found: false, message: 'No catalog items found' };
-        }
-        return { found: true, count: items.length, items: items };
-    }
-
-    function executeSearchDocs(args) {
-        if (!args.query) {
-            return { error: 'query is required' };
-        }
-
-        var restMessage = new sn_ws.RESTMessageV2();
-        restMessage.setHttpMethod('GET');
-        restMessage.setEndpoint('https://sn.jace.pro/core/assets/js/search_index.json');
-        var resp = restMessage.execute();
-        var body = resp.getBody();
-        var docs = JSON.parse(body);
-
-        var query = args.query.toLowerCase();
-        var limit = Math.min(args.limit || 5, 10);
-        var matches = [];
-        
-        for (var i = 0; i < docs.length; i++) {
-            var doc = docs[i];
-            var titleMatch = doc.title && doc.title.toLowerCase().indexOf(query) > -1;
-            var contentMatch = doc.content && doc.content.toLowerCase().indexOf(query) > -1;
-            if (titleMatch || contentMatch) {
-                matches.push({
-                    title: doc.title,
-                    url: 'https://sn.jace.pro' + doc.url,
-                    excerpt: doc.content ? doc.content.substring(0, 200) + '...' : ''
-                });
-            }
-            if (matches.length >= limit) break;
-        }
-
-        if (matches.length === 0) {
-            return { found: false, message: 'No documentation found for: ' + args.query };
-        }
-        return { found: true, count: matches.length, results: matches };
-    }
-
-    function executeGetCurrentUser(userId) {
-        if (!userId) return { error: 'No user context' };
-        var userGR = new GlideRecord('sys_user');
-        if (userGR.get(userId)) {
-            return {
-                sys_id: userGR.getUniqueValue(),
-                user_name: userGR.getValue('user_name'),
-                name: userGR.getValue('name'),
-                email: userGR.getValue('email'),
-                department: userGR.getDisplayValue('department')
-            };
-        }
-        return { error: 'User not found' };
-    }
 
 })(request, response);
 ]]></operation_script>
@@ -317,21 +92,21 @@
         <relative_path>/tools/execute</relative_path>
         <request_example/>
         <requires_acl_authorization>true</requires_acl_authorization>
-        <requires_authentication>false</requires_authentication>
+        <requires_authentication>true</requires_authentication>
         <requires_snc_internal_role>false</requires_snc_internal_role>
         <short_description/>
         <sys_class_name>sys_ws_operation</sys_class_name>
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2026-01-14 05:11:51</sys_created_on>
         <sys_id>dfb2443b831a32104d4fccb6feaad353</sys_id>
-        <sys_mod_count>17</sys_mod_count>
+        <sys_mod_count>28</sys_mod_count>
         <sys_name>Execute Tool</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_ws_operation_dfb2443b831a32104d4fccb6feaad353</sys_update_name>
         <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-14 07:30:48</sys_updated_on>
+        <sys_updated_on>2026-01-15 06:48:39</sys_updated_on>
         <web_service_definition display_value="AI in a Box Partials">6f21415793368210d2d070918bba1002</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>

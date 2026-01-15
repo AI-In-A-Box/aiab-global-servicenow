@@ -105,6 +105,10 @@
     margin-bottom: 25px;&#13;
   }&#13;
 &#13;
+  .status-checks-section {&#13;
+    margin-bottom: 25px;&#13;
+  }&#13;
+&#13;
   .config-section {&#13;
     margin-bottom: 20px;&#13;
   }&#13;
@@ -140,56 +144,45 @@
         <script><![CDATA[(function() {
   /*global gs, data, console*/
   try {
-    // Initialize AIIAB and get status
     var status = new global.aiabStatus();
-    // Core settings data
     data.settingsTitle = 'AI In A Box Settings';
-    data.settingsDescription = 'Configure and manage your AI In A Box features';
     
-    // Get feature status from AIIAB
+    // Features (streaming, summarize, chat)
     data.features = status.featuresAndProperties;
     
-    // Add core configuration links
+    // Status checks (toolsAcl)
+    var statusResult = status.status();
+    data.statusChecks = [];
+    if (statusResult && statusResult.toolsAcl) {
+      data.statusChecks.push(statusResult.toolsAcl);
+    }
+    
+    // Config links
     data.coreSettings = [
       {
         label: 'System Properties',
-        description: 'Configure all AI In A Box system properties',
         url: '/system_properties_ui.do?sysparm_title=Properties&sysparm_category=AI%20In%20A%20Box&sysparm_domain_restore=false&sysparm_stack=no',
-        buttonText: 'Configure',
-        className: 'btn btn-primary',
-        icon: 'fa fa-cogs'
+        buttonText: 'Configure'
       },
       {
         label: 'AI Summarizers',
-        description: 'Manage AI summarization configurations',
         url: '/u_ai_summarizer_list.do',
-        buttonText: 'Manage',
-        className: 'btn btn-primary',
-        icon: 'fa fa-list-alt'
+        buttonText: 'Manage'
       },
       {
         label: 'AI Inferences',
-        description: 'View and manage AI inference records',
         url: '/u_ai_inference_list.do',
-        buttonText: 'View',
-        className: 'btn btn-primary',
-        icon: 'fa fa-brain'
+        buttonText: 'View'
+      },
+      {
+        label: 'AI Tools',
+        url: '/u_ai_tool_list.do',
+        buttonText: 'Manage'
       }
     ];
     
-    // Get midserver configuration
-    data.midserverEnabled = gs.getProperty('ai_in_a_box.config.midserver.enabled') == 'true';
-    data.midserverName = gs.getProperty('ai_in_a_box.config.midserver') || 'Not configured';
-    
-    // Get key system properties for quick overview
-    data.systemInfo = {
-      version: gs.getProperty('ai_in_a_box.version') || 'Unknown',
-      instanceName: gs.getProperty('instance_name') || 'Unknown'
-    };
-    
   } catch (error) {
     data.error = 'Error loading settings: ' + error.message;
-    console.log(error);
   }
 })();]]></script>
         <servicenow>false</servicenow>
@@ -197,14 +190,14 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2025-08-31 18:24:53</sys_created_on>
         <sys_id>3c00e204c33be21052e098bc05013151</sys_id>
-        <sys_mod_count>31</sys_mod_count>
+        <sys_mod_count>36</sys_mod_count>
         <sys_name>AIAB Settings</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sp_widget_3c00e204c33be21052e098bc05013151</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-01-14 01:03:37</sys_updated_on>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-15 07:12:52</sys_updated_on>
         <template><![CDATA[<div class="aiab-settings-widget">
   <div class="panel panel-default">
     
@@ -224,48 +217,15 @@
         <i class="fa fa-exclamation-triangle"></i> {{data.error}}
       </div>
       
-      <!-- Description -->
-      <p class="text-muted">{{data.settingsDescription}}</p>
-      
-      <!-- System Overview -->
-      <div class="system-overview">
-        <h5 class="section-title">System Overview</h5>
-        <div class="well well-sm">
-          <div class="row">
-            <div class="col-sm-4">
-              <strong>Version:</strong><br>
-              <span class="text-muted">{{data.systemInfo.version}}</span>
-            </div>
-            <div class="col-sm-4">
-              <strong>Instance:</strong><br>
-              <span class="text-muted">{{data.systemInfo.instanceName}}</span>
-            </div>
-            <div class="col-sm-4">
-              <strong>
-                <span ng-if="data.midserverEnabled">Using Midserver</span>
-                <span ng-if="!data.midserverEnabled">Not Using Midserver</span>
-              </strong><br>
-              <span class="text-muted">{{data.midserverName}}</span>
-            </div>
-          </div>
-          <div ng-if="data.midserverEnabled" class="row" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
-            <div class="col-sm-12">
-              <strong>Midserver:</strong>
-              <span class="label label-info">{{data.midserverName}}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      
       <!-- Feature Status -->
       <div ng-if="data.features.length > 0" class="features-section">
-        <h5 class="section-title">Feature Status</h5>
+        <h5 class="section-title">Features</h5>
         <div class="list-group">
           <div ng-repeat="feature in data.features" class="list-group-item">
             <div class="row">
               <div class="col-sm-8">
                 <strong>{{feature.label}}</strong>
-                <span class="{{feature.enabled == true ? 'text-success' : 'text-danger'}}">
+                <span class="{{feature.enabled == true ? 'text-success' : 'text-muted'}}">
                   {{feature.enabled == true ? 'Enabled' : 'Disabled'}}
                 </span>
               </div>
@@ -281,30 +241,21 @@
         </div>
       </div>
       
-      <!-- Configuration Settings -->
-      <div ng-if="data.coreSettings.length > 0" class="config-section">
-        <h5 class="section-title">Configuration</h5>
+      <!-- Status Checks -->
+      <div ng-if="data.statusChecks.length > 0" class="status-checks-section">
+        <h5 class="section-title">Status</h5>
         <div class="list-group">
-          <div ng-repeat="setting in data.coreSettings" class="list-group-item">
+          <div ng-repeat="check in data.statusChecks" class="list-group-item">
             <div class="row">
               <div class="col-sm-8">
-                <div class="media">
-                  <div class="media-left">
-                    <i class="{{setting.icon}}" style="color: #6c757d; margin-top: 5px;"></i>
-                  </div>
-                  <div class="media-body">
-                    <strong>{{setting.label}}</strong>
-                    <div class="text-muted" style="font-size: 0.9em; margin-top: 2px;">
-                      {{setting.description}}
-                    </div>
-                  </div>
-                </div>
+                <strong>{{check.label}}</strong>
+                <span class="text-muted" style="font-size: 0.9em;">{{check.description}}</span>
               </div>
               <div class="col-sm-4 text-right">
-                <a ng-href="{{setting.url}}" 
-                   class="{{setting.className}} btn btn-sm"
+                <a ng-href="{{check.url}}" 
+                   class="{{check.className}} btn btn-sm"
                    target="_blank">
-                  {{setting.buttonText}}
+                  {{check.buttonText}}
                 </a>
               </div>
             </div>
@@ -312,12 +263,25 @@
         </div>
       </div>
       
-      <!-- Footer Note -->
-      <div class="footer-note">
-        <small class="text-muted">
-          <i class="fa fa-info-circle info-icon"></i>
-          Changes to system properties may require a restart to take effect
-        </small>
+      <!-- Configuration Settings -->
+      <div ng-if="data.coreSettings.length > 0" class="config-section">
+        <h5 class="section-title">Configuration</h5>
+        <div class="list-group">
+          <div ng-repeat="setting in data.coreSettings" class="list-group-item">
+            <div class="row">
+              <div class="col-sm-8">
+                <strong>{{setting.label}}</strong>
+              </div>
+              <div class="col-sm-4 text-right">
+                <a ng-href="{{setting.url}}" 
+                   class="btn btn-default btn-sm"
+                   target="_blank">
+                  {{setting.buttonText}}
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       
     </div>

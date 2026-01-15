@@ -40,14 +40,6 @@ aiabStatus.prototype = {
       label: "Midserver"
     },
     {
-      enabled: gs.getProperty('ai_in_a_box.feature.stream.enabled') == "true",
-      properties: [
-        'ai_in_a_box.feature.stream.auth',
-        'ai_in_a_box.feature.stream.enabled'
-      ],
-      label: "Streaming"
-    },
-    {
       enabled: gs.getProperty('ai_in_a_box.feature.summarize.enabled') == "true",
       roles: gs.getProperty('ai_in_a_box.feature.summarize.roles').split(','),
       properties: [
@@ -67,34 +59,6 @@ aiabStatus.prototype = {
   }
   ],
   status: function () {
-    var streaming = (function () {
-      var property = 'ai_in_a_box.feature.stream.enabled';
-      var returnObject = {
-        "className": "btn btn-danger",
-        "label": "Streaming",
-        "buttonText": "Streaming",
-        "url": "/sys_properties_list.do?sysparm_query=name=" + property
-      };
-      if (gs.getProperty(property) == null) {
-        returnObject.buttonText = "Not Set";
-        return returnObject;
-      }
-      if (gs.getProperty(property) == "false") {
-        returnObject.buttonText = "Disabled";
-        returnObject.className = "btn btn-warning";
-        return returnObject;
-      }
-      var authProperty = 'ai_in_a_box.feature.stream.auth';
-      returnObject.url = "/sys_properties_list.do?sysparm_query=name=" + authProperty;
-      if (gs.getProperty(property) == null || gs.getProperty(authProperty) == "") {
-        returnObject.buttonText = "Auth missing";
-        return returnObject;
-      }
-      returnObject.className = "btn btn-success";
-      returnObject.buttonText = '✅Done';
-      returnObject.url = "/sys_properties_list.do?sysparm_query=nameIN" + property + "," + authProperty;
-      return returnObject;
-    })();
     var summarize = (function () {
       var property = 'ai_in_a_box.feature.summarize.enabled';
       var returnObject = {
@@ -139,20 +103,84 @@ aiabStatus.prototype = {
       returnObject.buttonText = '✅Done';
       return returnObject;
     })();
+    // Tools ACL - checks if impersonation is configured for ACL-aware tool execution
+    var toolsAcl = (function () {
+      var returnObject = {
+        "className": "btn btn-warning",
+        "label": "Tools ACL",
+        "buttonText": "Not Configured",
+        "url": "https://getaiinabox.com/docs/tools-acl",
+        "description": "ACL-aware tool execution requires manual setup"
+      };
+      var issues = [];
+      // Check 1: callback auth property is set
+      var callbackAuth = gs.getProperty('ai_in_a_box.config.server.callback.auth');
+      if (!callbackAuth || callbackAuth == '') {
+        issues.push('Callback auth not set');
+      }
+      // Check 2: AIABGlobalHelper script include exists in global scope
+      var scriptInclude = new GlideRecord('sys_script_include');
+      scriptInclude.addQuery('name', 'AIABGlobalHelper');
+      scriptInclude.addQuery('sys_scope', 'global');
+      scriptInclude.addQuery('active', true);
+      scriptInclude.setLimit(1);
+      scriptInclude.query();
+      if (!scriptInclude.hasNext()) {
+        issues.push('Global helper missing');
+      }
+      // Check 3: Service user exists with impersonator role
+      if (callbackAuth && callbackAuth != '') {
+        var parts = callbackAuth.split(':');
+        if (parts.length >= 1) {
+          var username = parts[0];
+          var serviceUser = new GlideRecord('sys_user');
+          serviceUser.addQuery('user_name', username);
+          serviceUser.addQuery('active', true);
+          serviceUser.setLimit(1);
+          serviceUser.query();
+          if (!serviceUser.next()) {
+            issues.push('Service user not found');
+          } else {
+            // Check if user has impersonator role
+            var hasRole = new GlideRecord('sys_user_has_role');
+            hasRole.addQuery('user', serviceUser.sys_id);
+            hasRole.addQuery('role.name', 'impersonator');
+            hasRole.setLimit(1);
+            hasRole.query();
+            if (!hasRole.hasNext()) {
+              issues.push('Missing impersonator role');
+            }
+          }
+        }
+      }
+      if (issues.length == 0) {
+        returnObject.className = 'btn btn-success';
+        returnObject.buttonText = '✅Ready';
+        returnObject.description = 'Tools will respect user ACLs';
+      } else if (issues.length == 3) {
+        returnObject.className = 'btn btn-secondary';
+        returnObject.buttonText = 'Optional';
+        returnObject.description = 'Setup for ACL-aware tools (optional)';
+      } else {
+        returnObject.buttonText = issues[0];
+      }
+      return returnObject;
+    })();
     // mid server [ai_in_a_box.config.midserver]
     var midserver = (function () {
-	  var enabled = gs.getProptery('ai_in_a_box.config.midserver.enabled', true);
-	  if(enabled == 'false') {
-		returnObject.buttonText = "Not Used";
-		return returnObject;
-	  }
-      var property = 'ai_in_a_box.config.midserver';
-      var returnObject = {
+	  var enabled = gs.getProperty('ai_in_a_box.config.midserver.enabled', 'true');
+	  var returnObject = {
         "className": "btn btn-danger",
         "label": "Mid Server",
         "buttonText": "Down",
-        "url": "/sys_properties_list.do?sysparm_query=name=" + property
+        "url": "/sys_properties_list.do?sysparm_query=name=ai_in_a_box.config.midserver"
       };
+	  if(enabled == 'false') {
+		returnObject.buttonText = "Not Used";
+		returnObject.className = "btn btn-secondary";
+		return returnObject;
+	  }
+      var property = 'ai_in_a_box.config.midserver';
       var value = gs.getProperty(property);
       if (value == null) {
         returnObject.buttonText = "Not Set";
@@ -211,21 +239,26 @@ aiabStatus.prototype = {
       var authValue = gs.getProperty(authProperty);
       var url = value + "/meta/status";
       // we need to ensure the mid is up to do this
-      var eccAgent = new GlideRecord('ecc_agent');
-      eccAgent.setLimit(1);
-      eccAgent.addQuery('name', gs.getProperty('ai_in_a_box.config.midserver'));
-      eccAgent.addQuery('status', 'Up');
-      eccAgent.addQuery('validated', 'true');
-      eccAgent.query();
-      if (eccAgent.hasNext() == false) {
-        returnObject.buttonText = "Mid Server Down";
-        returnObject.url = "/ecc_agent_list.do?sysparm_query=name=" + gs.getProperty('ai_in_a_box.config.midserver');
-        return returnObject;
+      var midEnabled = gs.getProperty('ai_in_a_box.config.midserver.enabled', 'true');
+      if (midEnabled == 'true') {
+        var eccAgent = new GlideRecord('ecc_agent');
+        eccAgent.setLimit(1);
+        eccAgent.addQuery('name', gs.getProperty('ai_in_a_box.config.midserver'));
+        eccAgent.addQuery('status', 'Up');
+        eccAgent.addQuery('validated', 'true');
+        eccAgent.query();
+        if (eccAgent.hasNext() == false) {
+          returnObject.buttonText = "Mid Server Down";
+          returnObject.url = "/ecc_agent_list.do?sysparm_query=name=" + gs.getProperty('ai_in_a_box.config.midserver');
+          return returnObject;
+        }
       }
       var restMessage = new sn_ws.RESTMessageV2();
       restMessage.setHttpMethod('get');
       restMessage.setEndpoint(url);
-      restMessage.setMIDServer(gs.getProperty('ai_in_a_box.config.midserver'));
+      if (midEnabled == 'true') {
+        restMessage.setMIDServer(gs.getProperty('ai_in_a_box.config.midserver'));
+      }
       restMessage.setRequestHeader('Content-Type', 'application/json');
       restMessage.setRequestHeader('Authorization', 'Basic ' + GlideStringUtil.base64Encode(authValue));
       var response = restMessage.execute();
@@ -262,25 +295,29 @@ aiabStatus.prototype = {
         returnObject.url = "/sys_properties_list.do?sysparm_query=name=" + authProperty;
         return returnObject;
       }
-      var eccAgent = new GlideRecord('ecc_agent');
-      eccAgent.setLimit(1);
-      eccAgent.addQuery('name', gs.getProperty('ai_in_a_box.config.midserver'));
-      eccAgent.addQuery('status', 'Up');
-      eccAgent.addQuery('validated', 'true');
-      eccAgent.query();
-      if (eccAgent.hasNext() == false) {
-        returnObject.buttonText = "Mid Server Down";
-        returnObject.url = "/ecc_agent_list.do?sysparm_query=name=" + gs.getProperty('ai_in_a_box.config.midserver');
-        return returnObject;
+      var midEnabled = gs.getProperty('ai_in_a_box.config.midserver.enabled', 'true');
+      if (midEnabled == 'true') {
+        var eccAgent = new GlideRecord('ecc_agent');
+        eccAgent.setLimit(1);
+        eccAgent.addQuery('name', gs.getProperty('ai_in_a_box.config.midserver'));
+        eccAgent.addQuery('status', 'Up');
+        eccAgent.addQuery('validated', 'true');
+        eccAgent.query();
+        if (eccAgent.hasNext() == false) {
+          returnObject.buttonText = "Mid Server Down";
+          returnObject.url = "/ecc_agent_list.do?sysparm_query=name=" + gs.getProperty('ai_in_a_box.config.midserver');
+          return returnObject;
+        }
       }
       var restMessage = new sn_ws.RESTMessageV2();
       returnObject.gottorest = true;
       restMessage.setHttpMethod('get');
       restMessage.setEndpoint(value + '/models');
-      restMessage.setMIDServer(gs.getProperty('ai_in_a_box.config.midserver'));
+      if (midEnabled == 'true') {
+        restMessage.setMIDServer(gs.getProperty('ai_in_a_box.config.midserver'));
+      }
       restMessage.setRequestHeader('Content-Type', 'application/json');
-      //restMessage.setRequestHeader('Authorization', 'Bearer ' + GlideStringUtil.base64Encode(authValue));
-	  restMessage.setRequestHeader('Authorization', 'Bearer ' + authValue);
+      restMessage.setRequestHeader('Authorization', 'Bearer ' + authValue);
       var response = restMessage.execute();
       var responseBody = response.getBody();
       if (response.getStatusCode() == 401) {
@@ -294,7 +331,7 @@ aiabStatus.prototype = {
 
       var responseJSON = JSON.parse(responseBody);
       var isLlamaCpp = false;
-      var models = []; // we'll put them in here
+      var models = [];
       if (responseJSON.data) {
         for (var i = 0; i < responseJSON.data.length; i++) {
           models.push(responseJSON.data[i].id);
@@ -304,8 +341,6 @@ aiabStatus.prototype = {
         }
       }
       if (isLlamaCpp == false) {
-        // okay now we need to actually check if the model is there
-        // we can just check if the modelproperty is in the list of models
         var modelProperty = 'ai_in_a_box.config.server.llm.model';
         var modelValue = gs.getProperty(modelProperty);
         if (models.indexOf(modelValue) == -1) {
@@ -334,14 +369,14 @@ aiabStatus.prototype = {
     };
     var email = {
       "label": "Email",
-      "buttonText": "Email Me",
-      "url": "mailto:jace@benson.run",
+      "buttonText": "Email Us",
+      "url": "mailto:team@getaiinabox.com",
       "className": "btn btn-outline-primary"
     };
     return {
-      streaming: streaming,
       summarize: summarize,
       chat: chat,
+      toolsAcl: toolsAcl,
       midserver: midserver,
       aiiabServer: aiiabServer,
       llmServer: llmServer,
@@ -362,27 +397,22 @@ aiabStatus.prototype = {
         message: "Mid Server is disabled"
       };
     }
-    // now we will find the server
     var eccAgent = new GlideRecord('ecc_agent');
     eccAgent.addQuery('name', midservername);
     eccAgent.query();
     if (eccAgent.next()) {
-      // we found a midserver with this name
-      // check if it's up
       if (eccAgent.status != 'Up') {
         return {
           status: "down",
           message: "Mid Server is down"
         };
       }
-      // check if it's validated
       if (eccAgent.validated != 'true') {
         return {
           status: "not_validated",
           message: "Mid Server is not validated"
         };
       }
-      // check for issues
       var eccAgentIssues = new GlideRecord('ecc_agent_issue');
       eccAgentIssues.addQuery('mid_server.name', 'aiinabox-mid');
       eccAgentIssues.addQuery('state', '=', 'new');
@@ -391,7 +421,7 @@ aiabStatus.prototype = {
         return {
           status: "issues",
           message: "Mid Server has issues"
-        }
+        };
       }
       return {
         status: "up",
@@ -410,23 +440,17 @@ aiabStatus.prototype = {
       host: aiabStatusServer,
       path: '/meta/status',
     });
-    // expecting {"status": "ok"} // comes back stringified...
     var statusCode = JSON.parse(response.body).status;
-
 
     if (statusCode === "ok") {
       return {
         status: "up",
-        message: "AIAB Server is up",
-        //response: response,
-        //body: JSON.parse(response.body)
+        message: "AIAB Server is up"
       };
     } else {
       return {
         status: "down",
-        message: "AIAB Server is down",
-        //response: response,
-        //body: JSON.parse(response.body)
+        message: "AIAB Server is down"
       };
     }
   },
@@ -436,14 +460,14 @@ aiabStatus.prototype = {
         <sys_created_by>aiinaboxadmin</sys_created_by>
         <sys_created_on>2024-12-23 20:42:04</sys_created_on>
         <sys_id>7e581613c3ea9a50594e12f1b401310a</sys_id>
-        <sys_mod_count>134</sys_mod_count>
+        <sys_mod_count>136</sys_mod_count>
         <sys_name>aiabStatus</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_script_include_7e581613c3ea9a50594e12f1b401310a</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-01-14 01:06:04</sys_updated_on>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-15 07:16:20</sys_updated_on>
     </sys_script_include>
     <sys_es_latest_script action="INSERT_OR_UPDATE">
         <id>7e581613c3ea9a50594e12f1b401310a</id>

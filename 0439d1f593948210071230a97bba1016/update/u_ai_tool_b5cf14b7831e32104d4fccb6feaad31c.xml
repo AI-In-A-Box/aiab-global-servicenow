@@ -4,18 +4,30 @@
         <sys_created_by>opencode</sys_created_by>
         <sys_created_on>2026-01-14 07:18:29</sys_created_on>
         <sys_id>b5cf14b7831e32104d4fccb6feaad31c</sys_id>
-        <sys_mod_count>0</sys_mod_count>
+        <sys_mod_count>18</sys_mod_count>
         <sys_name>odd_or_even</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>u_ai_tool_b5cf14b7831e32104d4fccb6feaad31c</sys_update_name>
         <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-14 07:18:29</sys_updated_on>
+        <sys_updated_on>2026-01-15 00:16:01</sys_updated_on>
         <u_active>true</u_active>
         <u_description>Returns whether the current time (seconds) is odd or even. A fun way to make random decisions or test if the AI tools are working.</u_description>
         <u_execute_in/>
         <u_name>odd_or_even</u_name>
         <u_parameters>{"type": "object", "properties": {}, "required": []}</u_parameters>
+        <u_script><![CDATA[(function(args, userId) {
+    var now = new GlideDateTime();
+    var timeStr = "" + now;
+    var seconds = parseInt(timeStr.substring(17, 19), 10);
+    var isEven = seconds % 2 === 0;
+    return {
+        seconds: seconds,
+        result: isEven ? "even" : "odd",
+        message: "The current second is " + seconds + ", which is " + (isEven ? "even" : "odd") + "!",
+        timestamp: timeStr
+    };
+})(args, userId);]]></u_script>
     </u_ai_tool>
 </record_update>

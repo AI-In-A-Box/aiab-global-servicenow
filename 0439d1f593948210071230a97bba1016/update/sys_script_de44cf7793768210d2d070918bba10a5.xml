@@ -55,10 +55,6 @@
             var recordA = new GlideRecord(table);
             recordA.setLimit(1);
             if (aiSummarierGR.getValue('u_record_a_data')) {
-                //messages.push({
-                //    role: 'user',
-                //    content: aiSummarierGR.getValue('u_prompt')
-                //});
                 messages.push({
                     role: 'user',
                     content: aiSummarierGR.getValue('u_record_a_data')
@@ -72,10 +68,6 @@
             var recordB = new GlideRecord(table);
             recordB.setLimit(1);
             if (aiSummarierGR.getValue('u_record_b_data')) {
-                //messages.push({
-                //    role: 'user',
-                //    content: aiSummarierGR.getValue('u_prompt')
-                //});
                 messages.push({
                     role: 'user',
                     content: aiSummarierGR.getValue('u_record_b_data')
@@ -97,8 +89,6 @@
                 }
                 if (field.indexOf('__related__') > -1) {
                     try {
-                        // what do i need to get a related list of display values
-                        // i need the table, the query, and the field name
                         var clearField = field.replace('__related__', '');
                         var parts = clearField.split('__');
                         var rTable = parts[0];
@@ -118,7 +108,6 @@
                         var rGR = new GlideRecord(rTable);
                         rGR.addQuery(rQuery);
                         rGR.setLimit(10);
-                        //value = rTable + ':' + rField + ':' + rQuery
                         rGR.query();
                         var rValues = [];
                         while (rGR.next()) {
@@ -138,10 +127,6 @@
                 }
                 taskText = taskText.replace('{{' + field + '}}', value);
             });
-            //messages.push({
-            //    role: 'user',
-            //    content: aiSummarierGR.getValue('u_prompt')
-            //});
             messages.push({
                 role: 'user',
                 content: taskText
@@ -211,7 +196,6 @@
         record.setLimit(1);
         record.query();
         if (record.next()) {
-            // now we'll build out this message
             for (var field in record) {
                 var validField = record.isValidField(field);
                 if (validField) {
@@ -246,11 +230,23 @@
         var target = current.getValue('u_target');
         var type = current.getValue('u_type');
         var model = current.getValue('u_model') || gs.getProperty('ai_in_a_box.config.server.llm.model');
+        // Get the requesting user - use u_requested_by if set, otherwise fall back to sys_created_by
+        var requestingUserId = current.getValue('u_requested_by') || current.getValue('sys_created_by');
+        if (!requestingUserId) {
+            // Last resort - look up by sys_created_by username
+            var userGR = new GlideRecord('sys_user');
+            userGR.addQuery('user_name', current.getValue('sys_created_by'));
+            userGR.setLimit(1);
+            userGR.query();
+            if (userGR.next()) {
+                requestingUserId = userGR.getUniqueValue();
+            }
+        }
         if (type == 'summarize-simple') {
             messages = buildTableMessages();
         }
         if (type == 'chat') {
-            messages = setPromptToJSON(prompt); // TODO MAKE A NEW FX
+            messages = setPromptToJSON(prompt);
         }
         if (type == 'generic') {
             messages = setPromptToJSON(prompt);
@@ -258,27 +254,22 @@
         if (type == 'ask-record') {
             messages = buildAskRecordMessages(target, table, prompt);
         }
-        //current.u_prompt = JSON.stringify(messages, null, ' ');
         current.u_prompt = JSON.stringify(messages, null, ' ');
         current.u_state = 'requested';
-		var tools = getActiveTools();
+        var tools = getActiveTools();
         var aiabRest = new global.aiabRest();
-		var body = {
-			messages: messages,
-			model: model,
-			tools: tools.length > 0 ? tools : undefined
-		};
-		var path = "/openai/v1/chat/completions";
-		var method = "post";
-		var headers = {
-			"ai_in_a_box.inference.id": current.getValue('sys_id')
-		};
-		gs.info('Body being sent: ' + JSON.stringify({
-			body: body,
-            path: path,
-            method: method,
-            headers: headers
-		}, null, 2));
+        var body = {
+            messages: messages,
+            model: model,
+            tools: tools.length > 0 ? tools : undefined
+        };
+        var path = "/openai/v1/chat/completions";
+        var method = "post";
+        var headers = {
+            "ai_in_a_box.inference.id": current.getValue('sys_id'),
+            "ai_in_a_box.user.id": requestingUserId
+        };
+        gs.info('AIAB: Sending inference ' + current.getValue('sys_id') + ' for user ' + requestingUserId);
         var restMessageNoTable = aiabRest.send({
             body: body,
             path: path,
@@ -287,14 +278,10 @@
         });
         if (restMessageNoTable) {
             var parsed = JSON.parse(restMessageNoTable.body);
-            /*if (parsed.error == 0){
-                current.u_response = "Cannot connect to AI In A Box Server.";
-            }*/
             if (parsed.error) {
                 current.u_response = parsed.contents;
                 current.u_state = 'finished';
             }
-
         }
         current.update();
     } catch (error) {
@@ -307,15 +294,15 @@
         <sys_domain>global</sys_domain>
         <sys_domain_path>/</sys_domain_path>
         <sys_id>de44cf7793768210d2d070918bba10a5</sys_id>
-        <sys_mod_count>76</sys_mod_count>
+        <sys_mod_count>77</sys_mod_count>
         <sys_name>Fetch Inference</sys_name>
         <sys_overrides/>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_script_de44cf7793768210d2d070918bba10a5</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-01-14 06:07:44</sys_updated_on>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-15 06:28:34</sys_updated_on>
         <template/>
         <when>after</when>
     </sys_script>

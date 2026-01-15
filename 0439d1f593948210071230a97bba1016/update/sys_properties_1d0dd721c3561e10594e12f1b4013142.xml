@@ -11,16 +11,16 @@
         <sys_created_by>aiinaboxadmin</sys_created_by>
         <sys_created_on>2024-12-06 04:56:41</sys_created_on>
         <sys_id>1d0dd721c3561e10594e12f1b4013142</sys_id>
-        <sys_mod_count>7</sys_mod_count>
+        <sys_mod_count>8</sys_mod_count>
         <sys_name>ai_in_a_box.feature.stream.auth</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_properties_1d0dd721c3561e10594e12f1b4013142</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2025-01-01 17:12:12</sys_updated_on>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-15 06:39:22</sys_updated_on>
         <type>password2</type>
-        <value>{{gpaes}}z0ZfQXWOk7qvm7lKHOUSVw==</value>
+        <value>{{dflt-gpaes}}QV6lXcsumMfwrQTII+hMrw==</value>
         <write_roles/>
     </sys_properties>
     <sys_translated_text action="delete_multiple" query="documentkey=1d0dd721c3561e10594e12f1b4013142"/>

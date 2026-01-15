@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element attributes="update_synch=true" db_object_id="c3dd9073831e32104d4fccb6feaad3c2" extends="sys_metadata" label="AI Tool Definition" max_length="40" name="u_ai_tool" type="collection">
+        <element label="Script" max_length="4000" name="u_script" type="script"/>
+        <element choice="3" label="Execute In" max_length="40" name="u_execute_in" type="choice">
+            <choice>
+                <element inactive_on_update="false" label="Built-in" sequence="1" value="built-in"/>
+                <element inactive_on_update="false" label="ServiceNow" sequence="0" value="servicenow"/>
+            </choice>
+        </element>
+        <element label="Description" max_length="4000" name="u_description" type="string"/>
+        <element label="Parameters" max_length="4000" name="u_parameters" type="string"/>
+        <element display="true" label="Name" max_length="40" name="u_name" type="string"/>
+        <element default="true" label="Active" max_length="255" name="u_active" type="boolean"/>
+    </element>
+</database>

@@ -4,14 +4,14 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2026-01-14 05:47:46</sys_created_on>
         <sys_id>e6eac07b835a32104d4fccb6feaad3b9</sys_id>
-        <sys_mod_count>9</sys_mod_count>
+        <sys_mod_count>13</sys_mod_count>
         <sys_name>get_incident</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>u_ai_tool_e6eac07b835a32104d4fccb6feaad3b9</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-01-14 07:13:51</sys_updated_on>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-15 06:52:01</sys_updated_on>
         <u_active>true</u_active>
         <u_description>Search for incidents in ServiceNow. Can search by number, caller, assigned user, state, priority, or find recent incidents. Returns up to 5 matching incidents</u_description>
         <u_execute_in>servicenow</u_execute_in>
@@ -72,5 +72,96 @@
  },
  "required": []
 }</u_parameters>
+        <u_script><![CDATA[(function(args, userId) {
+    // Use GlideRecordSecure to respect ACLs
+    var gr = new GlideRecordSecure("incident");
+
+    if (args.number) gr.addQuery("number", args.number);
+    if (args.caller) {
+        var callerGR = new GlideRecord("sys_user");
+        callerGR.addQuery("name", "CONTAINS", args.caller);
+        callerGR.setLimit(1);
+        callerGR.query();
+        if (callerGR.next()) gr.addQuery("caller_id", callerGR.getUniqueValue());
+        else return { found: false, message: "No user found: " + args.caller };
+    }
+    if (args.assigned_to) {
+        var assigneeGR = new GlideRecord("sys_user");
+        assigneeGR.addQuery("name", "CONTAINS", args.assigned_to);
+        assigneeGR.setLimit(1);
+        assigneeGR.query();
+        if (assigneeGR.next()) gr.addQuery("assigned_to", assigneeGR.getUniqueValue());
+        else return { found: false, message: "No user found: " + args.assigned_to };
+    }
+    if (args.assignment_group) {
+        var groupGR = new GlideRecord("sys_user_group");
+        groupGR.addQuery("name", "CONTAINS", args.assignment_group);
+        groupGR.setLimit(1);
+        groupGR.query();
+        if (groupGR.next()) gr.addQuery("assignment_group", groupGR.getUniqueValue());
+        else return { found: false, message: "No group found: " + args.assignment_group };
+    }
+    if (args.state) {
+        var stateMap = { new: 1, in_progress: 2, on_hold: 3, resolved: 6, closed: 7 };
+        if (stateMap[args.state.toLowerCase()]) gr.addQuery("state", stateMap[args.state.toLowerCase()]);
+    }
+    if (args.priority) gr.addQuery("priority", args.priority);
+    if (args.opened_today === true) gr.addQuery("opened_at", ">=", gs.beginningOfToday());
+    if (args.short_description_contains) gr.addQuery("short_description", "CONTAINS", args.short_description_contains);
+
+    gr.orderByDesc("opened_at");
+    gr.setLimit(Math.min(args.limit || 5, 10));
+    gr.query();
+
+    var incidents = [];
+    while (gr.next()) {
+        var incident = {
+            number: "" + gr.number,
+            short_description: "" + gr.short_description,
+            state: gr.getDisplayValue("state"),
+            priority: gr.getDisplayValue("priority"),
+            assigned_to: gr.getDisplayValue("assigned_to"),
+            opened_at: "" + gr.opened_at
+        };
+        // Only include caller_id if field exists and user can read it
+        var callerField = gr.getElement("caller_id");
+        if (callerField && callerField.canRead()) {
+            incident.caller_id = gr.getDisplayValue("caller_id");
+        }
+        incidents.push(incident);
+    }
+
+    if (incidents.length === 0) return { found: false, count: 0, message: "No incidents found" };
+    if (args.number && incidents.length === 1) {
+        gr.get("number", args.number);
+        var singleIncident = {
+            number: "" + gr.number,
+            short_description: "" + gr.short_description,
+            description: "" + gr.description,
+            state: gr.getDisplayValue("state"),
+            priority: gr.getDisplayValue("priority"),
+            assigned_to: gr.getDisplayValue("assigned_to"),
+            opened_at: "" + gr.opened_at
+        };
+        // Only include caller_id if field exists and user can read it
+        var singleCallerField = gr.getElement("caller_id");
+        if (singleCallerField && singleCallerField.canRead()) {
+            singleIncident.caller_id = gr.getDisplayValue("caller_id");
+        }
+        return { found: true, incident: singleIncident };
+    }
+    return { found: true, count: incidents.length, incidents: incidents };
+})(args, userId);]]></u_script>
     </u_ai_tool>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>e6eac07b835a32104d4fccb6feaad3b9</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-01-14 05:47:45</sys_created_on>
+        <sys_id>410b047b835a32104d4fccb6feaad310</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-14 05:47:45</sys_updated_on>
+        <table>u_ai_tool</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
 </record_update>
