@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="u_ai_tool">
+    <u_ai_tool action="INSERT_OR_UPDATE">
+        <sys_class_name>u_ai_tool</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-01-22 18:31:17</sys_created_on>
+        <sys_id>237680e28366b2104d4fccb6feaad346</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>get_cmdb_context</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>u_ai_tool_237680e28366b2104d4fccb6feaad346</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-22 18:31:17</sys_updated_on>
+        <u_active>true</u_active>
+        <u_description>Get CMDB configuration item details and relationships. Retrieves information about the CI associated with a record (like an incident) including related CIs, CI attributes, and relationship types.</u_description>
+        <u_execute_in>servicenow</u_execute_in>
+        <u_name>get_cmdb_context</u_name>
+        <u_parameters>{"type": "object", "properties": {"ci_sys_id": {"type": "string", "description": "sys_id of the configuration item"}, "ci_name": {"type": "string", "description": "Name of the configuration item to search for"}, "include_relationships": {"type": "boolean", "description": "Include related CIs (default true)"}, "relationship_limit": {"type": "integer", "description": "Max related CIs to return (default 5, max 10)"}}, "required": []}</u_parameters>
+        <u_script><![CDATA[(function(args, userId) {
+    var ciGr = new GlideRecordSecure('cmdb_ci');
+    
+    // Find the CI
+    if (args.ci_sys_id) {
+        if (!ciGr.get(args.ci_sys_id)) {
+            return { found: false, message: 'Configuration item not found with sys_id: ' + args.ci_sys_id };
+        }
+    } else if (args.ci_name) {
+        ciGr.addQuery('name', 'LIKE', args.ci_name);
+        ciGr.setLimit(1);
+        ciGr.query();
+        if (!ciGr.next()) {
+            return { found: false, message: 'Configuration item not found with name: ' + args.ci_name };
+        }
+    } else {
+        return { found: false, message: 'Either ci_sys_id or ci_name is required' };
+    }
+    
+    // Build CI details
+    var ci = {
+        sys_id: '' + ciGr.sys_id,
+        name: '' + ciGr.name,
+        sys_class_name: ciGr.getDisplayValue('sys_class_name'),
+        operational_status: ciGr.getDisplayValue('operational_status'),
+        install_status: ciGr.getDisplayValue('install_status'),
+        environment: ciGr.getDisplayValue('environment'),
+        category: '' + ciGr.category,
+        subcategory: '' + ciGr.subcategory,
+        support_group: ciGr.getDisplayValue('support_group'),
+        assigned_to: ciGr.getDisplayValue('assigned_to'),
+        location: ciGr.getDisplayValue('location'),
+        department: ciGr.getDisplayValue('department')
+    };
+    
+    var result = { found: true, ci: ci };
+    
+    // Get relationships if requested (default true)
+    if (args.include_relationships !== false) {
+        var relLimit = Math.min(args.relationship_limit || 5, 10);
+        var relationships = [];
+        
+        // Get relationships where this CI is the parent
+        var relGr = new GlideRecordSecure('cmdb_rel_ci');
+        relGr.addQuery('parent', ciGr.sys_id);
+        relGr.setLimit(relLimit);
+        relGr.query();
+        while (relGr.next()) {
+            relationships.push({
+                direction: 'parent_of',
+                type: relGr.getDisplayValue('type'),
+                related_ci: relGr.getDisplayValue('child'),
+                related_ci_class: relGr.child.sys_class_name.getDisplayValue()
+            });
+        }
+        
+        // Get relationships where this CI is the child
+        relGr = new GlideRecordSecure('cmdb_rel_ci');
+        relGr.addQuery('child', ciGr.sys_id);
+        relGr.setLimit(relLimit);
+        relGr.query();
+        while (relGr.next()) {
+            relationships.push({
+                direction: 'child_of',
+                type: relGr.getDisplayValue('type'),
+                related_ci: relGr.getDisplayValue('parent'),
+                related_ci_class: relGr.parent.sys_class_name.getDisplayValue()
+            });
+        }
+        
+        result.relationships = relationships;
+        result.relationship_count = relationships.length;
+    }
+    
+    return result;
+})(args, userId);]]></u_script>
+    </u_ai_tool>
+</record_update>
