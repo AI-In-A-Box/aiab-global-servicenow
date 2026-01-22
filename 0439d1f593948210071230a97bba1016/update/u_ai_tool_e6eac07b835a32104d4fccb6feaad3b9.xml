@@ -4,14 +4,14 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2026-01-14 05:47:46</sys_created_on>
         <sys_id>e6eac07b835a32104d4fccb6feaad3b9</sys_id>
-        <sys_mod_count>32</sys_mod_count>
+        <sys_mod_count>33</sys_mod_count>
         <sys_name>get_incident</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>u_ai_tool_e6eac07b835a32104d4fccb6feaad3b9</sys_update_name>
         <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-22 15:48:18</sys_updated_on>
+        <sys_updated_on>2026-01-22 16:39:52</sys_updated_on>
         <u_active>true</u_active>
         <u_description>Search for incidents in ServiceNow. Can search by number, caller, assigned user, state, priority, or find recent incidents. Returns up to 5 matching incidents</u_description>
         <u_execute_in>servicenow</u_execute_in>
@@ -75,48 +75,48 @@
         <u_script><![CDATA[(function(args, userId) {
     // Impersonation is handled by the Web Service Operation via AIABGlobalHelper
     // Use GlideRecordSecure to respect ACLs of the impersonated user
-	var debug = {
-		args: args,
-		userId: userId,
-		currentUser: gs.getUserID(),
-		currentUserName: gs.getUserName()
-	};
+    var debug = {
+        args: args,
+        userId: userId,
+        currentUser: gs.getUserID(),
+        currentUserName: gs.getUserName()
+    };
     
     var incidentRecord = new GlideRecordSecure("incident");
 
     if (args.number) {
-		incidentRecord.addQuery("number", args.number);
-	}
+        incidentRecord.addQuery("number", args.number);
+    }
     if (args.caller) {
-		incidentRecord.addQuery("caller_id.name", "LIKE", args.caller);
-	}
+        incidentRecord.addQuery("caller_id.name", "LIKE", args.caller);
+    }
     if (args.assigned_to) {
-		incidentRecord.addQuery("assigned_to.name", "LIKE", args.assigned_to);
+        incidentRecord.addQuery("assigned_to.name", "LIKE", args.assigned_to);
     }
     if (args.assignment_group) {
-		incidentRecord.addQuery("assignment_group", "LIKE", args.assignment_group);
+        incidentRecord.addQuery("assignment_group", "LIKE", args.assignment_group);
     }
     if (args.state) {
         var stateMap = { 
-			"new": 1,
-			"in_progress": 2,
-			"on_hold": 3,
-			"resolved": 6,
-			"closed": 7 
-		};
+            "new": 1,
+            "in_progress": 2,
+            "on_hold": 3,
+            "resolved": 6,
+            "closed": 7 
+        };
         if (stateMap[args.state.toLowerCase()]) {
-			incidentRecord.addQuery("state", stateMap[args.state.toLowerCase()]);
-		}
+            incidentRecord.addQuery("state", stateMap[args.state.toLowerCase()]);
+        }
     }
     if (args.priority) {
-		incidentRecord.addQuery("priority", args.priority);
-	}
+        incidentRecord.addQuery("priority", args.priority);
+    }
     if (args.opened_today === true) {
-		incidentRecord.addQuery("opened_at", ">=", gs.beginningOfToday());
-	}
-    if (args.short_description_contains){
-		incidentRecord.addQuery("short_description", "CONTAINS", args.short_description_contains);
-	}
+        incidentRecord.addQuery("opened_at", ">=", gs.beginningOfToday());
+    }
+    if (args.short_description_contains) {
+        incidentRecord.addQuery("short_description", "CONTAINS", args.short_description_contains);
+    }
 
     incidentRecord.orderByDesc("opened_at");
     incidentRecord.setLimit(Math.min(args.limit || 5, 10));
@@ -135,20 +135,17 @@
             assigned_to: incidentRecord.getDisplayValue("assigned_to"),
             opened_at: "" + incidentRecord.opened_at
         };
-        try {
-            if (incidentRecord.caller_id) {
-                incident.caller_id = incidentRecord.getDisplayValue("caller_id");
-            }
-        } catch(e) {
-            // Field not accessible
+        // Only include caller_id if user can read it
+        if (incidentRecord.caller_id.canRead()) {
+            incident.caller_id = incidentRecord.getDisplayValue("caller_id");
         }
         incidents.push(incident);
     }
     debug.actualRowsProcessed = incidents.length;
 
     if (incidents.length === 0) {
-		return { found: false, count: 0, message: "No incidents found", debug: debug };
-	}
+        return { found: false, count: 0, message: "No incidents found", debug: debug };
+    }
     if (args.number && incidents.length === 1) {
         incidentRecord.get("number", args.number);
         var singleIncident = {
@@ -160,12 +157,9 @@
             assigned_to: incidentRecord.getDisplayValue("assigned_to"),
             opened_at: "" + incidentRecord.opened_at
         };
-        try {
-            if (incidentRecord.caller_id) {
-                singleIncident.caller_id = incidentRecord.getDisplayValue("caller_id");
-            }
-        } catch(e) {
-            // Field not accessible
+        // Only include caller_id if user can read it
+        if (incidentRecord.caller_id.canRead()) {
+            singleIncident.caller_id = incidentRecord.getDisplayValue("caller_id");
         }
         return { found: true, incident: singleIncident, debug: debug };
     }
