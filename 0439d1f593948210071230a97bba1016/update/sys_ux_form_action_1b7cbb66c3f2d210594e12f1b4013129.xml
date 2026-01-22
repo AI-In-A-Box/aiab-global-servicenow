@@ -19,7 +19,7 @@
         <sys_updated_by>jacebenson</sys_updated_by>
         <sys_updated_on>2025-01-03 06:19:27</sys_updated_on>
         <table>task</table>
-        <ui_action display_value="Cancel Summarize">137cbb66c3f2d210594e12f1b4013126</ui_action>
+        <ui_action/>
     </sys_ux_form_action>
     <sys_translated_text action="delete_multiple" query="documentkey=1b7cbb66c3f2d210594e12f1b4013129"/>
 </record_update>

@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ux_client_script">
+    <sys_ux_client_script action="DELETE">
+        <controller_preset/>
+        <includes/>
+        <macroponent display_value="AIAB Chat Injector">0664dc2283e6b2104d4fccb6feaad3e3</macroponent>
+        <name>AIAB Chat Injector Init</name>
+        <preset/>
+        <required_translations>[]</required_translations>
+        <script><![CDATA[/**
+ * AIAB Chat Injector - Injects chat widget iframe in Workspace
+ * Watches for URL changes since Workspace is a SPA
+ */
+(function() {
+  console.log('AIAB Chat Injector: Starting...');
+  
+  // Avoid duplicate injection
+  if (window.__aiabChatInjected) {
+    console.log('AIAB Chat Injector: Already injected, skipping');
+    return {};
+  }
+  window.__aiabChatInjected = true;
+  
+  var lastUrl = '';
+  var iframe = null;
+  
+  // Size constants
+  var BUTTON_WIDTH = '140px';
+  var BUTTON_HEIGHT = '70px';
+  var NORMAL_WIDTH = '420px';
+  var NORMAL_HEIGHT = '550px';
+  var WIDE_WIDTH = '620px';
+  var WIDE_HEIGHT = '620px';
+  
+  // Parse Workspace URL patterns
+  function parseWorkspaceUrl(url) {
+    var patterns = [
+      /\/now\/sow\/record\/([^\/]+)\/([a-f0-9]{32})/i,
+      /\/now\/workspace\/[^\/]+\/record\/([^\/]+)\/([a-f0-9]{32})/i,
+      /\/now\/[^\/]+\/record\/([^\/]+)\/([a-f0-9]{32})/i
+    ];
+    
+    for (var i = 0; i < patterns.length; i++) {
+      var match = url.match(patterns[i]);
+      if (match) {
+        return { table: match[1], sysId: match[2] };
+      }
+    }
+    return null;
+  }
+  
+  // Create or update the iframe
+  function updateChatIframe(table, sysId) {
+    var iframeSrc = '/$sp.do?id=aiab_chat';
+    if (table && sysId) {
+      iframeSrc += '&record_table=' + encodeURIComponent(table);
+      iframeSrc += '&record_sys_id=' + encodeURIComponent(sysId);
+    }
+    
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = 'aiab-chat-iframe';
+      iframe.style.cssText = 'position:fixed;bottom:10px;right:10px;width:' + BUTTON_WIDTH + ';height:' + BUTTON_HEIGHT + ';border:none;z-index:10000;background:transparent;';
+      iframe.setAttribute('allowtransparency', 'true');
+      document.body.appendChild(iframe);
+      console.log('AIAB Chat Injector: Iframe created');
+      
+      window.addEventListener('message', function(event) {
+        if (!event.data || !event.data.type) return;
+        var chatIframe = document.getElementById('aiab-chat-iframe');
+        if (!chatIframe) return;
+        
+        if (event.data.type === 'aiab-resize') {
+          chatIframe.style.width = event.data.wide ? WIDE_WIDTH : NORMAL_WIDTH;
+          chatIframe.style.height = event.data.wide ? WIDE_HEIGHT : NORMAL_HEIGHT;
+        }
+        
+        if (event.data.type === 'aiab-toggle') {
+          if (event.data.open) {
+            chatIframe.style.width = event.data.wide ? WIDE_WIDTH : NORMAL_WIDTH;
+            chatIframe.style.height = event.data.wide ? WIDE_HEIGHT : NORMAL_HEIGHT;
+            chatIframe.style.bottom = '0';
+            chatIframe.style.right = '0';
+          } else {
+            chatIframe.style.width = BUTTON_WIDTH;
+            chatIframe.style.height = BUTTON_HEIGHT;
+            chatIframe.style.bottom = '10px';
+            chatIframe.style.right = '10px';
+          }
+        }
+      });
+    }
+    
+    var newSrc = window.location.origin + iframeSrc;
+    if (iframe.src !== newSrc) {
+      console.log('AIAB Chat Injector: Updating iframe to', iframeSrc);
+      iframe.src = iframeSrc;
+      iframe.style.width = BUTTON_WIDTH;
+      iframe.style.height = BUTTON_HEIGHT;
+      iframe.style.bottom = '10px';
+      iframe.style.right = '10px';
+    }
+  }
+  
+  function hideChatIframe() {
+    if (iframe) iframe.style.display = 'none';
+  }
+  
+  function showChatIframe() {
+    if (iframe) iframe.style.display = 'block';
+  }
+  
+  function checkForUrlChange() {
+    var currentUrl = window.location.href;
+    if (currentUrl === lastUrl) return;
+    lastUrl = currentUrl;
+    
+    var record = parseWorkspaceUrl(currentUrl);
+    if (record) {
+      console.log('AIAB Chat Injector: Record detected', record.table, record.sysId);
+      showChatIframe();
+      updateChatIframe(record.table, record.sysId);
+    } else {
+      hideChatIframe();
+    }
+  }
+  
+  setInterval(checkForUrlChange, 500);
+  window.addEventListener('popstate', checkForUrlChange);
+  checkForUrlChange();
+  
+  console.log('AIAB Chat Injector: URL watcher started');
+  return {};
+})();]]></script>
+        <script_api_version>1</script_api_version>
+        <sys_class_name>sys_ux_client_script</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-01-22 19:32:26</sys_created_on>
+        <sys_id>1f74146283e6b2104d4fccb6feaad32d</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>AIAB Chat Injector Init</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_ux_client_script_1f74146283e6b2104d4fccb6feaad32d</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-22 19:32:26</sys_updated_on>
+        <target>macroponent</target>
+        <type>default</type>
+    </sys_ux_client_script>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="AI in a Box">0439d1f593948210071230a97bba1016</application>
+        <file_path/>
+        <instance_id>3e01943a1b79f9901024eb9b2d4bcb05</instance_id>
+        <instance_name>dev184755</instance_name>
+        <name>sys_ux_client_script_1f74146283e6b2104d4fccb6feaad32d</name>
+        <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sys_ux_client_script"&gt;&lt;sys_ux_client_script action="INSERT_OR_UPDATE"&gt;&lt;controller_preset/&gt;&lt;includes/&gt;&lt;macroponent display_value="AIAB Chat Injector"&gt;0664dc2283e6b2104d4fccb6feaad3e3&lt;/macroponent&gt;&lt;name&gt;AIAB Chat Injector Init&lt;/name&gt;&lt;preset/&gt;&lt;required_translations&gt;[]&lt;/required_translations&gt;&lt;script&gt;&lt;![CDATA[/**
+ * AIAB Chat Injector - Injects chat widget iframe in Workspace
+ * Watches for URL changes since Workspace is a SPA
+ */
+(function() {
+  console.log('AIAB Chat Injector: Starting...');
+  
+  // Avoid duplicate injection
+  if (window.__aiabChatInjected) {
+    console.log('AIAB Chat Injector: Already injected, skipping');
+    return {};
+  }
+  window.__aiabChatInjected = true;
+  
+  var lastUrl = '';
+  var iframe = null;
+  
+  // Size constants
+  var BUTTON_WIDTH = '140px';
+  var BUTTON_HEIGHT = '70px';
+  var NORMAL_WIDTH = '420px';
+  var NORMAL_HEIGHT = '550px';
+  var WIDE_WIDTH = '620px';
+  var WIDE_HEIGHT = '620px';
+  
+  // Parse Workspace URL patterns
+  function parseWorkspaceUrl(url) {
+    var patterns = [
+      /\/now\/sow\/record\/([^\/]+)\/([a-f0-9]{32})/i,
+      /\/now\/workspace\/[^\/]+\/record\/([^\/]+)\/([a-f0-9]{32})/i,
+      /\/now\/[^\/]+\/record\/([^\/]+)\/([a-f0-9]{32})/i
+    ];
+    
+    for (var i = 0; i &lt; patterns.length; i++) {
+      var match = url.match(patterns[i]);
+      if (match) {
+        return { table: match[1], sysId: match[2] };
+      }
+    }
+    return null;
+  }
+  
+  // Create or update the iframe
+  function updateChatIframe(table, sysId) {
+    var iframeSrc = '/$sp.do?id=aiab_chat';
+    if (table &amp;&amp; sysId) {
+      iframeSrc += '&amp;record_table=' + encodeURIComponent(table);
+      iframeSrc += '&amp;record_sys_id=' + encodeURIComponent(sysId);
+    }
+    
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = 'aiab-chat-iframe';
+      iframe.style.cssText = 'position:fixed;bottom:10px;right:10px;width:' + BUTTON_WIDTH + ';height:' + BUTTON_HEIGHT + ';border:none;z-index:10000;background:transparent;';
+      iframe.setAttribute('allowtransparency', 'true');
+      document.body.appendChild(iframe);
+      console.log('AIAB Chat Injector: Iframe created');
+      
+      window.addEventListener('message', function(event) {
+        if (!event.data || !event.data.type) return;
+        var chatIframe = document.getElementById('aiab-chat-iframe');
+        if (!chatIframe) return;
+        
+        if (event.data.type === 'aiab-resize') {
+          chatIframe.style.width = event.data.wide ? WIDE_WIDTH : NORMAL_WIDTH;
+          chatIframe.style.height = event.data.wide ? WIDE_HEIGHT : NORMAL_HEIGHT;
+        }
+        
+        if (event.data.type === 'aiab-toggle') {
+          if (event.data.open) {
+            chatIframe.style.width = event.data.wide ? WIDE_WIDTH : NORMAL_WIDTH;
+            chatIframe.style.height = event.data.wide ? WIDE_HEIGHT : NORMAL_HEIGHT;
+            chatIframe.style.bottom = '0';
+            chatIframe.style.right = '0';
+          } else {
+            chatIframe.style.width = BUTTON_WIDTH;
+            chatIframe.style.height = BUTTON_HEIGHT;
+            chatIframe.style.bottom = '10px';
+            chatIframe.style.right = '10px';
+          }
+        }
+      });
+    }
+    
+    var newSrc = window.location.origin + iframeSrc;
+    if (iframe.src !== newSrc) {
+      console.log('AIAB Chat Injector: Updating iframe to', iframeSrc);
+      iframe.src = iframeSrc;
+      iframe.style.width = BUTTON_WIDTH;
+      iframe.style.height = BUTTON_HEIGHT;
+      iframe.style.bottom = '10px';
+      iframe.style.right = '10px';
+    }
+  }
+  
+  function hideChatIframe() {
+    if (iframe) iframe.style.display = 'none';
+  }
+  
+  function showChatIframe() {
+    if (iframe) iframe.style.display = 'block';
+  }
+  
+  function checkForUrlChange() {
+    var currentUrl = window.location.href;
+    if (currentUrl === lastUrl) return;
+    lastUrl = currentUrl;
+    
+    var record = parseWorkspaceUrl(currentUrl);
+    if (record) {
+      console.log('AIAB Chat Injector: Record detected', record.table, record.sysId);
+      showChatIframe();
+      updateChatIframe(record.table, record.sysId);
+    } else {
+      hideChatIframe();
+    }
+  }
+  
+  setInterval(checkForUrlChange, 500);
+  window.addEventListener('popstate', checkForUrlChange);
+  checkForUrlChange();
+  
+  console.log('AIAB Chat Injector: URL watcher started');
+  return {};
+})();]]&gt;&lt;/script&gt;&lt;script_api_version&gt;1&lt;/script_api_version&gt;&lt;sys_class_name&gt;sys_ux_client_script&lt;/sys_class_name&gt;&lt;sys_created_by&gt;opencode&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-01-22 19:32:26&lt;/sys_created_on&gt;&lt;sys_id&gt;1f74146283e6b2104d4fccb6feaad32d&lt;/sys_id&gt;&lt;sys_mod_count&gt;0&lt;/sys_mod_count&gt;&lt;sys_name&gt;AIAB Chat Injector Init&lt;/sys_name&gt;&lt;sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016"&gt;0439d1f593948210071230a97bba1016&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="AI in a Box"&gt;0439d1f593948210071230a97bba1016&lt;/sys_scope&gt;&lt;sys_update_name&gt;sys_ux_client_script_1f74146283e6b2104d4fccb6feaad32d&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;opencode&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-01-22 19:32:26&lt;/sys_updated_on&gt;&lt;target&gt;macroponent&lt;/target&gt;&lt;type&gt;default&lt;/type&gt;&lt;/sys_ux_client_script&gt;&lt;/record_update&gt;</payload>
+        <payload_hash>-1771646080</payload_hash>
+        <record_name>AIAB Chat Injector Init</record_name>
+        <reverted_from/>
+        <source>fb79436b835232104d4fccb6feaad310</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-01-22 19:32:26</sys_created_on>
+        <sys_id>d774146283e6b2104d4fccb6feaad334</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>19be7319c2a0000001</sys_recorded_at>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-22 19:32:26</sys_updated_on>
+        <type>UX Client Script</type>
+        <update_guid>5774146201e6b210b98c2e6149a78433</update_guid>
+        <update_guid_history>5774146201e6b210b98c2e6149a78433:-1771646080</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete/>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-01-22 21:47:38</sys_created_on>
+        <sys_db_object display_value="" name="sys_ux_client_script">sys_ux_client_script</sys_db_object>
+        <sys_id>1fe1692a6b614bbb919571d5eca02a91</sys_id>
+        <sys_metadata>1f74146283e6b2104d4fccb6feaad32d</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>AIAB Chat Injector Init</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_scope_delete display_value="">c1a48f6b4a924506a5b1a6becbc665a1</sys_scope_delete>
+        <sys_update_name>sys_ux_client_script_1f74146283e6b2104d4fccb6feaad32d</sys_update_name>
+        <sys_update_version display_value="sys_ux_client_script_1f74146283e6b2104d4fccb6feaad32d">d774146283e6b2104d4fccb6feaad334</sys_update_version>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-22 21:47:38</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

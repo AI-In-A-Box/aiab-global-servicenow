@@ -1,0 +1,867 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="DELETE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function (spUtil, $scope, $interval) {
+  /*global api, setInterval, document, console, spUtil*/
+  try {
+    var c = this;
+    c.data.tryitlabel = "";
+		c.data.timePercent = 0;
+    c.requestServer = function () {
+      c.data.midserverUser = document.querySelector('#midserver-username').value;
+      c.data.requestServer = true;
+			c.data.timerStarted = true;
+			c.startTimer()
+      c.server.update();
+      //console.log(c.data);
+    };
+    c.startTimer = function () {
+      c.data.estimatedTimeToComplete = 60 * 5//5 minutes
+      c.data.timePassed = 0//0 seconds
+      c.data.timePercent = 0;
+			c.data.timerStarted = true;
+      //var timer = setInterval(function () {
+      var timer = $interval(function () {
+        c.data.timePassed++;
+        //if (c.data.startTimer === 0) {
+        // if timepassed is greater than estimated time to complete
+        c.data.timePercent = parseFloat((c.data.timePassed / c.data.estimatedTimeToComplete) * 100).toFixed(2);
+        if (c.data.timePassed >= c.data.estimatedTimeToComplete) {
+          //clearInterval(timer);
+          // calculate the percentage
+          c.data.timePercent = 100;
+          $interval.cancel(timer);
+					c.data.timerStarted = false;
+					c.data.requestServer = false;
+					c.server.update()
+        }
+      }, 1000);
+    }
+    var midQuery = 'name=' + c.data.midserverName;
+    spUtil.recordWatch($scope, 'ecc_agent', midQuery, function (response) {
+      // lets reload the page
+      c.data.requestServer = false;// stop it from re-requesting
+      c.server.update();
+      //console.log('midquery', response.data.record);
+      if (response.data.record && response.data.record.status) {
+        c.data.midserverRequested = response.data.record.status.value;
+      }
+      if (response.data.record && response.data.record.validated) {
+        if (response.data.record.validated.value != 'true') {
+          c.data.midserverRequested = 'Address Midserver issues';
+        }
+      }
+    });
+    var issueQuery = 'mid_server.name=' + c.data.midserverName;
+    issueQuery += '^state!=resolved';
+    spUtil.recordWatch(
+      $scope,
+      'ecc_agent_issue',
+      issueQuery,
+      function (response) {
+        //console.log('issuequery', response.data.record);
+        c.data.requestServer = false;// stop it from re-requesting
+        c.server.update();
+      }
+    );
+  } catch (error) {
+    console.log(error);
+  }
+}
+]]></client_script>
+        <controller_as>c</controller_as>
+        <css/>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id>aiiab_welcome_widget</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+
+}]]></link>
+        <name>AIIAB Welcome Widget</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function () {
+  /*global gs, global, data, sn_ws, console*/
+  try {
+	    data.midserverNeeded = gs.getProperty('ai_in_a_box.config.midserver.enabled') == 'true';
+		data.midserverName = gs.getProperty('ai_in_a_box.config.midserver');
+		data.midserverRequested = false;
+		var aiiab = new Aiiab();
+		var status = aiiab.Status();
+		data.instanceUrl = "https://" + gs.getProperty('instance_name') + '.service-now.com';
+		data.models = aiiab.HFModels()
+		data.midserverUserName = input.midserverUser || "tryaiinabox-mid-user";
+		if(input && input.timerStarted == true){
+			data.startTimerServer = true;
+		} else {
+			data.startTimerServer = false;
+		}
+
+		if(input && input.requestServer && input.midserverUser){
+			var password = aiiab.GeneratePassword();
+			var miduser = aiiab.CreateMidUser(password);
+			var hfRepo = input.hfRepo;
+			var hfFile = input.hfFile;
+			if(miduser.status == "success"){
+				var infra = aiiab.RequestDemoInfra(input.midserverUser, password, hfRepo, hfFile);
+				data.midserverRequested = "Server Requested...";
+				data.requestServer = false;
+			}
+		}
+		var sys_user = new GlideRecord('sys_user');
+		if(sys_user.get('user_name', data.midserverUserName)){
+			data.checkUserResponse = {
+				exists: true,
+				message: "User already Exists"
+			};
+		} else {
+			data.checkUserResponse = {
+				exists: false,
+				message: null
+			};
+		}
+
+		data.features = [
+			status.streaming,
+			status.summarize,
+		];
+		data.servers = [];
+		if(data.midserverNeeded){ data.servers.push(status.midserver) }
+		data.servers = [
+			status.aiiabServer,
+			status.llmServer
+		];
+		data.reachOut = [
+			status.meet,
+			status.docs,
+			status.email
+		];
+    var requestBody = {
+      instance: gs.getProperty('instance_name') || 'instance_name not set',
+      aiiab_version: gs.getProperty('ai_in_a_box.version') || 'version not set',
+      instance_version:
+        gs.getProperty('glide.product.version') || 'version not set',
+    };
+    var url = 'https://tryaiinabox.com/.redwood/functions/status/';
+    var restMessage = new sn_ws.RESTMessageV2();
+    restMessage.setHttpMethod('post');
+    restMessage.setEndpoint(url);
+    restMessage.setRequestHeader('Content-Type', 'application/json');
+    restMessage.setRequestBody(JSON.stringify(requestBody));
+    var response = restMessage.execute();
+    var responseBody = response.getBody();
+    var responseStatus = response.getStatusCode();
+    var message = null;
+    if (responseStatus != 200) {
+      message = 'An error occurred';
+      messageType = 'danger';
+    }
+    if (responseStatus == 200) {
+      var parsedResponse = JSON.parse(responseBody);
+      customerType = parsedResponse.customerType;
+      message = parsedResponse.message;
+    }
+    data.message = message;
+  } catch (error) {
+    console.log(error);
+  }
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>aiinaboxadmin</sys_created_by>
+        <sys_created_on>2024-12-06 00:11:44</sys_created_on>
+        <sys_id>99bb9aedc3deda10594e12f1b401313b</sys_id>
+        <sys_mod_count>445</sys_mod_count>
+        <sys_name>AIIAB Welcome Widget</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sp_widget_99bb9aedc3deda10594e12f1b401313b</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-14 01:04:54</sys_updated_on>
+        <template><![CDATA[<div class="container-fluid"
+     style="background-color: #f8f8f8; padding: 20px; border-radius: 5px; margin-top: 20px; margin-bottom: 20px;">
+  <div class="row">
+    <div class="col-md-12">
+      <h1>Welcome to AI In A Box</h1>
+      <p>
+        AI In A Box is a powerful tool that adds Gen AI to ServiceNow.
+      </p>
+      <div class="alert alert-{{data.messageType}}">
+        <strong>{{data.message}}</strong>
+      </div>
+      <div ng-if="data.error" class="alert alert-danger">
+
+        {{data.error}}
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <!--Settings-->
+    <div class="col-md-4">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <!--using emoijis, lets show there's error here-->
+          <h3 class="panel-title">
+            Settings
+          </h3>
+        </div>
+        <div class="panel-body">
+          <p>
+            Configure the settings for AI In A Box
+          </p>
+          <div class="flex-row" style="padding: 2px;">
+            <div>
+              All Settings
+            </div>
+            <div style="flex-grow: 1"></div>
+            <a
+               href="/system_properties_ui.do?sysparm_title=Properties&sysparm_category=AI%20In%20A%20Box&sysparm_domain_restore=false&sysparm_stack=no"
+               class="btn btn-primary"
+               >
+              Property Page
+            </a>
+          </div>
+          <div ng-repeat="feature in c.data.features" class="flex-row" style="padding: 2px;">
+            <div>
+              {{feature.label}}
+            </div>
+            <div style="flex-grow: 1"></div>
+            <a ng-href="{{feature.url}}" class="{{feature.className}}">{{feature.buttonText}}</a>
+            <!--<details><summary>Debug</summary>{{feature}}</details>-->
+          </div>
+          <div class="flex-row" style="padding: 2px;">
+            <div>
+              Summarizers
+            </div>
+            <div style="flex-grow: 1"></div>
+            <a
+               href="/u_ai_summarizer_list.do"
+               class="btn btn-primary"
+               >
+              View Summarizers
+            </a>
+          </div>
+          <div class="flex-row" style="padding: 2px;">
+            <div>
+              Inferences
+            </div>
+            <div style="flex-grow: 1"></div>
+            <a
+               href="/u_ai_inference_list.do"
+               class="btn btn-primary"
+               >
+              View Inferences
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!--Demo Box-->
+    <div class="col-md-4" ng-if="data.customerType != 'customer'">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h3 class="panel-title">Servers</h3>
+        </div>
+        <div class="panel-body">
+          <div ng-if="data.midserverNeeded == true">
+          <p>
+            Let's get you a temporary server
+          </p>
+          <div class="flex-row" style="padding: 2px;">
+            <div style="flex-grow: 1"></div>
+            <div
+                 ng-if="data.startTimerServer == true"
+                 >
+
+            <progress
+                      ng-if="data.startTimerServer == true"
+                      id="provisionServer"
+                      value={{c.data.timePassed}}
+                      max={{c.data.estimatedTimeToComplete}}>
+              {{c.data.timePercent}}%
+            </progress><br/>
+            {{c.data.timePercent}}% {{c.data.timePassed}}s/{{c.data.estimatedTimeToComplete}}s<br/>
+            </div>
+
+          </div>
+
+
+          <div class="flex-row" style="padding: 2px;">
+            <div>Want to try it?</div>
+            <div style="flex-grow: 1"></div>
+            <div ng-if="data.midserverRequested != false">
+              <button type="button" disabled class="btn btn-secondary">
+                {{data.midserverRequested}}
+              </button>
+            </div>
+            <div ng-if="data.midserverRequested == false">
+              <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#demoModal">
+                Request a Server for 100 minutes
+              </button>
+            </div>
+            <div class="modal fade" id="demoModal" tabindex="-1" role="dialog" aria-labelledby="demoModalLabel"
+                 aria-hidden="true">
+              <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="demoModalLabel">Request Server</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
+                  <div class="modal-body">
+                    <form>
+                      <div class="form-group">
+
+
+                        <label for="midserver-username" class="col-form-label">
+                          What username can we use for the
+                          midserver?
+                        </label>
+                        <input
+                               type="text"
+                               class="form-control"
+                               id="midserver-username"
+                               value="tryaiinabox-mid-user"
+                               readonly="true"
+                               >
+                        <br />
+                        <button
+                                data-dismiss="modal"
+                                type="submit"
+                                ng-click="c.requestServer()"
+                                class="btn btn-primary"
+
+                                >
+                          <div
+                               ng-if="c.data.checkUserResponse.exists == true"
+                               >
+                            Delete + Recreate User + Request Server
+                          </div>
+                          <div
+                               ng-if="c.data.checkUserResponse.exists == false"
+                               >
+                            Create User + Request Server
+                          </div>
+                        </button>
+                        <div>
+                          It takes <span style="font-weight:bold">~2-5 minutes to provision</span> the server.  <br/>
+                          You'll still need to validate the server after it connects.<br/>
+                          This <span style="font-weight:bold">server will be destroyed in ~100 minutes</span>.  You can re-request one at any time, and it will last for 100 minutes after that.<br/>
+                          <details>
+                            <summary
+                                     class="btn btn-primary"
+                                     >Why 100 minutes!?
+                            </summary>
+                            Let's not break the bank.  It costs me some money to run these.  Albeit not a lot, that amount increases with every team.  If you're building, great, but if you're not, I'd like not keep these things running without a need.
+                          </details>
+                        </div>
+
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>  
+          <div ng-repeat="server in c.data.servers" class="flex-row" style="padding: 2px;">
+            <div>
+              {{server.label}}
+            </div>
+            <div style="flex-grow: 1"></div>
+
+            <a
+               ng-href="{{server.url}}" class="{{server.className}}">{{server.buttonText}}</a>
+            <!--<details><summary>Debug</summary>{{server}}</details>-->
+
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+    <!--Put in a support request if customer-->
+    <div class="col-md-4" ng-if="data.customerType == 'customer'">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h3 class="panel-title">Support Request</h3>
+        </div>
+        <div class="panel-body">
+          <p>
+            Need help with AI In A Box?
+          </p>
+          <a href="https://jace.pro/meeting" class="btn btn-primary">Ask for Help</a>
+        </div>
+      </div>
+    </div>
+    <!--Get Help-->
+    <div class="col-md-4">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h3 class="panel-title">Get Help</h3>
+        </div>
+        <div class="panel-body">
+          <p>
+            Need help with AI In A Box?
+          </p>
+          <div ng-repeat="action in c.data.reachOut" class="flex-row" style="padding: 2px;">
+            <div>
+              {{action.label}}
+            </div>
+            <div style="flex-grow: 1"></div>
+            <a ng-href="{{action.url}}" class="{{action.className}}" target="_blank" >{{action.buttonText}}</a>
+            <!--<details><summary>Debug</summary>{{server}}</details>-->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>]]></template>
+    </sp_widget>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="AI in a Box">0439d1f593948210071230a97bba1016</application>
+        <file_path/>
+        <instance_id>3e01943a1b79f9901024eb9b2d4bcb05</instance_id>
+        <instance_name>dev184755</instance_name>
+        <name>sp_widget_99bb9aedc3deda10594e12f1b401313b</name>
+        <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sp_widget"&gt;&lt;sp_widget action="INSERT_OR_UPDATE"&gt;&lt;category&gt;custom&lt;/category&gt;&lt;client_script&gt;&lt;![CDATA[api.controller = function (spUtil, $scope, $interval) {
+  /*global api, setInterval, document, console, spUtil*/
+  try {
+    var c = this;
+    c.data.tryitlabel = "";
+		c.data.timePercent = 0;
+    c.requestServer = function () {
+      c.data.midserverUser = document.querySelector('#midserver-username').value;
+      c.data.requestServer = true;
+			c.data.timerStarted = true;
+			c.startTimer()
+      c.server.update();
+      //console.log(c.data);
+    };
+    c.startTimer = function () {
+      c.data.estimatedTimeToComplete = 60 * 5//5 minutes
+      c.data.timePassed = 0//0 seconds
+      c.data.timePercent = 0;
+			c.data.timerStarted = true;
+      //var timer = setInterval(function () {
+      var timer = $interval(function () {
+        c.data.timePassed++;
+        //if (c.data.startTimer === 0) {
+        // if timepassed is greater than estimated time to complete
+        c.data.timePercent = parseFloat((c.data.timePassed / c.data.estimatedTimeToComplete) * 100).toFixed(2);
+        if (c.data.timePassed &gt;= c.data.estimatedTimeToComplete) {
+          //clearInterval(timer);
+          // calculate the percentage
+          c.data.timePercent = 100;
+          $interval.cancel(timer);
+					c.data.timerStarted = false;
+					c.data.requestServer = false;
+					c.server.update()
+        }
+      }, 1000);
+    }
+    var midQuery = 'name=' + c.data.midserverName;
+    spUtil.recordWatch($scope, 'ecc_agent', midQuery, function (response) {
+      // lets reload the page
+      c.data.requestServer = false;// stop it from re-requesting
+      c.server.update();
+      //console.log('midquery', response.data.record);
+      if (response.data.record &amp;&amp; response.data.record.status) {
+        c.data.midserverRequested = response.data.record.status.value;
+      }
+      if (response.data.record &amp;&amp; response.data.record.validated) {
+        if (response.data.record.validated.value != 'true') {
+          c.data.midserverRequested = 'Address Midserver issues';
+        }
+      }
+    });
+    var issueQuery = 'mid_server.name=' + c.data.midserverName;
+    issueQuery += '^state!=resolved';
+    spUtil.recordWatch(
+      $scope,
+      'ecc_agent_issue',
+      issueQuery,
+      function (response) {
+        //console.log('issuequery', response.data.record);
+        c.data.requestServer = false;// stop it from re-requesting
+        c.server.update();
+      }
+    );
+  } catch (error) {
+    console.log(error);
+  }
+}
+]]&gt;&lt;/client_script&gt;&lt;controller_as&gt;c&lt;/controller_as&gt;&lt;css/&gt;&lt;data_table&gt;sp_instance&lt;/data_table&gt;&lt;demo_data/&gt;&lt;description/&gt;&lt;docs/&gt;&lt;field_list/&gt;&lt;has_preview&gt;true&lt;/has_preview&gt;&lt;id&gt;aiiab_welcome_widget&lt;/id&gt;&lt;internal&gt;false&lt;/internal&gt;&lt;link&gt;&lt;![CDATA[function link(scope, element, attrs, controller) {
+
+}]]&gt;&lt;/link&gt;&lt;name&gt;AIIAB Welcome Widget&lt;/name&gt;&lt;option_schema/&gt;&lt;public&gt;false&lt;/public&gt;&lt;roles/&gt;&lt;script&gt;&lt;![CDATA[(function () {
+  /*global gs, global, data, sn_ws, console*/
+  try {
+	    data.midserverNeeded = gs.getProperty('ai_in_a_box.config.midserver.enabled') == 'true';
+		data.midserverName = gs.getProperty('ai_in_a_box.config.midserver');
+		data.midserverRequested = false;
+		var aiiab = new Aiiab();
+		var status = aiiab.Status();
+		data.instanceUrl = "https://" + gs.getProperty('instance_name') + '.service-now.com';
+		data.models = aiiab.HFModels()
+		data.midserverUserName = input.midserverUser || "tryaiinabox-mid-user";
+		if(input &amp;&amp; input.timerStarted == true){
+			data.startTimerServer = true;
+		} else {
+			data.startTimerServer = false;
+		}
+
+		if(input &amp;&amp; input.requestServer &amp;&amp; input.midserverUser){
+			var password = aiiab.GeneratePassword();
+			var miduser = aiiab.CreateMidUser(password);
+			var hfRepo = input.hfRepo;
+			var hfFile = input.hfFile;
+			if(miduser.status == "success"){
+				var infra = aiiab.RequestDemoInfra(input.midserverUser, password, hfRepo, hfFile);
+				data.midserverRequested = "Server Requested...";
+				data.requestServer = false;
+			}
+		}
+		var sys_user = new GlideRecord('sys_user');
+		if(sys_user.get('user_name', data.midserverUserName)){
+			data.checkUserResponse = {
+				exists: true,
+				message: "User already Exists"
+			};
+		} else {
+			data.checkUserResponse = {
+				exists: false,
+				message: null
+			};
+		}
+
+		data.features = [
+			status.streaming,
+			status.summarize,
+		];
+		data.servers = [];
+		if(data.midserverNeeded){ data.servers.push(status.midserver) }
+		data.servers = [
+			status.aiiabServer,
+			status.llmServer
+		];
+		data.reachOut = [
+			status.meet,
+			status.docs,
+			status.email
+		];
+    var requestBody = {
+      instance: gs.getProperty('instance_name') || 'instance_name not set',
+      aiiab_version: gs.getProperty('ai_in_a_box.version') || 'version not set',
+      instance_version:
+        gs.getProperty('glide.product.version') || 'version not set',
+    };
+    var url = 'https://tryaiinabox.com/.redwood/functions/status/';
+    var restMessage = new sn_ws.RESTMessageV2();
+    restMessage.setHttpMethod('post');
+    restMessage.setEndpoint(url);
+    restMessage.setRequestHeader('Content-Type', 'application/json');
+    restMessage.setRequestBody(JSON.stringify(requestBody));
+    var response = restMessage.execute();
+    var responseBody = response.getBody();
+    var responseStatus = response.getStatusCode();
+    var message = null;
+    if (responseStatus != 200) {
+      message = 'An error occurred';
+      messageType = 'danger';
+    }
+    if (responseStatus == 200) {
+      var parsedResponse = JSON.parse(responseBody);
+      customerType = parsedResponse.customerType;
+      message = parsedResponse.message;
+    }
+    data.message = message;
+  } catch (error) {
+    console.log(error);
+  }
+})();]]&gt;&lt;/script&gt;&lt;servicenow&gt;false&lt;/servicenow&gt;&lt;sys_class_name&gt;sp_widget&lt;/sys_class_name&gt;&lt;sys_created_by&gt;aiinaboxadmin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2024-12-06 00:11:44&lt;/sys_created_on&gt;&lt;sys_id&gt;99bb9aedc3deda10594e12f1b401313b&lt;/sys_id&gt;&lt;sys_mod_count&gt;445&lt;/sys_mod_count&gt;&lt;sys_name&gt;AIIAB Welcome Widget&lt;/sys_name&gt;&lt;sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016"&gt;0439d1f593948210071230a97bba1016&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="AI in a Box"&gt;0439d1f593948210071230a97bba1016&lt;/sys_scope&gt;&lt;sys_update_name&gt;sp_widget_99bb9aedc3deda10594e12f1b401313b&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-01-14 01:04:54&lt;/sys_updated_on&gt;&lt;template&gt;&lt;![CDATA[&lt;div class="container-fluid"
+     style="background-color: #f8f8f8; padding: 20px; border-radius: 5px; margin-top: 20px; margin-bottom: 20px;"&gt;
+  &lt;div class="row"&gt;
+    &lt;div class="col-md-12"&gt;
+      &lt;h1&gt;Welcome to AI In A Box&lt;/h1&gt;
+      &lt;p&gt;
+        AI In A Box is a powerful tool that adds Gen AI to ServiceNow.
+      &lt;/p&gt;
+      &lt;div class="alert alert-{{data.messageType}}"&gt;
+        &lt;strong&gt;{{data.message}}&lt;/strong&gt;
+      &lt;/div&gt;
+      &lt;div ng-if="data.error" class="alert alert-danger"&gt;
+
+        {{data.error}}
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class="row"&gt;
+    &lt;!--Settings--&gt;
+    &lt;div class="col-md-4"&gt;
+      &lt;div class="panel panel-default"&gt;
+        &lt;div class="panel-heading"&gt;
+          &lt;!--using emoijis, lets show there's error here--&gt;
+          &lt;h3 class="panel-title"&gt;
+            Settings
+          &lt;/h3&gt;
+        &lt;/div&gt;
+        &lt;div class="panel-body"&gt;
+          &lt;p&gt;
+            Configure the settings for AI In A Box
+          &lt;/p&gt;
+          &lt;div class="flex-row" style="padding: 2px;"&gt;
+            &lt;div&gt;
+              All Settings
+            &lt;/div&gt;
+            &lt;div style="flex-grow: 1"&gt;&lt;/div&gt;
+            &lt;a
+               href="/system_properties_ui.do?sysparm_title=Properties&amp;sysparm_category=AI%20In%20A%20Box&amp;sysparm_domain_restore=false&amp;sysparm_stack=no"
+               class="btn btn-primary"
+               &gt;
+              Property Page
+            &lt;/a&gt;
+          &lt;/div&gt;
+          &lt;div ng-repeat="feature in c.data.features" class="flex-row" style="padding: 2px;"&gt;
+            &lt;div&gt;
+              {{feature.label}}
+            &lt;/div&gt;
+            &lt;div style="flex-grow: 1"&gt;&lt;/div&gt;
+            &lt;a ng-href="{{feature.url}}" class="{{feature.className}}"&gt;{{feature.buttonText}}&lt;/a&gt;
+            &lt;!--&lt;details&gt;&lt;summary&gt;Debug&lt;/summary&gt;{{feature}}&lt;/details&gt;--&gt;
+          &lt;/div&gt;
+          &lt;div class="flex-row" style="padding: 2px;"&gt;
+            &lt;div&gt;
+              Summarizers
+            &lt;/div&gt;
+            &lt;div style="flex-grow: 1"&gt;&lt;/div&gt;
+            &lt;a
+               href="/u_ai_summarizer_list.do"
+               class="btn btn-primary"
+               &gt;
+              View Summarizers
+            &lt;/a&gt;
+          &lt;/div&gt;
+          &lt;div class="flex-row" style="padding: 2px;"&gt;
+            &lt;div&gt;
+              Inferences
+            &lt;/div&gt;
+            &lt;div style="flex-grow: 1"&gt;&lt;/div&gt;
+            &lt;a
+               href="/u_ai_inference_list.do"
+               class="btn btn-primary"
+               &gt;
+              View Inferences
+            &lt;/a&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;!--Demo Box--&gt;
+    &lt;div class="col-md-4" ng-if="data.customerType != 'customer'"&gt;
+      &lt;div class="panel panel-default"&gt;
+        &lt;div class="panel-heading"&gt;
+          &lt;h3 class="panel-title"&gt;Servers&lt;/h3&gt;
+        &lt;/div&gt;
+        &lt;div class="panel-body"&gt;
+          &lt;div ng-if="data.midserverNeeded == true"&gt;
+          &lt;p&gt;
+            Let's get you a temporary server
+          &lt;/p&gt;
+          &lt;div class="flex-row" style="padding: 2px;"&gt;
+            &lt;div style="flex-grow: 1"&gt;&lt;/div&gt;
+            &lt;div
+                 ng-if="data.startTimerServer == true"
+                 &gt;
+
+            &lt;progress
+                      ng-if="data.startTimerServer == true"
+                      id="provisionServer"
+                      value={{c.data.timePassed}}
+                      max={{c.data.estimatedTimeToComplete}}&gt;
+              {{c.data.timePercent}}%
+            &lt;/progress&gt;&lt;br/&gt;
+            {{c.data.timePercent}}% {{c.data.timePassed}}s/{{c.data.estimatedTimeToComplete}}s&lt;br/&gt;
+            &lt;/div&gt;
+
+          &lt;/div&gt;
+
+
+          &lt;div class="flex-row" style="padding: 2px;"&gt;
+            &lt;div&gt;Want to try it?&lt;/div&gt;
+            &lt;div style="flex-grow: 1"&gt;&lt;/div&gt;
+            &lt;div ng-if="data.midserverRequested != false"&gt;
+              &lt;button type="button" disabled class="btn btn-secondary"&gt;
+                {{data.midserverRequested}}
+              &lt;/button&gt;
+            &lt;/div&gt;
+            &lt;div ng-if="data.midserverRequested == false"&gt;
+              &lt;button type="button" class="btn btn-primary" data-toggle="modal" data-target="#demoModal"&gt;
+                Request a Server for 100 minutes
+              &lt;/button&gt;
+            &lt;/div&gt;
+            &lt;div class="modal fade" id="demoModal" tabindex="-1" role="dialog" aria-labelledby="demoModalLabel"
+                 aria-hidden="true"&gt;
+              &lt;div class="modal-dialog" role="document"&gt;
+                &lt;div class="modal-content"&gt;
+                  &lt;div class="modal-header"&gt;
+                    &lt;h5 class="modal-title" id="demoModalLabel"&gt;Request Server&lt;/h5&gt;
+                    &lt;button type="button" class="close" data-dismiss="modal" aria-label="Close"&gt;
+                      &lt;span aria-hidden="true"&gt;&amp;times;&lt;/span&gt;
+                    &lt;/button&gt;
+                  &lt;/div&gt;
+                  &lt;div class="modal-body"&gt;
+                    &lt;form&gt;
+                      &lt;div class="form-group"&gt;
+
+
+                        &lt;label for="midserver-username" class="col-form-label"&gt;
+                          What username can we use for the
+                          midserver?
+                        &lt;/label&gt;
+                        &lt;input
+                               type="text"
+                               class="form-control"
+                               id="midserver-username"
+                               value="tryaiinabox-mid-user"
+                               readonly="true"
+                               &gt;
+                        &lt;br /&gt;
+                        &lt;button
+                                data-dismiss="modal"
+                                type="submit"
+                                ng-click="c.requestServer()"
+                                class="btn btn-primary"
+
+                                &gt;
+                          &lt;div
+                               ng-if="c.data.checkUserResponse.exists == true"
+                               &gt;
+                            Delete + Recreate User + Request Server
+                          &lt;/div&gt;
+                          &lt;div
+                               ng-if="c.data.checkUserResponse.exists == false"
+                               &gt;
+                            Create User + Request Server
+                          &lt;/div&gt;
+                        &lt;/button&gt;
+                        &lt;div&gt;
+                          It takes &lt;span style="font-weight:bold"&gt;~2-5 minutes to provision&lt;/span&gt; the server.  &lt;br/&gt;
+                          You'll still need to validate the server after it connects.&lt;br/&gt;
+                          This &lt;span style="font-weight:bold"&gt;server will be destroyed in ~100 minutes&lt;/span&gt;.  You can re-request one at any time, and it will last for 100 minutes after that.&lt;br/&gt;
+                          &lt;details&gt;
+                            &lt;summary
+                                     class="btn btn-primary"
+                                     &gt;Why 100 minutes!?
+                            &lt;/summary&gt;
+                            Let's not break the bank.  It costs me some money to run these.  Albeit not a lot, that amount increases with every team.  If you're building, great, but if you're not, I'd like not keep these things running without a need.
+                          &lt;/details&gt;
+                        &lt;/div&gt;
+
+                      &lt;/div&gt;
+                    &lt;/form&gt;
+                  &lt;/div&gt;
+                &lt;/div&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+          &lt;/div&gt;  
+          &lt;div ng-repeat="server in c.data.servers" class="flex-row" style="padding: 2px;"&gt;
+            &lt;div&gt;
+              {{server.label}}
+            &lt;/div&gt;
+            &lt;div style="flex-grow: 1"&gt;&lt;/div&gt;
+
+            &lt;a
+               ng-href="{{server.url}}" class="{{server.className}}"&gt;{{server.buttonText}}&lt;/a&gt;
+            &lt;!--&lt;details&gt;&lt;summary&gt;Debug&lt;/summary&gt;{{server}}&lt;/details&gt;--&gt;
+
+          &lt;/div&gt;
+
+        &lt;/div&gt;
+      &lt;/div&gt;
+
+    &lt;/div&gt;
+    &lt;!--Put in a support request if customer--&gt;
+    &lt;div class="col-md-4" ng-if="data.customerType == 'customer'"&gt;
+      &lt;div class="panel panel-default"&gt;
+        &lt;div class="panel-heading"&gt;
+          &lt;h3 class="panel-title"&gt;Support Request&lt;/h3&gt;
+        &lt;/div&gt;
+        &lt;div class="panel-body"&gt;
+          &lt;p&gt;
+            Need help with AI In A Box?
+          &lt;/p&gt;
+          &lt;a href="https://jace.pro/meeting" class="btn btn-primary"&gt;Ask for Help&lt;/a&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;!--Get Help--&gt;
+    &lt;div class="col-md-4"&gt;
+      &lt;div class="panel panel-default"&gt;
+        &lt;div class="panel-heading"&gt;
+          &lt;h3 class="panel-title"&gt;Get Help&lt;/h3&gt;
+        &lt;/div&gt;
+        &lt;div class="panel-body"&gt;
+          &lt;p&gt;
+            Need help with AI In A Box?
+          &lt;/p&gt;
+          &lt;div ng-repeat="action in c.data.reachOut" class="flex-row" style="padding: 2px;"&gt;
+            &lt;div&gt;
+              {{action.label}}
+            &lt;/div&gt;
+            &lt;div style="flex-grow: 1"&gt;&lt;/div&gt;
+            &lt;a ng-href="{{action.url}}" class="{{action.className}}" target="_blank" &gt;{{action.buttonText}}&lt;/a&gt;
+            &lt;!--&lt;details&gt;&lt;summary&gt;Debug&lt;/summary&gt;{{server}}&lt;/details&gt;--&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;]]&gt;&lt;/template&gt;&lt;/sp_widget&gt;&lt;/record_update&gt;</payload>
+        <payload_hash>-1262482701</payload_hash>
+        <record_name>AIIAB Welcome Widget</record_name>
+        <reverted_from/>
+        <source>fb79436b835232104d4fccb6feaad310</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-01-14 01:04:54</sys_created_on>
+        <sys_id>294a8beb835232104d4fccb6feaad3b7</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>19bba08bf720000001</sys_recorded_at>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-14 01:04:54</sys_updated_on>
+        <type>Widget</type>
+        <update_guid>694a8bebdd5232104b59d39386bd75b6</update_guid>
+        <update_guid_history>694a8bebdd5232104b59d39386bd75b6:-1262482701,434f1ac08a3be210bcbb9b948dc00788:-2071722537,3cce1e80ae3be210c75abdc8885fc6c4:-1687851528,04ed52404a3be210fc601a4fea7b3cfb:1760631647,fb11d7f35f2ba210d311d0f2e0a4f4fe:-2071722537,9db093f3ad2ba210c8168cd2d614b7aa:-629527153,178093f3d72ba21093542bc375a60b0e:-360095921,f6609b33332ba2108e2427796938b587:-821948371,f9301fb3842ba21000e6b32298d300a8:1224605633,298f8f73f62ba210b9ac5d4ad1f4e752:900251580,4b4fcb33012ba2103e917d9cd78a34c7:49976616,8a6270af6ae72210b09303f67dd6ab13:-207349591</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete display_value="AIIAB Welcome Widget">9ac4f46683eab2104d4fccb6feaad39c</sys_audit_delete>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-01-22 21:53:32</sys_created_on>
+        <sys_db_object display_value="" name="sp_widget">sp_widget</sys_db_object>
+        <sys_id>4cfa658b4f524626ad177b5b9800c331</sys_id>
+        <sys_metadata>99bb9aedc3deda10594e12f1b401313b</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>AIIAB Welcome Widget</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_scope_delete display_value="">c1a48f6b4a924506a5b1a6becbc665a1</sys_scope_delete>
+        <sys_update_name>sp_widget_99bb9aedc3deda10594e12f1b401313b</sys_update_name>
+        <sys_update_version display_value="sp_widget_99bb9aedc3deda10594e12f1b401313b">294a8beb835232104d4fccb6feaad3b7</sys_update_version>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-22 21:53:32</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

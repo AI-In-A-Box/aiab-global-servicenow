@@ -58,163 +58,288 @@ aiabAjax.prototype = Object.extendsObject(AbstractAjaxProcessor, {
     },
     createAIChat: function (messages) {
         try {
-            if (!messages) messages = this.getParameter('sysparm_messages') || false;
+            // Support both sysparm_messages (legacy) and sysparm_conversation (new)
+            if (!messages) messages = this.getParameter('sysparm_messages') || this.getParameter('sysparm_conversation') || false;
             if (messages == false) {
                 return JSON.stringify({ error: "missing messages" })
             }
+            
+            // Get optional record context
+            var recordTable = this.getParameter('sysparm_table') || '';
+            var recordSysId = this.getParameter('sysparm_record') || '';
+            
             var inference = new GlideRecord('u_ai_inference');
             inference.newRecord();
 			inference.setValue('u_type','chat');
-            // lets build some context...
+            
+            // Store record reference if provided
+            if (recordTable && recordSysId) {
+                inference.setValue('u_table', recordTable);
+                inference.setValue('u_target', recordSysId);
+            }
+            
+            // Build system context
+            var systemPrompt = gs.getProperty('ai_in_a_box.feature.chat.system_prompt') || 
+                "You are a helpful AI assistant. Answer questions clearly and concisely. If you don't know the answer, say so.";
+            
             var context = [{
 				role: "system",
-				content: "You are a chatbot.  You will answer questions presented by the user, and if you don't know the answer, reply 'I don\'t know that.'"
-			}]
-            //who am i?
-            var sys_user = new GlideRecord('sys_user');
-            sys_user.get(gs.getUserID());
-			var userData = [
-                "Logged in user: " + sys_user.getDisplayValue(),
-                "- Email: " + sys_user.email || "Not set",
-                "- Phone: " + sys_user.phone_number || "Not set",
-                "- Location: " + sys_user.location.getDisplayValue() || "Not set",
-                "- Department: " + sys_user.department.getDisplayValue() || "Not set",
-                "- Manager: " + sys_user.manager.getDisplayValue() || "Not set",
-                "- Title: " + sys_user.title || "Not set",
-            ].join('\n');
-            // if admin, lets get some .. interesting data
-            if (gs.hasRole('admin')) {
-                // add some.. details from the system using this post
-                // https://www.servicenow.com/community/developer-articles/instance-performance-maintenance-and-administration/ta-p/2326277
-                // logged in users
-                // https://dev216364.service-now.com/v_user_session_list.do?sysparm_query=user!%3Dguest&sysparm_view=
-                var adminContext = [userData];
-                var sessions = new GlideQuery('v_user_session')
-                    .where('user', '!=', 'guest')
-                    .count();
-
-                adminContext.push('There are ' + sessions + ' users logged in.');
-
-
-				// query sys_log_transactions
-				// sys_created_onRELATIVEGT@minute@ago@5^urlSTARTSWITH/^type!=rest^ORtype=^type!=soap^ORtype=^url!=/amb_session_setup.do^ORurl=NULL
-				// group by sys_created_by
-				// gett things like admin
-                var fiveMinuteAgo = new GlideDateTime();
-                fiveMinuteAgo.addSeconds(-300);
-                var transactions = new GlideQuery('syslog_transaction')
-                    .where('sys_created_on', '>', fiveMinuteAgo)
-                    .where('type', '!=', 'rest')
-                    .where('type', '!=', 'soap')
-                    .where('url', '!=', '/amb_session_setup.do')
-                    .where('url', '!=', 'NULL')
-                    .aggregate('avg', 'response_time')
-                    .groupBy('sys_created_by')
-                    .select()
-                    .toArray(10);
-
-                var txMessage = '';
-                transactions.forEach(function (transaction) {
-                    var responseTimeInSec = transaction.avg.response_time / 1000;
-                    if (transaction.avg.response_time > 1000) {
-                        txMessage += 'User "' + transaction.group.sys_created_by + '" had an average response time of ' + responseTimeInSec + 's on the syslog_transaction table\n';
-                    }
-                });
-                if (txMessage.length > 0) {
-                    txMessage = 'The following transactions took longer than 3s:\n' + txMessage;
+				content: systemPrompt
+			}];
+            
+            // Add user context
+            var userContext = this._buildUserContext();
+            if (userContext) {
+                context[0].content += '\n\n--- Current User Context ---\n' + userContext;
+            }
+            
+            // Add record context if viewing a record
+            if (recordTable && recordSysId) {
+                var recContext = this._buildRecordContext(recordTable, recordSysId);
+                if (recContext) {
+                    context[0].content += '\n\n--- Current Record Context ---\n' + recContext;
                 }
-
-
-                //adminContext.push('Average response time for transactions over last 5 minutes: ' + transactions + 'ms. Anything over 3000ms is considered slow.');
-                adminContext.push(txMessage);
-
-                // count events for today
-                var today = new GlideDateTime();
-                // set today to midnight
-                today.setDisplayValue(today.getDisplayValue().split(' ')[0] + ' 00:00:00');
-                var events = new GlideQuery('sysevent')
-                    .where('sys_created_on', '>', today)
-                    .aggregate('count')
-                    .groupBy('name')
-                    .select()
-                    .toArray(10);
-                events.sort(function (a, b) {
-                    return b.count - a.count;
-                });
-                var message = 'The 10 most common events today are:\n';
-                events.forEach(function (event) {
-                    message += '- ' + event.group.name + ' occurred ' + event.count + ' times\n';
-                });
-                adminContext.push(message);
-                // lets get all tasks assigned to me that are not closed and updated in the last 2 weeks
-                // well get the number and short description
-                var twoWeeksAgo = new GlideDateTime();
-                twoWeeksAgo.addDays(-14);
-                var tasks = new GlideQuery('task')
-                    .where('assigned_to', '=', gs.getUserID())
-                    .where('active', '=', true)
-                    .where('sys_updated_on', '>', twoWeeksAgo)
-                    .select('number', 'short_description')
-                    .toArray(10);
-                var taskMessage = 'You have ' + tasks.length + ' tasks assigned to you.';
-                tasks.forEach(function (task) {
-                    taskMessage += '\n- ' + task.number + ': ' + task.short_description;
-                });
-
-                adminContext.push(taskMessage);
-
-                context.push({
-                    role: "assistant",
-                    content: adminContext.join('\n')
-                });
-                context.push({
-                    role:"user",
-                    content: "Who am I?"
-                })
-                context.push({
-                    role:"assistant",
-                    content: "You are " + sys_user.getDisplayValue() + "."
-                })
-                context.push({
-                    role:"user",
-                    content: "How many events are we tracking?"
-                })
-                context.push({
-                    role:"assistant",
-                    content: "We are tracking " + events.length + " events."
-                })
-                var parsedMessages = JSON.parse(messages);
-                //we need to prepend the context to the messages
-                parsedMessages = context.concat(parsedMessages);
-                inference.setValue('u_prompt', JSON.stringify(parsedMessages, null, 4));
-                return inference.insert();
             }
-            if(gs.hasRole('itil')){
-                context.push(userData);
-                var parsedMessages = JSON.parse(messages);
-                //we need to prepend the context to the messages
-                parsedMessages = context.concat(parsedMessages);
-                inference.setValue('u_prompt', JSON.stringify(parsedMessages, null, 4));
-                return inference.insert();
-            }
-            if(!gs.hasRole('itil') && !gs.hasRole('admin')){
-                context.push(userData);
-                var parsedMessages = JSON.parse(messages);
-                //we need to prepend the context to the messages
-                parsedMessages = context.concat(parsedMessages);
-                inference.setValue('u_prompt', JSON.stringify(parsedMessages, null, 4));
-                return inference.insert();
-
-            }
-            // lets get a summary of some simple stats
-            // users logged in, incidents created today, yesterday
-            // inferences created today, yesterday
-
-
+            
+            // Parse and append conversation messages
+            var parsedMessages = JSON.parse(messages);
+            parsedMessages = context.concat(parsedMessages);
+            inference.setValue('u_prompt', JSON.stringify(parsedMessages, null, 4));
+            return inference.insert();
+            
         } catch (error) {
-            return error;
+            return '';
         }
     },
+    
+    getAIInference: function(inferenceId) {
+        try {
+            if (!inferenceId) inferenceId = this.getParameter('sysparm_sys_id') || '';
+            if (!inferenceId) {
+                return JSON.stringify({ error: 'missing sys_id' });
+            }
+            
+            var gr = new GlideRecord('u_ai_inference');
+            if (gr.get(inferenceId)) {
+                return JSON.stringify({
+                    response: gr.getValue('u_response') || '',
+                    state: gr.getValue('u_state') || ''
+                });
+            } else {
+                return JSON.stringify({ error: 'not found' });
+            }
+        } catch (error) {
+            return JSON.stringify({ error: error.message || 'unknown error' });
+        }
+    },
+    
+    getChatHistory: function() {
+        try {
+            var table = this.getParameter('sysparm_table') || '';
+            var record = this.getParameter('sysparm_record') || '';
+            
+            if (!table || !record) {
+                return JSON.stringify({ chats: [] });
+            }
+            
+            var chats = [];
+            var gr = new GlideRecord('u_ai_inference');
+            gr.addQuery('u_type', 'chat');
+            gr.addQuery('u_table', table);
+            gr.addQuery('u_target', record);
+            gr.addQuery('sys_created_by', gs.getUserName());
+            gr.addQuery('u_state', 'finished');
+            gr.orderByDesc('sys_created_on');
+            gr.setLimit(10);
+            gr.query();
+            
+            while (gr.next()) {
+                // Extract first user message as preview
+                var preview = 'Chat conversation';
+                try {
+                    var prompt = JSON.parse(gr.getValue('u_prompt') || '[]');
+                    for (var i = 0; i < prompt.length; i++) {
+                        if (prompt[i].role === 'user') {
+                            preview = prompt[i].content || '';
+                            if (preview.length > 50) {
+                                preview = preview.substring(0, 50) + '...';
+                            }
+                            break;
+                        }
+                    }
+                } catch(e) {
+                    // Keep default preview
+                }
+                
+                chats.push({
+                    sys_id: gr.getValue('sys_id'),
+                    created: gr.getDisplayValue('sys_created_on'),
+                    preview: preview
+                });
+            }
+            
+            return JSON.stringify({ chats: chats });
+        } catch (error) {
+            return JSON.stringify({ chats: [], error: error.message || 'unknown error' });
+        }
+    },
+    
+    loadChatConversation: function() {
+        try {
+            var sysId = this.getParameter('sysparm_sys_id') || '';
+            
+            if (!sysId) {
+                return JSON.stringify({ error: 'missing sys_id' });
+            }
+            
+            var gr = new GlideRecord('u_ai_inference');
+            if (!gr.get(sysId)) {
+                return JSON.stringify({ error: 'not found' });
+            }
+            
+            // Verify ownership - only allow loading your own conversations
+            if (gr.getValue('sys_created_by') !== gs.getUserName()) {
+                return JSON.stringify({ error: 'access denied' });
+            }
+            
+            var messages = [];
+            try {
+                var prompt = JSON.parse(gr.getValue('u_prompt') || '[]');
+                for (var i = 0; i < prompt.length; i++) {
+                    // Only include user and assistant messages (skip system)
+                    if (prompt[i].role === 'user' || prompt[i].role === 'assistant') {
+                        messages.push({
+                            role: prompt[i].role,
+                            content: prompt[i].content || ''
+                        });
+                    }
+                }
+            } catch(e) {
+                // Return empty if parsing fails
+            }
+            
+            // Add final response if not already in messages
+            var response = gr.getValue('u_response') || '';
+            if (response && messages.length > 0 && messages[messages.length - 1].role !== 'assistant') {
+                messages.push({ role: 'assistant', content: response });
+            }
+            
+            return JSON.stringify({ messages: messages });
+        } catch (error) {
+            return JSON.stringify({ error: error.message || 'unknown error' });
+        }
+    },
+    
+    _buildUserContext: function() {
+        var user = new GlideRecord('sys_user');
+        if (!user.get(gs.getUserID())) return '';
+        
+        var lines = [
+            'Logged in user: ' + user.getDisplayValue('name'),
+            '- Email: ' + (user.getValue('email') || 'Not set'),
+            '- Title: ' + (user.getValue('title') || 'Not set'),
+            '- Department: ' + (user.getDisplayValue('department') || 'Not set'),
+            '- Location: ' + (user.getDisplayValue('location') || 'Not set'),
+            '- Manager: ' + (user.getDisplayValue('manager') || 'Not set')
+        ];
+        
+        // Add user roles
+        var roles = gs.getUser().getRoles().toString();
+        if (roles) {
+            lines.push('- Roles: ' + roles);
+        }
+        
+        return lines.join('\n');
+    },
+    
+    _buildRecordContext: function(table, sysId) {
+        var gr = new GlideRecord(table);
+        if (!gr.get(sysId)) return '';
+        
+        var lines = [
+            'Table: ' + table,
+            'Record: ' + gr.getDisplayValue()
+        ];
+        
+        // Common task fields
+        if (gr.isValidField('number')) {
+            lines.push('Number: ' + gr.getValue('number'));
+        }
+        if (gr.isValidField('short_description')) {
+            lines.push('Short description: ' + gr.getValue('short_description'));
+        }
+        if (gr.isValidField('description') && gr.getValue('description')) {
+            var desc = gr.getValue('description');
+            if (desc.length > 500) desc = desc.substring(0, 500) + '...';
+            lines.push('Description: ' + desc);
+        }
+        if (gr.isValidField('state')) {
+            lines.push('State: ' + gr.getDisplayValue('state'));
+        }
+        if (gr.isValidField('priority')) {
+            lines.push('Priority: ' + gr.getDisplayValue('priority'));
+        }
+        
+        // People fields
+        if (gr.isValidField('caller_id') && gr.getValue('caller_id')) {
+            lines.push('Caller: ' + gr.getDisplayValue('caller_id'));
+        }
+        if (gr.isValidField('opened_by') && gr.getValue('opened_by')) {
+            lines.push('Opened by: ' + gr.getDisplayValue('opened_by'));
+        }
+        if (gr.isValidField('assigned_to') && gr.getValue('assigned_to')) {
+            lines.push('Assigned to: ' + gr.getDisplayValue('assigned_to'));
+        }
+        if (gr.isValidField('assignment_group') && gr.getValue('assignment_group')) {
+            lines.push('Assignment group: ' + gr.getDisplayValue('assignment_group'));
+        }
+        
+        // Category fields
+        if (gr.isValidField('category') && gr.getValue('category')) {
+            lines.push('Category: ' + gr.getDisplayValue('category'));
+        }
+        if (gr.isValidField('subcategory') && gr.getValue('subcategory')) {
+            lines.push('Subcategory: ' + gr.getDisplayValue('subcategory'));
+        }
+        
+        // Dates
+        if (gr.isValidField('sys_created_on')) {
+            lines.push('Created: ' + gr.getValue('sys_created_on'));
+        }
+        if (gr.isValidField('sys_updated_on')) {
+            lines.push('Last updated: ' + gr.getValue('sys_updated_on'));
+        }
+        
+        // User's relationship to this record
+        var userId = gs.getUserID();
+        var relationships = [];
+        if (gr.isValidField('caller_id') && gr.getValue('caller_id') == userId) {
+            relationships.push('You are the Caller');
+        }
+        if (gr.isValidField('opened_by') && gr.getValue('opened_by') == userId) {
+            relationships.push('You are the Opened by');
+        }
+        if (gr.isValidField('assigned_to') && gr.getValue('assigned_to') == userId) {
+            relationships.push('You are the Assigned to');
+        }
+        if (gr.isValidField('resolved_by') && gr.getValue('resolved_by') == userId) {
+            relationships.push('You are the Resolved by');
+        }
+        if (gr.isValidField('closed_by') && gr.getValue('closed_by') == userId) {
+            relationships.push('You are the Closed by');
+        }
+        
+        if (relationships.length > 0) {
+            lines.push('');
+            lines.push('Your relationship to this record:');
+            for (var i = 0; i < relationships.length; i++) {
+                lines.push('- ' + relationships[i]);
+            }
+        }
+        
+        return lines.join('\n');
+    },
+
 	askClientScript: function (sys_id, table, prompt, script) {
 		 try {
             if (!sys_id) sys_id = this.getParameter('sysparm_sys_id') || "";
@@ -445,13 +570,13 @@ aiabAjax.prototype = Object.extendsObject(AbstractAjaxProcessor, {
         <sys_created_by>jacebenson</sys_created_by>
         <sys_created_on>2024-02-12 07:43:24</sys_created_on>
         <sys_id>7849113993948210071230a97bba105f</sys_id>
-        <sys_mod_count>268</sys_mod_count>
+        <sys_mod_count>271</sys_mod_count>
         <sys_name>aiabAjax</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_script_include_7849113993948210071230a97bba105f</sys_update_name>
         <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-22 18:43:58</sys_updated_on>
+        <sys_updated_on>2026-01-22 20:55:56</sys_updated_on>
     </sys_script_include>
 </record_update>

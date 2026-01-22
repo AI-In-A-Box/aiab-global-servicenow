@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_embedded_tour_step">
+    <sys_embedded_tour_step action="DELETE">
+        <action>false</action>
+        <action_event>next</action_event>
+        <action_target/>
+        <action_target_ref display_value="xpath">6f8d02cac3b6d610594e12f1b40131d2</action_target_ref>
+        <active>true</active>
+        <content><![CDATA[If you&#39;d rather just email me, that&#39;s an option too!]]></content>
+        <guide display_value="AI In A Box Primer">30cc868ac3b6d610594e12f1b401314b</guide>
+        <implicit>false</implicit>
+        <link/>
+        <name/>
+        <options>{"url":"/aiiab?id=aiiab_welcome"}</options>
+        <order>6</order>
+        <placement>left</placement>
+        <skippable>false</skippable>
+        <step_type>step</step_type>
+        <sys_class_name>sys_embedded_tour_step</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2025-01-01 08:57:49</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>278d02cac3b6d610594e12f1b40131d5</sys_id>
+        <sys_mod_count>6</sys_mod_count>
+        <sys_name/>
+        <sys_overrides/>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_embedded_tour_step_278d02cac3b6d610594e12f1b40131d5</sys_update_name>
+        <sys_updated_by>jacebenson</sys_updated_by>
+        <sys_updated_on>2025-01-04 02:31:21</sys_updated_on>
+        <target/>
+        <target_ref display_value="xpath">6f8d02cac3b6d610594e12f1b40131d2</target_ref>
+        <title/>
+        <ui_version>dynamic</ui_version>
+        <view/>
+        <window>aiiab</window>
+    </sys_embedded_tour_step>
+    <sys_translated_text action="DELETE" query="documentkey=278d02cac3b6d610594e12f1b40131d5"/>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="AI in a Box">0439d1f593948210071230a97bba1016</application>
+        <file_path/>
+        <instance_id>3e01943a1b79f9901024eb9b2d4bcb05</instance_id>
+        <instance_name>dev184755</instance_name>
+        <name>sys_embedded_tour_step_278d02cac3b6d610594e12f1b40131d5</name>
+        <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update sys_domain="global" table="sys_embedded_tour_step"&gt;&lt;sys_embedded_tour_step action="INSERT_OR_UPDATE"&gt;&lt;action&gt;false&lt;/action&gt;&lt;action_event&gt;next&lt;/action_event&gt;&lt;action_target/&gt;&lt;action_target_ref display_value="xpath"&gt;6f8d02cac3b6d610594e12f1b40131d2&lt;/action_target_ref&gt;&lt;active&gt;true&lt;/active&gt;&lt;content&gt;&lt;![CDATA[If you&amp;#39;d rather just email me, that&amp;#39;s an option too!]]&gt;&lt;/content&gt;&lt;guide display_value="AI In A Box Primer"&gt;30cc868ac3b6d610594e12f1b401314b&lt;/guide&gt;&lt;implicit&gt;false&lt;/implicit&gt;&lt;link/&gt;&lt;name/&gt;&lt;options&gt;{"url":"/aiiab?id=aiiab_welcome"}&lt;/options&gt;&lt;order&gt;6&lt;/order&gt;&lt;placement&gt;left&lt;/placement&gt;&lt;skippable&gt;false&lt;/skippable&gt;&lt;step_type&gt;step&lt;/step_type&gt;&lt;sys_class_name&gt;sys_embedded_tour_step&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2025-01-01 08:57:49&lt;/sys_created_on&gt;&lt;sys_domain&gt;global&lt;/sys_domain&gt;&lt;sys_domain_path&gt;/&lt;/sys_domain_path&gt;&lt;sys_id&gt;278d02cac3b6d610594e12f1b40131d5&lt;/sys_id&gt;&lt;sys_mod_count&gt;6&lt;/sys_mod_count&gt;&lt;sys_name/&gt;&lt;sys_overrides/&gt;&lt;sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016"&gt;0439d1f593948210071230a97bba1016&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="AI in a Box"&gt;0439d1f593948210071230a97bba1016&lt;/sys_scope&gt;&lt;sys_update_name&gt;sys_embedded_tour_step_278d02cac3b6d610594e12f1b40131d5&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;jacebenson&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2025-01-04 02:31:21&lt;/sys_updated_on&gt;&lt;target/&gt;&lt;target_ref display_value="xpath"&gt;6f8d02cac3b6d610594e12f1b40131d2&lt;/target_ref&gt;&lt;title/&gt;&lt;ui_version&gt;dynamic&lt;/ui_version&gt;&lt;view/&gt;&lt;window&gt;aiiab&lt;/window&gt;&lt;/sys_embedded_tour_step&gt;&lt;sys_translated_text action="delete_multiple" query="documentkey=278d02cac3b6d610594e12f1b40131d5"/&gt;&lt;/record_update&gt;</payload>
+        <payload_hash>-1412181725</payload_hash>
+        <record_name/>
+        <reverted_from/>
+        <source>ee32c045831afe104d4fccb6feaad328</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-01-05 16:06:14</sys_created_on>
+        <sys_id>cd424845831afe104d4fccb6feaad3e5</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>19b8ee8b6400000001</sys_recorded_at>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-05 16:06:14</sys_updated_on>
+        <type>Guided Tour Step</type>
+        <update_guid>da6270afe1e72210ba99ad05502cc147</update_guid>
+        <update_guid_history>da6270afe1e72210ba99ad05502cc147:-1412181725</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete/>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>jacebenson</sys_created_by>
+        <sys_created_on>2026-01-22 21:55:12</sys_created_on>
+        <sys_db_object display_value="" name="sys_embedded_tour_step">sys_embedded_tour_step</sys_db_object>
+        <sys_id>0edbfbb8339b4cb8a5416433f06acc40</sys_id>
+        <sys_metadata>278d02cac3b6d610594e12f1b40131d5</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name/>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_scope_delete display_value="">c1a48f6b4a924506a5b1a6becbc665a1</sys_scope_delete>
+        <sys_update_name>sys_embedded_tour_step_278d02cac3b6d610594e12f1b40131d5</sys_update_name>
+        <sys_update_version display_value="sys_embedded_tour_step_278d02cac3b6d610594e12f1b40131d5">cd424845831afe104d4fccb6feaad3e5</sys_update_version>
+        <sys_updated_by>jacebenson</sys_updated_by>
+        <sys_updated_on>2026-01-22 21:55:12</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

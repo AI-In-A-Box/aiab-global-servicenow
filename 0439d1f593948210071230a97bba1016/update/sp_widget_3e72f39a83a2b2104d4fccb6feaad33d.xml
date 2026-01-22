@@ -3,80 +3,27 @@
         <category>custom</category>
         <client_script><![CDATA[api.controller = function($scope, $sce, $timeout, $location) {
   var c = this;
-  var SNOOZE_KEY = 'aiab_chat_snoozed_until';
-  var WIDE_MODE_KEY = 'aiab_chat_wide_mode';
   
   // State
   c.isOpen = false;
+  c.isWide = false;
+  c.isSnoozed = false;
   c.isLoading = false;
   c.userInput = '';
   c.messages = [];
   c.currentInferenceId = null;
   c.watcherChannel = null;
-  c.showSnoozeMenu = false;
   c.showHistoryMenu = false;
-  c.isSnoozed = false;
-  c.isWideMode = false;
   c.isViewingHistory = false;
   c.previousChats = c.data.previousChats || [];
   
-  // Get record context - prefer server-side values (which have fallback lookup)
-  // URL params are passed from the global injector
+  // Get URL params
   var urlParams = $location.search();
+  
+  // Get record context
   c.recordTable = c.data.recordTable || urlParams.record_table || '';
   c.recordSysId = c.data.recordSysId || urlParams.record_sys_id || '';
   c.recordDisplay = c.data.recordDisplay || urlParams.record_display || '';
-  
-  // Notify parent window to resize iframe for wide mode
-  c.notifyParentResize = function(wide) {
-    try {
-      window.parent.postMessage({ type: 'aiab-resize', wide: wide }, '*');
-      console.log('AIAB Chat: Posted resize message to parent, wide:', wide);
-    } catch (e) {
-      console.warn('AIAB Chat: Could not post message to parent', e);
-    }
-  };
-  
-  // Notify parent window when chat opens/closes
-  c.notifyParentToggle = function(open) {
-    try {
-      window.parent.postMessage({ type: 'aiab-toggle', open: open, wide: c.isWideMode }, '*');
-      console.log('AIAB Chat: Posted toggle message to parent, open:', open, 'wide:', c.isWideMode);
-    } catch (e) {
-      console.warn('AIAB Chat: Could not post message to parent', e);
-    }
-  };
-  
-  // Check snooze status on init
-  c.checkSnoozeStatus = function() {
-    try {
-      var snoozedUntil = localStorage.getItem(SNOOZE_KEY);
-      if (snoozedUntil) {
-        var snoozeTime = parseInt(snoozedUntil, 10);
-        if (Date.now() < snoozeTime) {
-          c.isSnoozed = true;
-        } else {
-          localStorage.removeItem(SNOOZE_KEY);
-          c.isSnoozed = false;
-        }
-      }
-    } catch (e) {
-      console.warn('AIAB Chat: Could not check snooze status', e);
-    }
-  };
-  
-  // Load wide mode preference
-  c.loadWideMode = function() {
-    try {
-      c.isWideMode = localStorage.getItem(WIDE_MODE_KEY) === 'true';
-    } catch (e) {
-      console.warn('AIAB Chat: Could not load wide mode', e);
-    }
-  };
-  
-  // Initialize
-  c.checkSnoozeStatus();
-  c.loadWideMode();
   
   // Initial welcome message
   c.messages.push({
@@ -87,34 +34,40 @@
   // Toggle chat open/closed
   c.toggleChat = function() {
     c.isOpen = !c.isOpen;
-    c.showSnoozeMenu = false;
     c.showHistoryMenu = false;
-    // Notify parent to resize iframe
-    c.notifyParentToggle(c.isOpen);
+    c.notifyParent();
   };
   
   // Toggle wide mode
-  c.toggleWideMode = function() {
-    c.isWideMode = !c.isWideMode;
-    try {
-      localStorage.setItem(WIDE_MODE_KEY, c.isWideMode.toString());
-    } catch (e) {
-      console.warn('AIAB Chat: Could not save wide mode', e);
-    }
-    // Notify parent window to resize iframe
-    c.notifyParentResize(c.isWideMode);
+  c.toggleWide = function() {
+    c.isWide = !c.isWide;
+    c.notifyParent();
   };
   
-  // Snooze chat for specified hours
-  c.snooze = function(hours) {
-    var snoozeUntil = Date.now() + (hours * 60 * 60 * 1000);
+  // Snooze - hide the chat button
+  c.snooze = function() {
+    c.isOpen = false;
+    c.isSnoozed = true;
+    c.notifyParent();
+  };
+  
+  // Unsnooze - show the chat button again
+  c.unsnooze = function() {
+    c.isSnoozed = false;
+    c.notifyParent();
+  };
+  
+  // Notify parent frame about state changes (for iframe resizing)
+  c.notifyParent = function() {
     try {
-      localStorage.setItem(SNOOZE_KEY, snoozeUntil.toString());
-      c.isSnoozed = true;
-      c.showSnoozeMenu = false;
-      c.isOpen = false;
+      window.parent.postMessage({
+        type: 'aiab-chat-state',
+        isOpen: c.isOpen,
+        isWide: c.isWide,
+        isSnoozed: c.isSnoozed
+      }, '*');
     } catch (e) {
-      console.warn('AIAB Chat: Could not save snooze', e);
+      // Ignore cross-origin errors
     }
   };
   
@@ -138,7 +91,7 @@
     });
   };
   
-  // Start a new chat (clear history view)
+  // Start a new chat
   c.startNewChat = function() {
     c.messages = [{
       role: 'assistant',
@@ -148,79 +101,52 @@
     c.currentInferenceId = null;
   };
   
-  /**
-   * Simple markdown to HTML converter
-   * Handles common patterns: bold, italic, code, lists, headings, links
-   */
+  // Simple markdown to HTML converter
   c.markdownToHtml = function(text) {
     if (!text) return '';
     
     var html = text;
     
-    // Escape HTML entities first (prevent XSS)
-    html = html.replace(/&/g, '&amp;')
-               .replace(/</g, '&lt;')
-               .replace(/>/g, '&gt;');
+    // Escape HTML entities
+    html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     
-    // Code blocks (``` ... ```) - must be before other processing
+    // Code blocks
     html = html.replace(/```([\s\S]*?)```/g, function(match, code) {
       return '<pre><code>' + code.trim() + '</code></pre>';
     });
     
-    // Inline code (`code`)
+    // Inline code
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
     
-    // Bold (**text** or __text__)
+    // Bold
     html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
     
-    // Italic (*text* or _text_) - be careful not to match inside words
+    // Italic
     html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-    html = html.replace(/(?:^|\s)_([^_]+)_(?:\s|$)/g, ' <em>$1</em> ');
     
-    // Headings (### Heading)
+    // Headings
     html = html.replace(/^### (.+)$/gm, '<h5>$1</h5>');
     html = html.replace(/^## (.+)$/gm, '<h4>$1</h4>');
     html = html.replace(/^# (.+)$/gm, '<h3>$1</h3>');
     
-    // Links [text](url)
+    // Links
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
     
-    // Unordered lists (- item or * item)
-    // Process consecutive list items as a group
-    html = html.replace(/(?:^|\n)((?:[-*] .+\n?)+)/g, function(match, listBlock) {
-      var items = listBlock.trim().split('\n').map(function(item) {
-        return '<li>' + item.replace(/^[-*] /, '') + '</li>';
-      }).join('');
-      return '<ul>' + items + '</ul>';
-    });
-    
-    // Ordered lists (1. item)
-    html = html.replace(/(?:^|\n)((?:\d+\. .+\n?)+)/g, function(match, listBlock) {
-      var items = listBlock.trim().split('\n').map(function(item) {
-        return '<li>' + item.replace(/^\d+\. /, '') + '</li>';
-      }).join('');
-      return '<ol>' + items + '</ol>';
-    });
-    
-    // Line breaks (but not inside pre/code blocks)
-    // Split by pre tags, only convert newlines outside of them
+    // Line breaks
     var parts = html.split(/(<pre>.*?<\/pre>)/s);
     html = parts.map(function(part) {
-      if (part.indexOf('<pre>') === 0) {
-        return part; // Don't process inside pre blocks
-      }
+      if (part.indexOf('<pre>') === 0) return part;
       return part.replace(/\n/g, '<br>');
     }).join('');
     
     return html;
   };
   
-  // Render message content (convert markdown to HTML)
+  // Render message content
   c.renderMessage = function(content) {
     if (!content) return '';
-    var html = c.markdownToHtml(content);
-    return $sce.trustAsHtml(html);
+    return $sce.trustAsHtml(c.markdownToHtml(content));
   };
   
   // Handle Enter key
@@ -230,16 +156,12 @@
     }
   };
   
-  // Build conversation history for API
+  // Build conversation history
   c.getConversationHistory = function() {
-    // Filter out empty messages and map to API format
     return c.messages.filter(function(msg) {
       return msg.content && msg.content.trim() !== '';
     }).map(function(msg) {
-      return {
-        role: msg.role,
-        content: msg.content
-      };
+      return { role: msg.role, content: msg.content };
     });
   };
   
@@ -250,23 +172,13 @@
     var userMessage = c.userInput;
     c.userInput = '';
     c.isLoading = true;
-    
-    // If viewing history, mark as no longer just viewing (we're continuing the conversation)
     c.isViewingHistory = false;
     
-    // Add user message to chat
-    c.messages.push({
-      role: 'user',
-      content: userMessage
-    });
-    
-    // Scroll to bottom
+    c.messages.push({ role: 'user', content: userMessage });
     c.scrollToBottom();
     
-    // Get full conversation history including the new message
     var conversationHistory = c.getConversationHistory();
     
-    // Call server to create inference with full conversation and record context
     c.server.get({
       action: 'createChat',
       conversation: JSON.stringify(conversationHistory),
@@ -275,53 +187,36 @@
     }).then(function(response) {
       if (response.data.success) {
         c.currentInferenceId = response.data.inferenceId;
-        
-        // Add placeholder for assistant response
-        c.messages.push({
-          role: 'assistant',
-          content: ''
-        });
-        
-        // Subscribe to AMB for real-time updates
+        c.messages.push({ role: 'assistant', content: '' });
         c.subscribeToUpdates(c.currentInferenceId);
       } else {
         c.isLoading = false;
-        c.messages.push({
-          role: 'assistant',
-          content: 'Sorry, something went wrong. Please try again.'
-        });
+        c.messages.push({ role: 'assistant', content: 'Sorry, something went wrong. Please try again.' });
       }
     });
   };
   
-  // Watch record using AMB (same pattern as UI Script)
+  // Watch record using AMB
   c.watchRecord = function(table, filter, callback) {
     try {
-      console.log('AIAB Chat: watchRecord', table, filter);
-      
       function getFilterString(f) {
         return btoa(f.replace(/\^EQ/g, '').replace(/\^ORDERBY(?:DESC)?[^^]*/g, '').replace(/^GOTO/, '')).replace(/=/g, '-');
       }
       
       if (table === 'sys_amb_message' || table.startsWith('sys_rw')) return null;
       
-      // Access AMB client from top window
-      var amb = top.window.top.g_ambClient;
-      if (!amb) {
-        console.error('AIAB Chat: g_ambClient not available');
-        return null;
-      }
+      var amb = null;
+      try { amb = top.window.top.g_ambClient; } catch (e) {}
+      if (!amb) try { amb = window.parent.g_ambClient; } catch (e) {}
+      if (!amb && typeof g_ambClient !== 'undefined') amb = g_ambClient;
+      if (!amb) return null;
       
       var channelName = '/rw/default/' + table + '/' + getFilterString(filter);
-      console.log('AIAB Chat: subscribing to', channelName);
-      
       var watcherChannel = amb.getChannel(channelName);
       watcherChannel.subscribe(callback);
       amb.connect();
-      
       return watcherChannel;
     } catch (e) {
-      console.error('AIAB Chat: watchRecord error', e);
       return null;
     }
   };
@@ -332,22 +227,15 @@
     
     c.watcherChannel = c.watchRecord('u_ai_inference', filter, function(message) {
       $scope.$apply(function() {
-        console.log('AIAB Chat: AMB message received', message);
-        
         var record = message.data && message.data.record ? message.data.record : null;
-        if (!record) {
-          console.warn('AIAB Chat: No record in message', message);
-          return;
-        }
+        if (!record) return;
         
-        // Update response
         if (record.u_response) {
           var responseValue = record.u_response.value !== undefined ? record.u_response.value : record.u_response;
           c.messages[c.messages.length - 1].content = responseValue;
           c.scrollToBottom();
         }
         
-        // Check state
         var stateValue = record.u_state ? (record.u_state.value !== undefined ? record.u_state.value : record.u_state) : null;
         if (stateValue === 'finished' || stateValue === 'cancelled') {
           c.isLoading = false;
@@ -356,53 +244,39 @@
       });
     });
     
-    // If AMB subscription failed, fall back to polling
     if (!c.watcherChannel) {
-      console.warn('AIAB Chat: AMB failed, falling back to polling');
       c.pollForUpdates(inferenceId);
     }
   };
   
-  // Fallback polling mechanism
+  // Fallback polling
   c.pollForUpdates = function(inferenceId) {
-    var pollInterval = 1000; // 1 second
-    var maxPolls = 120; // 2 minutes max
     var pollCount = 0;
-    
     var poll = function() {
-      if (!c.isLoading || pollCount >= maxPolls) return;
+      if (!c.isLoading || pollCount >= 120) return;
       pollCount++;
       
-      c.server.get({
-        action: 'getInference',
-        inferenceId: inferenceId
-      }).then(function(response) {
+      c.server.get({ action: 'getInference', inferenceId: inferenceId }).then(function(response) {
         if (response.data.success) {
           c.messages[c.messages.length - 1].content = response.data.response || '';
           c.scrollToBottom();
-          
           if (response.data.state === 'finished' || response.data.state === 'cancelled') {
             c.isLoading = false;
           } else {
-            $timeout(poll, pollInterval);
+            $timeout(poll, 1000);
           }
         } else {
           c.isLoading = false;
         }
       });
     };
-    
-    $timeout(poll, pollInterval);
+    $timeout(poll, 1000);
   };
   
-  // Unsubscribe from watcher
+  // Unsubscribe
   c.unsubscribe = function() {
     if (c.watcherChannel) {
-      try {
-        c.watcherChannel.unsubscribe();
-      } catch (e) {
-        console.warn('AIAB Chat: unsubscribe error', e);
-      }
+      try { c.watcherChannel.unsubscribe(); } catch (e) {}
       c.watcherChannel = null;
     }
   };
@@ -410,112 +284,113 @@
   // Stop generation
   c.stopGeneration = function() {
     if (!c.currentInferenceId) return;
-    
-    c.server.get({
-      action: 'cancelInference',
-      inferenceId: c.currentInferenceId
-    }).then(function() {
+    c.server.get({ action: 'cancelInference', inferenceId: c.currentInferenceId }).then(function() {
       c.isLoading = false;
       c.unsubscribe();
     });
   };
   
-  // Scroll messages to bottom
+  // Scroll to bottom
   c.scrollToBottom = function() {
     $timeout(function() {
       var container = document.getElementById('aiab-chat-messages');
-      if (container) {
-        container.scrollTop = container.scrollHeight;
-      }
+      if (container) container.scrollTop = container.scrollHeight;
     }, 50);
   };
   
-  // Cleanup on destroy
-  $scope.$on('$destroy', function() {
-    c.unsubscribe();
-  });
+  // Cleanup
+  $scope.$on('$destroy', function() { c.unsubscribe(); });
 };]]></client_script>
         <controller_as>c</controller_as>
-        <css>/* AIAB Chat Widget - CSS Variables for easy customization */
+        <css>/* AIAB Chat Widget */
 .aiab-chat-container {
-  --aiab-primary-color: #1f6feb;
+  --aiab-primary: #1f6feb;
   --aiab-primary-hover: #1558d6;
-  --aiab-danger-color: #dc3545;
-  --aiab-bg-color: #ffffff;
-  --aiab-border-color: #e1e4e8;
-  --aiab-text-color: #24292f;
-  --aiab-text-muted: #57606a;
-  --aiab-user-bubble-bg: #1f6feb;
-  --aiab-user-bubble-text: #ffffff;
-  --aiab-assistant-bubble-bg: #f6f8fa;
-  --aiab-assistant-bubble-text: #24292f;
-  --aiab-border-radius: 12px;
-  --aiab-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-  --aiab-dialog-width: 380px;
-  --aiab-dialog-height: 500px;
-  --aiab-dialog-width-wide: 600px;
-  --aiab-dialog-height-wide: 600px;
+  --aiab-danger: #dc3545;
+  --aiab-bg: #ffffff;
+  --aiab-border: #e1e4e8;
+  --aiab-text: #24292f;
+  --aiab-muted: #57606a;
+  --aiab-user-bg: #1f6feb;
+  --aiab-user-text: #ffffff;
+  --aiab-assistant-bg: #f6f8fa;
+  --aiab-assistant-text: #24292f;
   
   position: fixed;
-  bottom: 0;
-  right: 0;
+  bottom: 20px;
+  right: 20px;
   z-index: 10000;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-  pointer-events: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* Wide mode */
-.aiab-chat--wide .aiab-chat-dialog {
-  width: var(--aiab-dialog-width-wide);
-  height: var(--aiab-dialog-height-wide);
-}
-
-/* Toggle Button */
-.aiab-chat-toggle {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
+/* Floating Button */
+.aiab-chat-button {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--aiab-primary-color);
+  padding: 12px 20px;
+  background: var(--aiab-primary);
   color: white;
   border: none;
-  padding: 12px 20px;
-  border-radius: 50px;
+  border-radius: 24px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  box-shadow: var(--aiab-shadow);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   transition: all 0.2s ease;
-  pointer-events: auto;
 }
 
-.aiab-chat-toggle:hover {
+.aiab-chat-button:hover {
   background: var(--aiab-primary-hover);
-  transform: scale(1.05);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
 }
 
-.aiab-chat-toggle-icon {
+.aiab-chat-button-icon {
   font-size: 18px;
+}
+
+/* Snoozed button (minimized) */
+.aiab-chat-snoozed-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: var(--aiab-muted);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  opacity: 0.7;
+  transition: all 0.2s ease;
+}
+
+.aiab-chat-snoozed-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
 }
 
 /* Chat Dialog */
 .aiab-chat-dialog {
   position: absolute;
-  bottom: 20px;
-  right: 20px;
-  width: var(--aiab-dialog-width);
-  height: var(--aiab-dialog-height);
-  background: var(--aiab-bg-color);
-  border-radius: var(--aiab-border-radius);
-  box-shadow: var(--aiab-shadow);
+  bottom: 0;
+  right: 0;
+  width: 380px;
+  height: 500px;
+  background: var(--aiab-bg);
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--aiab-border-color);
   transition: width 0.2s ease, height 0.2s ease;
-  pointer-events: auto;
+}
+
+/* Wide mode */
+.aiab-chat-wide .aiab-chat-dialog {
+  width: 600px;
+  height: 600px;
 }
 
 /* Header */
@@ -524,16 +399,17 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--aiab-border-color);
-  background: var(--aiab-bg-color);
+  border-bottom: 1px solid var(--aiab-border);
+  background: var(--aiab-bg);
   position: relative;
+  flex-shrink: 0;
 }
 
 .aiab-chat-title {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: var(--aiab-text-color);
+  color: var(--aiab-text);
 }
 
 .aiab-chat-header-buttons {
@@ -545,9 +421,9 @@
 .aiab-chat-btn {
   background: none;
   border: none;
-  font-size: 18px;
+  font-size: 16px;
   cursor: pointer;
-  color: var(--aiab-text-muted);
+  color: var(--aiab-muted);
   padding: 4px 8px;
   border-radius: 4px;
   transition: all 0.2s ease;
@@ -555,51 +431,13 @@
 }
 
 .aiab-chat-btn:hover {
-  background: var(--aiab-border-color);
-  color: var(--aiab-text-color);
+  background: var(--aiab-border);
+  color: var(--aiab-text);
 }
 
 .aiab-chat-close {
   font-size: 24px;
-}
-
-.aiab-chat-close:hover {
-  color: var(--aiab-danger-color);
-  background: none;
-}
-
-/* Snooze Menu */
-.aiab-snooze-menu {
-  position: absolute;
-  top: 100%;
-  right: 40px;
-  background: var(--aiab-bg-color);
-  border: 1px solid var(--aiab-border-color);
-  border-radius: 8px;
-  box-shadow: var(--aiab-shadow);
-  z-index: 100;
-  overflow: hidden;
-}
-
-.aiab-snooze-menu button {
-  display: block;
-  width: 100%;
-  padding: 10px 16px;
-  border: none;
-  background: none;
-  text-align: left;
-  cursor: pointer;
-  font-size: 14px;
-  color: var(--aiab-text-color);
-  transition: background 0.2s ease;
-}
-
-.aiab-snooze-menu button:hover {
-  background: var(--aiab-assistant-bubble-bg);
-}
-
-.aiab-snooze-menu button:not(:last-child) {
-  border-bottom: 1px solid var(--aiab-border-color);
+  font-weight: 300;
 }
 
 /* History Menu */
@@ -608,12 +446,12 @@
   top: 100%;
   left: 0;
   right: 0;
-  max-height: 300px;
+  max-height: 250px;
   overflow-y: auto;
-  background: var(--aiab-bg-color);
-  border: 1px solid var(--aiab-border-color);
+  background: var(--aiab-bg);
+  border: 1px solid var(--aiab-border);
   border-radius: 0 0 8px 8px;
-  box-shadow: var(--aiab-shadow);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
   z-index: 100;
 }
 
@@ -621,11 +459,10 @@
   padding: 10px 16px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--aiab-text-muted);
+  color: var(--aiab-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  background: var(--aiab-assistant-bubble-bg);
-  border-bottom: 1px solid var(--aiab-border-color);
+  background: var(--aiab-assistant-bg);
+  border-bottom: 1px solid var(--aiab-border);
 }
 
 .aiab-history-menu button {
@@ -637,20 +474,15 @@
   background: none;
   text-align: left;
   cursor: pointer;
-  transition: background 0.2s ease;
 }
 
 .aiab-history-menu button:hover {
-  background: var(--aiab-assistant-bubble-bg);
-}
-
-.aiab-history-menu button:not(:last-child) {
-  border-bottom: 1px solid var(--aiab-border-color);
+  background: var(--aiab-assistant-bg);
 }
 
 .aiab-history-preview {
   font-size: 14px;
-  color: var(--aiab-text-color);
+  color: var(--aiab-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -658,43 +490,32 @@
 
 .aiab-history-date {
   font-size: 11px;
-  color: var(--aiab-text-muted);
+  color: var(--aiab-muted);
   margin-top: 2px;
 }
 
-/* Record Context Indicator */
+/* Record Context */
 .aiab-chat-context {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  background: var(--aiab-assistant-bubble-bg);
-  border-bottom: 1px solid var(--aiab-border-color);
+  background: var(--aiab-assistant-bg);
+  border-bottom: 1px solid var(--aiab-border);
   font-size: 12px;
-  color: var(--aiab-text-muted);
-}
-
-.aiab-chat-context-icon {
-  font-size: 14px;
-}
-
-.aiab-chat-context-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
+  color: var(--aiab-muted);
+  flex-shrink: 0;
 }
 
 .aiab-chat-context-badge {
   font-size: 10px;
   padding: 2px 6px;
-  background: var(--aiab-primary-color);
+  background: var(--aiab-primary);
   color: white;
   border-radius: 10px;
-  font-weight: 500;
 }
 
-/* Messages Area */
+/* Messages */
 .aiab-chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -726,36 +547,24 @@
 }
 
 .aiab-chat-message--user .aiab-chat-bubble {
-  background: var(--aiab-user-bubble-bg);
-  color: var(--aiab-user-bubble-text);
+  background: var(--aiab-user-bg);
+  color: var(--aiab-user-text);
   border-bottom-right-radius: 4px;
 }
 
 .aiab-chat-message--assistant .aiab-chat-bubble {
-  background: var(--aiab-assistant-bubble-bg);
-  color: var(--aiab-assistant-bubble-text);
+  background: var(--aiab-assistant-bg);
+  color: var(--aiab-assistant-text);
   border-bottom-left-radius: 4px;
 }
 
-/* Markdown Styles inside chat bubbles */
-.aiab-chat-bubble strong {
-  font-weight: 600;
-}
-
-.aiab-chat-bubble em {
-  font-style: italic;
-}
-
+/* Markdown in bubbles */
 .aiab-chat-bubble code {
-  background: rgba(0, 0, 0, 0.08);
+  background: rgba(0,0,0,0.08);
   padding: 2px 6px;
   border-radius: 4px;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: monospace;
   font-size: 13px;
-}
-
-.aiab-chat-message--user .aiab-chat-bubble code {
-  background: rgba(255, 255, 255, 0.2);
 }
 
 .aiab-chat-bubble pre {
@@ -765,55 +574,14 @@
   border-radius: 8px;
   overflow-x: auto;
   margin: 8px 0;
-  font-size: 13px;
 }
 
 .aiab-chat-bubble pre code {
   background: none;
   padding: 0;
-  font-size: inherit;
-  color: inherit;
 }
 
-.aiab-chat-bubble h3,
-.aiab-chat-bubble h4,
-.aiab-chat-bubble h5 {
-  margin: 8px 0 4px 0;
-  font-weight: 600;
-}
-
-.aiab-chat-bubble h3 {
-  font-size: 16px;
-}
-
-.aiab-chat-bubble h4 {
-  font-size: 15px;
-}
-
-.aiab-chat-bubble h5 {
-  font-size: 14px;
-}
-
-.aiab-chat-bubble ul,
-.aiab-chat-bubble ol {
-  margin: 8px 0;
-  padding-left: 20px;
-}
-
-.aiab-chat-bubble li {
-  margin: 4px 0;
-}
-
-.aiab-chat-bubble a {
-  color: var(--aiab-primary-color);
-  text-decoration: underline;
-}
-
-.aiab-chat-message--user .aiab-chat-bubble a {
-  color: #ffffff;
-}
-
-/* Loading Animation */
+/* Loading */
 .aiab-chat-loading {
   display: flex;
   gap: 4px;
@@ -823,18 +591,13 @@
 .aiab-chat-dot {
   width: 8px;
   height: 8px;
-  background: var(--aiab-text-muted);
+  background: var(--aiab-muted);
   border-radius: 50%;
   animation: aiab-bounce 1.4s ease-in-out infinite;
 }
 
-.aiab-chat-dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.aiab-chat-dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
+.aiab-chat-dot:nth-child(2) { animation-delay: 0.2s; }
+.aiab-chat-dot:nth-child(3) { animation-delay: 0.4s; }
 
 @keyframes aiab-bounce {
   0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
@@ -846,27 +609,22 @@
   display: flex;
   gap: 8px;
   padding: 12px;
-  border-top: 1px solid var(--aiab-border-color);
-  background: var(--aiab-bg-color);
+  border-top: 1px solid var(--aiab-border);
+  background: var(--aiab-bg);
+  flex-shrink: 0;
 }
 
 .aiab-chat-input {
   flex: 1;
   padding: 10px 14px;
-  border: 1px solid var(--aiab-border-color);
+  border: 1px solid var(--aiab-border);
   border-radius: 8px;
   font-size: 14px;
   outline: none;
-  transition: border-color 0.2s ease;
 }
 
 .aiab-chat-input:focus {
-  border-color: var(--aiab-primary-color);
-}
-
-.aiab-chat-input:disabled {
-  background: #f6f8fa;
-  cursor: not-allowed;
+  border-color: var(--aiab-primary);
 }
 
 .aiab-chat-send,
@@ -877,11 +635,10 @@
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
 }
 
 .aiab-chat-send {
-  background: var(--aiab-primary-color);
+  background: var(--aiab-primary);
   color: white;
 }
 
@@ -895,12 +652,8 @@
 }
 
 .aiab-chat-stop {
-  background: var(--aiab-danger-color);
+  background: var(--aiab-danger);
   color: white;
-}
-
-.aiab-chat-stop:hover {
-  background: #c82333;
 }</css>
         <data_table>sp_instance</data_table>
         <demo_data>false</demo_data>
@@ -926,6 +679,9 @@
   }
   data.chatEnabled = enabled;
   data.options = options;
+  
+  // Check if embedded in a modal (no floating button, starts open)
+  data.embedded = $sp.getParameter('embedded') === 'true';
   
   // Get record context from URL params (passed from global injector)
   data.recordTable = $sp.getParameter('record_table') || '';
@@ -1326,19 +1082,24 @@
         <sys_created_by>opencode</sys_created_by>
         <sys_created_on>2026-01-22 17:03:51</sys_created_on>
         <sys_id>3e72f39a83a2b2104d4fccb6feaad33d</sys_id>
-        <sys_mod_count>22</sys_mod_count>
+        <sys_mod_count>35</sys_mod_count>
         <sys_name>AIAB Chat</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sp_widget_3e72f39a83a2b2104d4fccb6feaad33d</sys_update_name>
         <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-22 19:20:04</sys_updated_on>
-        <template><![CDATA[<div class="aiab-chat-container" ng-if="data.chatEnabled && !c.isSnoozed" ng-class="{'aiab-chat--wide': c.isWideMode}">
+        <sys_updated_on>2026-01-22 23:37:36</sys_updated_on>
+        <template><![CDATA[<div class="aiab-chat-container" ng-if="data.chatEnabled" ng-class="{'aiab-chat-wide': c.isWide, 'aiab-chat-snoozed': c.isSnoozed}">
   <!-- Floating Chat Button -->
-  <button class="aiab-chat-toggle" ng-click="c.toggleChat()" ng-hide="c.isOpen">
-    <span class="aiab-chat-toggle-icon">]]>💬<![CDATA[</span>
-    <span class="aiab-chat-toggle-text">Chat</span>
+  <button class="aiab-chat-button" ng-click="c.toggleChat()" ng-hide="c.isOpen || c.isSnoozed" title="Chat with AI Assistant">
+    <span class="aiab-chat-button-icon">]]>💬<![CDATA[</span>
+    <span class="aiab-chat-button-text">Chat</span>
+  </button>
+
+  <!-- Snoozed indicator (small button to restore) -->
+  <button class="aiab-chat-snoozed-btn" ng-show="c.isSnoozed" ng-click="c.unsnooze()" title="Show chat">
+    <span>]]>💬<![CDATA[</span>
   </button>
 
   <!-- Chat Dialog -->
@@ -1347,34 +1108,27 @@
     <div class="aiab-chat-header">
       <h5 class="aiab-chat-title">{{c.options.title || 'AI Assistant'}}</h5>
       <div class="aiab-chat-header-buttons">
-        <!-- History button (only show if there are previous chats) -->
+        <!-- History button -->
         <button class="aiab-chat-btn" ng-if="c.previousChats.length > 0" ng-click="c.showHistoryMenu = !c.showHistoryMenu" title="Previous conversations">
           <span>]]>📜<![CDATA[</span>
         </button>
-        <!-- New chat button (only show if viewing history) -->
+        <!-- New chat button -->
         <button class="aiab-chat-btn" ng-if="c.isViewingHistory" ng-click="c.startNewChat()" title="New conversation">
           <span>➕</span>
         </button>
-        <!-- Resize button -->
-        <button class="aiab-chat-btn" ng-click="c.toggleWideMode()" title="{{c.isWideMode ? 'Compact view' : 'Wide view'}}">
-          <span ng-hide="c.isWideMode">⬌</span>
-          <span ng-show="c.isWideMode">⬄</span>
+        <!-- Enlarge/shrink button -->
+        <button class="aiab-chat-btn" ng-click="c.toggleWide()" title="{{c.isWide ? 'Shrink' : 'Enlarge'}}">
+          <span ng-hide="c.isWide">⤢</span>
+          <span ng-show="c.isWide">⤡</span>
         </button>
         <!-- Snooze button -->
-        <button class="aiab-chat-btn" ng-click="c.showSnoozeMenu = !c.showSnoozeMenu" title="Snooze chat">
-          <span>]]>💤<![CDATA[</span>
+        <button class="aiab-chat-btn" ng-click="c.snooze()" title="Hide for now">
+          <span>]]>🔕<![CDATA[</span>
         </button>
         <!-- Close button -->
         <button class="aiab-chat-btn aiab-chat-close" ng-click="c.toggleChat()" title="Close">
-          <span>&times;</span>
+          <span>×</span>
         </button>
-      </div>
-      <!-- Snooze dropdown menu -->
-      <div class="aiab-snooze-menu" ng-show="c.showSnoozeMenu">
-        <button ng-click="c.snooze(1)">1 hour</button>
-        <button ng-click="c.snooze(4)">4 hours</button>
-        <button ng-click="c.snooze(24)">1 day</button>
-        <button ng-click="c.snooze(168)">1 week</button>
       </div>
       <!-- History dropdown menu -->
       <div class="aiab-history-menu" ng-show="c.showHistoryMenu">

@@ -1,0 +1,368 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_script">
+    <sys_ui_script action="DELETE">
+        <active>false</active>
+        <description>Injects chat widget iframe in Workspace/Next Experience by watching URL changes</description>
+        <global>false</global>
+        <ignore_in_now_experience>false</ignore_in_now_experience>
+        <name>AIAB Chat Workspace</name>
+        <script><![CDATA[// AIAB Chat Workspace - Injects chat widget iframe in Next Experience
+// Watches for URL changes since Workspace is a SPA
+(function() {
+  console.log('AIAB Chat Workspace: Script starting...', window.location.pathname);
+  
+  var lastUrl = '';
+  var iframe = null;
+  
+  // Size constants
+  var BUTTON_WIDTH = '140px';
+  var BUTTON_HEIGHT = '70px';
+  var NORMAL_WIDTH = '420px';
+  var NORMAL_HEIGHT = '550px';
+  var WIDE_WIDTH = '620px';
+  var WIDE_HEIGHT = '620px';
+  
+  // Parse Workspace URL patterns
+  // /now/sow/record/{table}/{sys_id}
+  // /now/workspace/agent/record/{table}/{sys_id}
+  function parseWorkspaceUrl(url) {
+    var patterns = [
+      /\/now\/sow\/record\/([^\/]+)\/([a-f0-9]{32})/i,
+      /\/now\/workspace\/agent\/record\/([^\/]+)\/([a-f0-9]{32})/i,
+      /\/now\/[^\/]+\/record\/([^\/]+)\/([a-f0-9]{32})/i
+    ];
+    
+    for (var i = 0; i < patterns.length; i++) {
+      var match = url.match(patterns[i]);
+      if (match) {
+        return { table: match[1], sysId: match[2] };
+      }
+    }
+    return null;
+  }
+  
+  // Create or update the iframe
+  function updateChatIframe(table, sysId) {
+    var iframeSrc = '/$sp.do?id=aiab_chat';
+    if (table && sysId) {
+      iframeSrc += '&record_table=' + encodeURIComponent(table);
+      iframeSrc += '&record_sys_id=' + encodeURIComponent(sysId);
+    }
+    
+    if (!iframe) {
+      // Create iframe
+      iframe = document.createElement('iframe');
+      iframe.id = 'aiab-chat-iframe';
+      iframe.style.cssText = 'position:fixed;bottom:10px;right:10px;width:' + BUTTON_WIDTH + ';height:' + BUTTON_HEIGHT + ';border:none;z-index:10000;background:transparent;';
+      iframe.setAttribute('allowtransparency', 'true');
+      
+      iframe.onload = function() {
+        console.log('AIAB Chat Workspace: Iframe loaded');
+      };
+      
+      document.body.appendChild(iframe);
+      console.log('AIAB Chat Workspace: Iframe created');
+      
+      // Listen for messages from the widget
+      window.addEventListener('message', function(event) {
+        if (!event.data || !event.data.type) return;
+        
+        var chatIframe = document.getElementById('aiab-chat-iframe');
+        if (!chatIframe) return;
+        
+        if (event.data.type === 'aiab-resize') {
+          if (event.data.wide) {
+            chatIframe.style.width = WIDE_WIDTH;
+            chatIframe.style.height = WIDE_HEIGHT;
+          } else {
+            chatIframe.style.width = NORMAL_WIDTH;
+            chatIframe.style.height = NORMAL_HEIGHT;
+          }
+        }
+        
+        if (event.data.type === 'aiab-toggle') {
+          if (event.data.open) {
+            if (event.data.wide) {
+              chatIframe.style.width = WIDE_WIDTH;
+              chatIframe.style.height = WIDE_HEIGHT;
+            } else {
+              chatIframe.style.width = NORMAL_WIDTH;
+              chatIframe.style.height = NORMAL_HEIGHT;
+            }
+            chatIframe.style.bottom = '0';
+            chatIframe.style.right = '0';
+          } else {
+            chatIframe.style.width = BUTTON_WIDTH;
+            chatIframe.style.height = BUTTON_HEIGHT;
+            chatIframe.style.bottom = '10px';
+            chatIframe.style.right = '10px';
+          }
+        }
+      });
+    }
+    
+    // Update iframe src if changed
+    if (iframe.src !== window.location.origin + iframeSrc) {
+      console.log('AIAB Chat Workspace: Updating iframe src to', iframeSrc);
+      iframe.src = iframeSrc;
+      // Reset to button size when navigating
+      iframe.style.width = BUTTON_WIDTH;
+      iframe.style.height = BUTTON_HEIGHT;
+      iframe.style.bottom = '10px';
+      iframe.style.right = '10px';
+    }
+  }
+  
+  // Hide the iframe (when not on a record page)
+  function hideChatIframe() {
+    if (iframe) {
+      iframe.style.display = 'none';
+    }
+  }
+  
+  // Show the iframe
+  function showChatIframe() {
+    if (iframe) {
+      iframe.style.display = 'block';
+    }
+  }
+  
+  // Check for URL changes
+  function checkForUrlChange() {
+    var currentUrl = window.location.href;
+    if (currentUrl === lastUrl) return;
+    
+    lastUrl = currentUrl;
+    console.log('AIAB Chat Workspace: URL changed to', currentUrl);
+    
+    var record = parseWorkspaceUrl(currentUrl);
+    if (record) {
+      console.log('AIAB Chat Workspace: Detected record', record.table, record.sysId);
+      showChatIframe();
+      updateChatIframe(record.table, record.sysId);
+    } else {
+      console.log('AIAB Chat Workspace: Not on a record page, hiding chat');
+      hideChatIframe();
+    }
+  }
+  
+  // Start watching for URL changes
+  // Use both interval and popstate for reliability
+  setInterval(checkForUrlChange, 500);
+  window.addEventListener('popstate', checkForUrlChange);
+  
+  // Initial check
+  checkForUrlChange();
+  
+  console.log('AIAB Chat Workspace: URL watcher started');
+})();]]></script>
+        <script_name/>
+        <sys_class_name>sys_ui_script</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-01-22 19:31:10</sys_created_on>
+        <sys_id>3434d82283e6b2104d4fccb6feaad387</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>AIAB Chat Workspace</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_ui_script_3434d82283e6b2104d4fccb6feaad387</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-22 19:32:42</sys_updated_on>
+        <ui_type>10</ui_type>
+        <use_scoped_format>false</use_scoped_format>
+    </sys_ui_script>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="AI in a Box">0439d1f593948210071230a97bba1016</application>
+        <file_path/>
+        <instance_id>3e01943a1b79f9901024eb9b2d4bcb05</instance_id>
+        <instance_name>dev184755</instance_name>
+        <name>sys_ui_script_3434d82283e6b2104d4fccb6feaad387</name>
+        <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sys_ui_script"&gt;&lt;sys_ui_script action="INSERT_OR_UPDATE"&gt;&lt;active&gt;false&lt;/active&gt;&lt;description&gt;Injects chat widget iframe in Workspace/Next Experience by watching URL changes&lt;/description&gt;&lt;global&gt;false&lt;/global&gt;&lt;ignore_in_now_experience&gt;false&lt;/ignore_in_now_experience&gt;&lt;name&gt;AIAB Chat Workspace&lt;/name&gt;&lt;script&gt;&lt;![CDATA[// AIAB Chat Workspace - Injects chat widget iframe in Next Experience
+// Watches for URL changes since Workspace is a SPA
+(function() {
+  console.log('AIAB Chat Workspace: Script starting...', window.location.pathname);
+  
+  var lastUrl = '';
+  var iframe = null;
+  
+  // Size constants
+  var BUTTON_WIDTH = '140px';
+  var BUTTON_HEIGHT = '70px';
+  var NORMAL_WIDTH = '420px';
+  var NORMAL_HEIGHT = '550px';
+  var WIDE_WIDTH = '620px';
+  var WIDE_HEIGHT = '620px';
+  
+  // Parse Workspace URL patterns
+  // /now/sow/record/{table}/{sys_id}
+  // /now/workspace/agent/record/{table}/{sys_id}
+  function parseWorkspaceUrl(url) {
+    var patterns = [
+      /\/now\/sow\/record\/([^\/]+)\/([a-f0-9]{32})/i,
+      /\/now\/workspace\/agent\/record\/([^\/]+)\/([a-f0-9]{32})/i,
+      /\/now\/[^\/]+\/record\/([^\/]+)\/([a-f0-9]{32})/i
+    ];
+    
+    for (var i = 0; i &lt; patterns.length; i++) {
+      var match = url.match(patterns[i]);
+      if (match) {
+        return { table: match[1], sysId: match[2] };
+      }
+    }
+    return null;
+  }
+  
+  // Create or update the iframe
+  function updateChatIframe(table, sysId) {
+    var iframeSrc = '/$sp.do?id=aiab_chat';
+    if (table &amp;&amp; sysId) {
+      iframeSrc += '&amp;record_table=' + encodeURIComponent(table);
+      iframeSrc += '&amp;record_sys_id=' + encodeURIComponent(sysId);
+    }
+    
+    if (!iframe) {
+      // Create iframe
+      iframe = document.createElement('iframe');
+      iframe.id = 'aiab-chat-iframe';
+      iframe.style.cssText = 'position:fixed;bottom:10px;right:10px;width:' + BUTTON_WIDTH + ';height:' + BUTTON_HEIGHT + ';border:none;z-index:10000;background:transparent;';
+      iframe.setAttribute('allowtransparency', 'true');
+      
+      iframe.onload = function() {
+        console.log('AIAB Chat Workspace: Iframe loaded');
+      };
+      
+      document.body.appendChild(iframe);
+      console.log('AIAB Chat Workspace: Iframe created');
+      
+      // Listen for messages from the widget
+      window.addEventListener('message', function(event) {
+        if (!event.data || !event.data.type) return;
+        
+        var chatIframe = document.getElementById('aiab-chat-iframe');
+        if (!chatIframe) return;
+        
+        if (event.data.type === 'aiab-resize') {
+          if (event.data.wide) {
+            chatIframe.style.width = WIDE_WIDTH;
+            chatIframe.style.height = WIDE_HEIGHT;
+          } else {
+            chatIframe.style.width = NORMAL_WIDTH;
+            chatIframe.style.height = NORMAL_HEIGHT;
+          }
+        }
+        
+        if (event.data.type === 'aiab-toggle') {
+          if (event.data.open) {
+            if (event.data.wide) {
+              chatIframe.style.width = WIDE_WIDTH;
+              chatIframe.style.height = WIDE_HEIGHT;
+            } else {
+              chatIframe.style.width = NORMAL_WIDTH;
+              chatIframe.style.height = NORMAL_HEIGHT;
+            }
+            chatIframe.style.bottom = '0';
+            chatIframe.style.right = '0';
+          } else {
+            chatIframe.style.width = BUTTON_WIDTH;
+            chatIframe.style.height = BUTTON_HEIGHT;
+            chatIframe.style.bottom = '10px';
+            chatIframe.style.right = '10px';
+          }
+        }
+      });
+    }
+    
+    // Update iframe src if changed
+    if (iframe.src !== window.location.origin + iframeSrc) {
+      console.log('AIAB Chat Workspace: Updating iframe src to', iframeSrc);
+      iframe.src = iframeSrc;
+      // Reset to button size when navigating
+      iframe.style.width = BUTTON_WIDTH;
+      iframe.style.height = BUTTON_HEIGHT;
+      iframe.style.bottom = '10px';
+      iframe.style.right = '10px';
+    }
+  }
+  
+  // Hide the iframe (when not on a record page)
+  function hideChatIframe() {
+    if (iframe) {
+      iframe.style.display = 'none';
+    }
+  }
+  
+  // Show the iframe
+  function showChatIframe() {
+    if (iframe) {
+      iframe.style.display = 'block';
+    }
+  }
+  
+  // Check for URL changes
+  function checkForUrlChange() {
+    var currentUrl = window.location.href;
+    if (currentUrl === lastUrl) return;
+    
+    lastUrl = currentUrl;
+    console.log('AIAB Chat Workspace: URL changed to', currentUrl);
+    
+    var record = parseWorkspaceUrl(currentUrl);
+    if (record) {
+      console.log('AIAB Chat Workspace: Detected record', record.table, record.sysId);
+      showChatIframe();
+      updateChatIframe(record.table, record.sysId);
+    } else {
+      console.log('AIAB Chat Workspace: Not on a record page, hiding chat');
+      hideChatIframe();
+    }
+  }
+  
+  // Start watching for URL changes
+  // Use both interval and popstate for reliability
+  setInterval(checkForUrlChange, 500);
+  window.addEventListener('popstate', checkForUrlChange);
+  
+  // Initial check
+  checkForUrlChange();
+  
+  console.log('AIAB Chat Workspace: URL watcher started');
+})();]]&gt;&lt;/script&gt;&lt;script_name/&gt;&lt;sys_class_name&gt;sys_ui_script&lt;/sys_class_name&gt;&lt;sys_created_by&gt;opencode&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-01-22 19:31:10&lt;/sys_created_on&gt;&lt;sys_id&gt;3434d82283e6b2104d4fccb6feaad387&lt;/sys_id&gt;&lt;sys_mod_count&gt;1&lt;/sys_mod_count&gt;&lt;sys_name&gt;AIAB Chat Workspace&lt;/sys_name&gt;&lt;sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016"&gt;0439d1f593948210071230a97bba1016&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="AI in a Box"&gt;0439d1f593948210071230a97bba1016&lt;/sys_scope&gt;&lt;sys_update_name&gt;sys_ui_script_3434d82283e6b2104d4fccb6feaad387&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;opencode&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-01-22 19:32:42&lt;/sys_updated_on&gt;&lt;ui_type&gt;10&lt;/ui_type&gt;&lt;use_scoped_format&gt;false&lt;/use_scoped_format&gt;&lt;/sys_ui_script&gt;&lt;/record_update&gt;</payload>
+        <payload_hash>94151252</payload_hash>
+        <record_name>AIAB Chat Workspace</record_name>
+        <reverted_from/>
+        <source>fb79436b835232104d4fccb6feaad310</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-01-22 19:32:43</sys_created_on>
+        <sys_id>1f84946283e6b2104d4fccb6feaad36b</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>19be731dbf20000001</sys_recorded_at>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-22 19:32:43</sys_updated_on>
+        <type>UI Script</type>
+        <update_guid>1f849462f6e6b210ae66a2884a9cea6a</update_guid>
+        <update_guid_history>1f849462f6e6b210ae66a2884a9cea6a:94151252,3c34d82206e6b210f40020e5976a1a8a:-1154156181</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete/>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-01-22 21:41:28</sys_created_on>
+        <sys_db_object display_value="" name="sys_ui_script">sys_ui_script</sys_db_object>
+        <sys_id>028fe466f1ca445c800c10bca9388c64</sys_id>
+        <sys_metadata>3434d82283e6b2104d4fccb6feaad387</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>AIAB Chat Workspace</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_scope_delete display_value="">c1a48f6b4a924506a5b1a6becbc665a1</sys_scope_delete>
+        <sys_update_name>sys_ui_script_3434d82283e6b2104d4fccb6feaad387</sys_update_name>
+        <sys_update_version display_value="sys_ui_script_3434d82283e6b2104d4fccb6feaad387">1f84946283e6b2104d4fccb6feaad36b</sys_update_version>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-22 21:41:28</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

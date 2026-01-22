@@ -5,7 +5,7 @@
         <action_delete>false</action_delete>
         <action_insert>true</action_insert>
         <action_query>false</action_query>
-        <action_update>true</action_update>
+        <action_update>false</action_update>
         <active>true</active>
         <add_message>false</add_message>
         <advanced>true</advanced>
@@ -173,57 +173,6 @@
         }
         return tools;
     };
-    var buildAskRecordMessages = function(sysid, table, prompt) {
-        var messages = [{
-                role: "system",
-                content: "You are a helpful chatbot who will answer to the best of your ability the request asked.  Do not expand more than necessary."
-            },
-            {
-                role: "user",
-                content: "I need assistance, given the following record, I will ask a few questions about it.  Do you're best to answer the question or request.  Ready?"
-            },
-            {
-                role: "assistant",
-                content: "I'm ready."
-            }
-        ];
-        var questionMessage = {
-            role: "user",
-            content: ""
-        }
-        var record = new GlideRecord(table);
-        record.addQuery('sys_id', sysid);
-        record.setLimit(1);
-        record.query();
-        if (record.next()) {
-            for (var field in record) {
-                var validField = record.isValidField(field);
-                if (validField) {
-                    var label = record[field].getLabel(field);
-                    var value = record.getDisplayValue(field) || "Not set";
-                    questionMessage.content += label + ': ' + value + '\n';
-                }
-            }
-        }
-        messages.push(questionMessage);
-        messages.push({
-            role: "assistant",
-            content: "Ask your question."
-        });
-        messages.push({
-            role: "user",
-            content: "What is the records unique id, the sys_id?"
-        });
-        messages.push({
-            role: "assistant",
-            content: "The record's sys_id is " + sysid
-        })
-        messages.push({
-            role: "user",
-            content: prompt
-        });
-        return messages;
-    };
     try {
         var prompt = current.getValue('u_prompt');
         var table = current.getValue('u_table');
@@ -250,9 +199,6 @@
         }
         if (type == 'generic') {
             messages = setPromptToJSON(prompt);
-        }
-        if (type == 'ask-record') {
-            messages = buildAskRecordMessages(target, table, prompt);
         }
         current.u_prompt = JSON.stringify(messages, null, ' ');
         current.u_state = 'requested';
@@ -294,15 +240,15 @@
         <sys_domain>global</sys_domain>
         <sys_domain_path>/</sys_domain_path>
         <sys_id>de44cf7793768210d2d070918bba10a5</sys_id>
-        <sys_mod_count>78</sys_mod_count>
+        <sys_mod_count>80</sys_mod_count>
         <sys_name>Fetch Inference</sys_name>
         <sys_overrides/>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_script_de44cf7793768210d2d070918bba10a5</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-01-22 14:39:30</sys_updated_on>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-22 21:44:48</sys_updated_on>
         <template/>
         <when>async_always</when>
     </sys_script>

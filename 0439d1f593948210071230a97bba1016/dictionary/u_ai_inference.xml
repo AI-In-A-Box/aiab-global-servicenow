@@ -16,7 +16,6 @@
         <element attributes="edge_encryption_enabled=true" choice="1" default="generic" label="Type" max_length="40" name="u_type" type="string">
             <choice>
                 <element inactive_on_update="false" label="Generic" sequence="100" value="generic"/>
-                <element inactive_on_update="false" label="Ask Record" sequence="300" value="ask-record"/>
                 <element inactive_on_update="false" label="Chat" sequence="400" value="chat"/>
                 <element inactive_on_update="false" label="Summarize" sequence="200" value="summarize-simple"/>
             </choice>
