@@ -28,6 +28,40 @@
         return { error: "tool_name is required" };
     }
 
+    // SECURITY: Validate user_id matches the inference creator
+    // This prevents impersonation attacks where an attacker could
+    // execute tools as a different user by providing their sys_id
+    if (inferenceId && userId) {
+        var inferenceGR = new GlideRecord("u_ai_inference");
+        if (inferenceGR.get(inferenceId)) {
+            var inferenceCreator = inferenceGR.getValue("sys_created_by");
+            // Get sys_id of the user who created the inference
+            var creatorGR = new GlideRecord("sys_user");
+            creatorGR.addQuery("user_name", inferenceCreator);
+            creatorGR.setLimit(1);
+            creatorGR.query();
+            
+            if (creatorGR.next()) {
+                var creatorSysId = creatorGR.getUniqueValue();
+                if (creatorSysId !== userId) {
+                    gs.warn("AIAB Security: user_id " + userId + " does not match inference creator " + creatorSysId + " (" + inferenceCreator + ")");
+                    response.setStatus(403);
+                    return { error: "User ID does not match inference creator" };
+                }
+            }
+        } else {
+            gs.warn("AIAB Security: Inference not found: " + inferenceId);
+            response.setStatus(404);
+            return { error: "Inference not found" };
+        }
+    } else if (userId && !inferenceId) {
+        // If user_id is provided but no inference_id, reject the request
+        // This prevents direct tool execution without an inference context
+        gs.warn("AIAB Security: user_id provided without inference_id");
+        response.setStatus(400);
+        return { error: "inference_id is required when user_id is provided" };
+    }
+
     gs.info("AIAB Execute Tool: " + toolName + " for user: " + userId);
 
     // Impersonate the requesting user to respect ACLs
@@ -99,14 +133,14 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2026-01-14 05:11:51</sys_created_on>
         <sys_id>dfb2443b831a32104d4fccb6feaad353</sys_id>
-        <sys_mod_count>28</sys_mod_count>
+        <sys_mod_count>29</sys_mod_count>
         <sys_name>Execute Tool</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_ws_operation_dfb2443b831a32104d4fccb6feaad353</sys_update_name>
         <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-15 06:48:39</sys_updated_on>
+        <sys_updated_on>2026-01-22 16:23:36</sys_updated_on>
         <web_service_definition display_value="AI in a Box Partials">6f21415793368210d2d070918bba1002</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>

@@ -150,11 +150,18 @@
     // Features (streaming, summarize, chat)
     data.features = status.featuresAndProperties;
     
-    // Status checks (toolsAcl)
+    // Tool Calling (callbackAuth + serviceAccount + helperScript)
     var statusResult = status.status();
-    data.statusChecks = [];
-    if (statusResult && statusResult.toolsAcl) {
-      data.statusChecks.push(statusResult.toolsAcl);
+    if (statusResult && statusResult.callbackAuth && statusResult.serviceAccount && statusResult.helperScript) {
+      var authOk = statusResult.callbackAuth.className.indexOf('btn-success') >= 0;
+      var accountOk = statusResult.serviceAccount.className.indexOf('btn-success') >= 0;
+      var scriptOk = statusResult.helperScript.className.indexOf('btn-success') >= 0;
+      data.toolCalling = {
+        enabled: authOk && accountOk && scriptOk,
+        callbackAuth: statusResult.callbackAuth,
+        serviceAccount: statusResult.serviceAccount,
+        helperScript: statusResult.helperScript
+      };
     }
     
     // Config links
@@ -184,20 +191,21 @@
   } catch (error) {
     data.error = 'Error loading settings: ' + error.message;
   }
-})();]]></script>
+})();
+]]></script>
         <servicenow>false</servicenow>
         <sys_class_name>sp_widget</sys_class_name>
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2025-08-31 18:24:53</sys_created_on>
         <sys_id>3c00e204c33be21052e098bc05013151</sys_id>
-        <sys_mod_count>36</sys_mod_count>
+        <sys_mod_count>48</sys_mod_count>
         <sys_name>AIAB Settings</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sp_widget_3c00e204c33be21052e098bc05013151</sys_update_name>
         <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-15 07:12:52</sys_updated_on>
+        <sys_updated_on>2026-01-22 16:10:20</sys_updated_on>
         <template><![CDATA[<div class="aiab-settings-widget">
   <div class="panel panel-default">
     
@@ -238,28 +246,65 @@
               </div>
             </div>
           </div>
-        </div>
-      </div>
-      
-      <!-- Status Checks -->
-      <div ng-if="data.statusChecks.length > 0" class="status-checks-section">
-        <h5 class="section-title">Status</h5>
-        <div class="list-group">
-          <div ng-repeat="check in data.statusChecks" class="list-group-item">
+          
+          <!-- Tool Calling Feature -->
+          <div ng-if="data.toolCalling" class="list-group-item">
             <div class="row">
               <div class="col-sm-8">
-                <strong>{{check.label}}</strong>
-                <span class="text-muted" style="font-size: 0.9em;">{{check.description}}</span>
+                <strong>Tool Calling</strong>
+                <span class="{{data.toolCalling.enabled ? 'text-success' : 'text-muted'}}">
+                  {{data.toolCalling.enabled ? 'Ready' : 'Not Configured'}}
+                </span>
               </div>
-              <div class="col-sm-4 text-right">
-                <a ng-href="{{check.url}}" 
-                   class="{{check.className}} btn btn-sm"
+              <div class="col-sm-4" style="display: flex; justify-content: flex-end;">
+                <a ng-href="https://getaiinabox.com/docs/tools" 
+                   class="btn btn-default btn-sm"
                    target="_blank">
-                  {{check.buttonText}}
+                  Docs
+                </a>
+              </div>
+            </div>
+            <!-- Callback Auth line -->
+            <div class="row" style="margin-top: 6px;">
+              <div class="col-sm-8">
+                <span class="text-muted" style="padding-left: 10px;">Callback Auth</span>
+              </div>
+              <div class="col-sm-4" style="display: flex; justify-content: flex-end;">
+                <a ng-href="{{data.toolCalling.callbackAuth.url}}" 
+                   class="{{data.toolCalling.callbackAuth.className}} btn-sm"
+                   target="_blank">
+                  {{data.toolCalling.callbackAuth.buttonText}}
+                </a>
+              </div>
+            </div>
+            <!-- Service Account line -->
+            <div class="row" style="margin-top: 4px;">
+              <div class="col-sm-8">
+                <span class="text-muted" style="padding-left: 10px;">Service Account</span>
+              </div>
+              <div class="col-sm-4" style="display: flex; justify-content: flex-end;">
+                <a ng-href="{{data.toolCalling.serviceAccount.url}}" 
+                   class="{{data.toolCalling.serviceAccount.className}} btn-sm"
+                   target="_blank">
+                  {{data.toolCalling.serviceAccount.buttonText}}
+                </a>
+              </div>
+            </div>
+            <!-- Helper Script line -->
+            <div class="row" style="margin-top: 4px;">
+              <div class="col-sm-8">
+                <span class="text-muted" style="padding-left: 10px;">Helper Script</span>
+              </div>
+              <div class="col-sm-4" style="display: flex; justify-content: flex-end;">
+                <a ng-href="{{data.toolCalling.helperScript.url}}" 
+                   class="{{data.toolCalling.helperScript.className}} btn-sm"
+                   target="_blank">
+                  {{data.toolCalling.helperScript.buttonText}}
                 </a>
               </div>
             </div>
           </div>
+          
         </div>
       </div>
       
@@ -286,7 +331,8 @@
       
     </div>
   </div>
-</div>]]></template>
+</div>
+]]></template>
     </sp_widget>
     <sys_es_latest_script action="INSERT_OR_UPDATE">
         <id>3c00e204c33be21052e098bc05013151</id>

@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="DELETE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>global.AIABGlobalHelper</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description>Global helper for AI in a Box scoped app. Provides impersonation since gs.impersonate() is global-scope only.</description>
+        <mobile_callable>false</mobile_callable>
+        <name>AIABGlobalHelper</name>
+        <sandbox_callable>false</sandbox_callable>
+        <script><![CDATA[var AIABGlobalHelper = Class.create();
+AIABGlobalHelper.prototype = {
+    initialize: function() {},
+	getUserName: function(userId){
+		var sys_user = new GlideRecord('sys_user');
+		if(sys_user.get(userId)){
+			return sys_user.getValue('user_name');
+		}
+		return "NO USER FOUND with userId " + userId;
+	},
+
+    impersonate: function(userId) {
+        gs.info("AIABGlobalHelper.impersonate v4 ENTRY");
+        if (!userId) {
+            gs.warn("AIABGlobalHelper.impersonate: No userId provided");
+            return null;
+        }
+        var originalUser = gs.getUserID();
+		var originalUserName = this.getUserName(originalUser);
+        gs.info("AIABGlobalHelper.impersonate v4: attempting " + userId + " from " + originalUser + '['+originalUserName+']');
+        gs.info("AIABGlobalHelper.impersonate v4: calling gs.impersonate");
+        
+        var result = gs.impersonate(userId);
+        
+        gs.info("AIABGlobalHelper.impersonate v4: result=" + result);
+        
+        var newUser = gs.getUserID();
+        gs.info("AIABGlobalHelper.impersonate v4: now running as " + newUser);
+        
+        if (newUser === userId) {
+            gs.info("AIABGlobalHelper.impersonate v4: SUCCESS");
+            return originalUser;
+        } else {
+            gs.warn("AIABGlobalHelper.impersonate v4: FAILED - still " + newUser);
+            return null;
+        }
+    },
+
+    revert: function(originalUserId) {
+        if (originalUserId) {
+            try {
+                gs.impersonate(originalUserId);
+            } catch (e) {
+                gs.warn("AIABGlobalHelper.revert failed: " + e);
+            }
+        }
+    },
+
+    type: "AIABGlobalHelper"
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-01-15 06:39:57</sys_created_on>
+        <sys_id>1380618c83a2f2104d4fccb6feaad38e</sys_id>
+        <sys_mod_count>5</sys_mod_count>
+        <sys_name>AIABGlobalHelper</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_script_include_1380618c83a2f2104d4fccb6feaad38e</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-22 15:32:00</sys_updated_on>
+    </sys_script_include>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="AI in a Box">0439d1f593948210071230a97bba1016</application>
+        <file_path/>
+        <instance_id>3e01943a1b79f9901024eb9b2d4bcb05</instance_id>
+        <instance_name>dev184755</instance_name>
+        <name>sys_script_include_1380618c83a2f2104d4fccb6feaad38e</name>
+        <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sys_script_include"&gt;&lt;sys_script_include action="INSERT_OR_UPDATE"&gt;&lt;access&gt;public&lt;/access&gt;&lt;active&gt;true&lt;/active&gt;&lt;api_name&gt;global.AIABGlobalHelper&lt;/api_name&gt;&lt;caller_access/&gt;&lt;client_callable&gt;false&lt;/client_callable&gt;&lt;description&gt;Global helper for AI in a Box scoped app. Provides impersonation since gs.impersonate() is global-scope only.&lt;/description&gt;&lt;mobile_callable&gt;false&lt;/mobile_callable&gt;&lt;name&gt;AIABGlobalHelper&lt;/name&gt;&lt;sandbox_callable&gt;false&lt;/sandbox_callable&gt;&lt;script&gt;&lt;![CDATA[var AIABGlobalHelper = Class.create();
+AIABGlobalHelper.prototype = {
+    initialize: function() {},
+	getUserName: function(userId){
+		var sys_user = new GlideRecord('sys_user');
+		if(sys_user.get(userId)){
+			return sys_user.getValue('user_name');
+		}
+		return "NO USER FOUND with userId " + userId;
+	},
+
+    impersonate: function(userId) {
+        gs.info("AIABGlobalHelper.impersonate v4 ENTRY");
+        if (!userId) {
+            gs.warn("AIABGlobalHelper.impersonate: No userId provided");
+            return null;
+        }
+        var originalUser = gs.getUserID();
+		var originalUserName = this.getUserName(originalUser);
+        gs.info("AIABGlobalHelper.impersonate v4: attempting " + userId + " from " + originalUser + '['+originalUserName+']');
+        gs.info("AIABGlobalHelper.impersonate v4: calling gs.impersonate");
+        
+        var result = gs.impersonate(userId);
+        
+        gs.info("AIABGlobalHelper.impersonate v4: result=" + result);
+        
+        var newUser = gs.getUserID();
+        gs.info("AIABGlobalHelper.impersonate v4: now running as " + newUser);
+        
+        if (newUser === userId) {
+            gs.info("AIABGlobalHelper.impersonate v4: SUCCESS");
+            return originalUser;
+        } else {
+            gs.warn("AIABGlobalHelper.impersonate v4: FAILED - still " + newUser);
+            return null;
+        }
+    },
+
+    revert: function(originalUserId) {
+        if (originalUserId) {
+            try {
+                gs.impersonate(originalUserId);
+            } catch (e) {
+                gs.warn("AIABGlobalHelper.revert failed: " + e);
+            }
+        }
+    },
+
+    type: "AIABGlobalHelper"
+};]]&gt;&lt;/script&gt;&lt;sys_class_name&gt;sys_script_include&lt;/sys_class_name&gt;&lt;sys_created_by&gt;opencode&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-01-15 06:39:57&lt;/sys_created_on&gt;&lt;sys_id&gt;1380618c83a2f2104d4fccb6feaad38e&lt;/sys_id&gt;&lt;sys_mod_count&gt;5&lt;/sys_mod_count&gt;&lt;sys_name&gt;AIABGlobalHelper&lt;/sys_name&gt;&lt;sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016"&gt;0439d1f593948210071230a97bba1016&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="AI in a Box"&gt;0439d1f593948210071230a97bba1016&lt;/sys_scope&gt;&lt;sys_update_name&gt;sys_script_include_1380618c83a2f2104d4fccb6feaad38e&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-01-22 15:32:00&lt;/sys_updated_on&gt;&lt;/sys_script_include&gt;&lt;/record_update&gt;</payload>
+        <payload_hash>352670324</payload_hash>
+        <record_name>AIABGlobalHelper</record_name>
+        <reverted_from/>
+        <source>fb79436b835232104d4fccb6feaad310</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-01-22 15:32:00</sys_created_on>
+        <sys_id>117dd75e83ee72104d4fccb6feaad372</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>19be6557a9d0000001</sys_recorded_at>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-22 15:32:00</sys_updated_on>
+        <type>Script Include</type>
+        <update_guid>9d7dd75ee2ee72103024034e73673f70</update_guid>
+        <update_guid_history>9d7dd75ee2ee72103024034e73673f70:352670324,bd4d9f1ef9ee72109f292f6ef202d524:-935167742,bbccdbda26ee72105e949247c851890d:-2007306176,c38cdf9af7ee721090d97b34383ae205:-1889305682,8ffb575aeaee7210a5b4135b7d73ee5b:-2122778443,df80258cf4a2f2105bd9f242ed339394:1687107660</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete/>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-01-22 15:34:00</sys_created_on>
+        <sys_db_object display_value="" name="sys_script_include">sys_script_include</sys_db_object>
+        <sys_id>bdaf6b41f02f452babf59988c8b78599</sys_id>
+        <sys_metadata>1380618c83a2f2104d4fccb6feaad38e</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>AIABGlobalHelper</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_scope_delete display_value="">c1a48f6b4a924506a5b1a6becbc665a1</sys_scope_delete>
+        <sys_update_name>sys_script_include_1380618c83a2f2104d4fccb6feaad38e</sys_update_name>
+        <sys_update_version display_value="sys_script_include_1380618c83a2f2104d4fccb6feaad38e">117dd75e83ee72104d4fccb6feaad372</sys_update_version>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-22 15:34:00</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

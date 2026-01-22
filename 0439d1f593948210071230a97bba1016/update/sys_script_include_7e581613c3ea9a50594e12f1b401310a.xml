@@ -104,69 +104,159 @@ aiabStatus.prototype = {
       return returnObject;
     })();
     // Tools ACL - checks if impersonation is configured for ACL-aware tool execution
-    var toolsAcl = (function () {
+    // Global Helper - checks if AIABGlobalHelper script include exists in global scope
+    // Callback Auth - checks if the callback auth property is set
+    var callbackAuth = (function () {
       var returnObject = {
         "className": "btn btn-warning",
-        "label": "Tools ACL",
+        "label": "Callback Auth",
+        "buttonText": "Not Set",
+        "url": "/sys_properties_list.do?sysparm_query=name=ai_in_a_box.config.server.callback.auth",
+        "description": "Authentication for AI server callbacks"
+      };
+      var authValue = gs.getProperty('ai_in_a_box.config.server.callback.auth');
+      if (!authValue || authValue == '') {
+        returnObject.className = 'btn btn-secondary';
+        returnObject.buttonText = 'Not Set';
+        return returnObject;
+      }
+      var parts = authValue.split(':');
+      if (parts.length < 2) {
+        returnObject.className = 'btn btn-danger';
+        returnObject.buttonText = 'Invalid Format';
+        returnObject.description = 'Should be username:password';
+        return returnObject;
+      }
+      returnObject.className = 'btn btn-success';
+      returnObject.buttonText = 'Set';
+      returnObject.description = 'Callback auth is configured';
+      return returnObject;
+    })();
+    // Service Account - checks if the user exists, has admin role, and credentials work
+    var serviceAccount = (function () {
+      var returnObject = {
+        "className": "btn btn-warning",
+        "label": "Service Account",
         "buttonText": "Not Configured",
         "url": "https://getaiinabox.com/docs/tools-acl",
-        "description": "ACL-aware tool execution requires manual setup"
+        "description": "User account for tool execution"
       };
-      var issues = [];
-      // Check 1: callback auth property is set
-      var callbackAuth = gs.getProperty('ai_in_a_box.config.server.callback.auth');
-      if (!callbackAuth || callbackAuth == '') {
-        issues.push('Callback auth not set');
+      var authValue = gs.getProperty('ai_in_a_box.config.server.callback.auth');
+      if (!authValue || authValue == '') {
+        returnObject.className = 'btn btn-secondary';
+        returnObject.buttonText = 'N/A';
+        returnObject.description = 'Set callback auth first';
+        return returnObject;
       }
-      // Check 2: AIABGlobalHelper script include exists in global scope
+      var parts = authValue.split(':');
+      if (parts.length < 2) {
+        returnObject.className = 'btn btn-secondary';
+        returnObject.buttonText = 'N/A';
+        return returnObject;
+      }
+      var username = parts[0];
+      var userRecord = new GlideRecord('sys_user');
+      userRecord.addQuery('user_name', username);
+      userRecord.addQuery('active', true);
+      userRecord.setLimit(1);
+      userRecord.query();
+      if (!userRecord.next()) {
+        returnObject.className = 'btn btn-danger';
+        returnObject.buttonText = 'Not Found';
+        returnObject.description = 'User "' + username + '" not found or inactive';
+        returnObject.url = '/sys_user_list.do?sysparm_query=user_name=' + username;
+        return returnObject;
+      }
+      returnObject.url = '/sys_user.do?sys_id=' + userRecord.sys_id;
+      // Check if user has admin role (required for GlideImpersonate)
+      var hasAdminRole = new GlideRecord('sys_user_has_role');
+      hasAdminRole.addQuery('user', userRecord.sys_id);
+      hasAdminRole.addQuery('role.name', 'admin');
+      hasAdminRole.setLimit(1);
+      hasAdminRole.query();
+      if (!hasAdminRole.hasNext()) {
+        returnObject.className = 'btn btn-danger';
+        returnObject.buttonText = 'No Admin Role';
+        returnObject.description = 'User "' + username + '" needs admin role';
+        return returnObject;
+      }
+      // Test that credentials actually work by making a REST call
+      try {
+        var instanceUrl = gs.getProperty('glide.servlet.uri', '');
+        if (!instanceUrl) {
+          instanceUrl = 'https://' + gs.getProperty('instance_name') + '.service-now.com/';
+        }
+        var testEndpoint = instanceUrl + 'api/now/table/sys_user?sysparm_query=user_name=' + username + '&sysparm_limit=1&sysparm_fields=user_name';
+        var restMessage = new sn_ws.RESTMessageV2();
+        restMessage.setHttpMethod('GET');
+        restMessage.setEndpoint(testEndpoint);
+        restMessage.setRequestHeader('Accept', 'application/json');
+        restMessage.setRequestHeader('Authorization', 'Basic ' + GlideStringUtil.base64Encode(authValue));
+        var response = restMessage.execute();
+        var statusCode = response.getStatusCode();
+        if (statusCode == 401 || statusCode == 403) {
+          returnObject.className = 'btn btn-danger';
+          returnObject.buttonText = 'Auth Failed';
+          returnObject.description = 'Invalid password for "' + username + '"';
+          return returnObject;
+        }
+        if (statusCode != 200) {
+          returnObject.className = 'btn btn-warning';
+          returnObject.buttonText = 'Test Error';
+          returnObject.description = 'Could not verify (HTTP ' + statusCode + ')';
+          return returnObject;
+        }
+      } catch (e) {
+        returnObject.className = 'btn btn-warning';
+        returnObject.buttonText = 'Test Error';
+        returnObject.description = 'Error: ' + e.message;
+        return returnObject;
+      }
+      returnObject.className = 'btn btn-success';
+      returnObject.buttonText = username;
+      returnObject.description = 'Verified with admin role';
+      return returnObject;
+    })();
+    // Helper Script - checks if AIABGlobalHelper script include exists in global scope
+    var helperScript = (function () {
+      var returnObject = {
+        "className": "btn btn-warning",
+        "label": "Helper Script",
+        "buttonText": "Not Found",
+        "url": "https://getaiinabox.com/docs/tools-acl",
+        "description": "Global script include for tool execution"
+      };
       var scriptInclude = new GlideRecord('sys_script_include');
       scriptInclude.addQuery('name', 'AIABGlobalHelper');
       scriptInclude.addQuery('sys_scope', 'global');
       scriptInclude.addQuery('active', true);
       scriptInclude.setLimit(1);
       scriptInclude.query();
-      if (!scriptInclude.hasNext()) {
-        issues.push('Global helper missing');
-      }
-      // Check 3: Service user exists with impersonator role
-      if (callbackAuth && callbackAuth != '') {
-        var parts = callbackAuth.split(':');
-        if (parts.length >= 1) {
-          var username = parts[0];
-          var serviceUser = new GlideRecord('sys_user');
-          serviceUser.addQuery('user_name', username);
-          serviceUser.addQuery('active', true);
-          serviceUser.setLimit(1);
-          serviceUser.query();
-          if (!serviceUser.next()) {
-            issues.push('Service user not found');
-          } else {
-            // Check if user has impersonator role
-            var hasRole = new GlideRecord('sys_user_has_role');
-            hasRole.addQuery('user', serviceUser.sys_id);
-            hasRole.addQuery('role.name', 'impersonator');
-            hasRole.setLimit(1);
-            hasRole.query();
-            if (!hasRole.hasNext()) {
-              issues.push('Missing impersonator role');
-            }
-          }
-        }
-      }
-      if (issues.length == 0) {
+      if (scriptInclude.next()) {
         returnObject.className = 'btn btn-success';
-        returnObject.buttonText = '✅Ready';
-        returnObject.description = 'Tools will respect user ACLs';
-      } else if (issues.length == 3) {
-        returnObject.className = 'btn btn-secondary';
-        returnObject.buttonText = 'Optional';
-        returnObject.description = 'Setup for ACL-aware tools (optional)';
+        returnObject.buttonText = 'Installed';
+        returnObject.description = 'AIABGlobalHelper is active';
+        returnObject.url = '/sys_script_include.do?sys_id=' + scriptInclude.sys_id;
       } else {
-        returnObject.buttonText = issues[0];
+        // Check if it exists but is inactive
+        var inactiveCheck = new GlideRecord('sys_script_include');
+        inactiveCheck.addQuery('name', 'AIABGlobalHelper');
+        inactiveCheck.addQuery('sys_scope', 'global');
+        inactiveCheck.setLimit(1);
+        inactiveCheck.query();
+        if (inactiveCheck.next()) {
+          returnObject.className = 'btn btn-warning';
+          returnObject.buttonText = 'Inactive';
+          returnObject.description = 'Script exists but is not active';
+          returnObject.url = '/sys_script_include.do?sys_id=' + inactiveCheck.sys_id;
+        } else {
+          returnObject.className = 'btn btn-secondary';
+          returnObject.buttonText = 'Not Installed';
+          returnObject.description = 'AIABGlobalHelper not found';
+        }
       }
       return returnObject;
     })();
-    // mid server [ai_in_a_box.config.midserver]
     var midserver = (function () {
 	  var enabled = gs.getProperty('ai_in_a_box.config.midserver.enabled', 'true');
 	  var returnObject = {
@@ -376,7 +466,9 @@ aiabStatus.prototype = {
     return {
       summarize: summarize,
       chat: chat,
-      toolsAcl: toolsAcl,
+      callbackAuth: callbackAuth,
+      serviceAccount: serviceAccount,
+      helperScript: helperScript,
       midserver: midserver,
       aiiabServer: aiiabServer,
       llmServer: llmServer,
@@ -455,19 +547,25 @@ aiabStatus.prototype = {
     }
   },
   type: 'aiabStatus'
-};]]></script>
+};
+
+
+
+
+
+]]></script>
         <sys_class_name>sys_script_include</sys_class_name>
         <sys_created_by>aiinaboxadmin</sys_created_by>
         <sys_created_on>2024-12-23 20:42:04</sys_created_on>
         <sys_id>7e581613c3ea9a50594e12f1b401310a</sys_id>
-        <sys_mod_count>136</sys_mod_count>
+        <sys_mod_count>142</sys_mod_count>
         <sys_name>aiabStatus</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_script_include_7e581613c3ea9a50594e12f1b401310a</sys_update_name>
         <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-15 07:16:20</sys_updated_on>
+        <sys_updated_on>2026-01-22 16:09:49</sys_updated_on>
     </sys_script_include>
     <sys_es_latest_script action="INSERT_OR_UPDATE">
         <id>7e581613c3ea9a50594e12f1b401310a</id>

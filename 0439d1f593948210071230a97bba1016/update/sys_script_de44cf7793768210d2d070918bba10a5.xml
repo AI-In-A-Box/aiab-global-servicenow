@@ -5,7 +5,7 @@
         <action_delete>false</action_delete>
         <action_insert>true</action_insert>
         <action_query>false</action_query>
-        <action_update>false</action_update>
+        <action_update>true</action_update>
         <active>true</active>
         <add_message>false</add_message>
         <advanced>true</advanced>
@@ -294,17 +294,17 @@
         <sys_domain>global</sys_domain>
         <sys_domain_path>/</sys_domain_path>
         <sys_id>de44cf7793768210d2d070918bba10a5</sys_id>
-        <sys_mod_count>77</sys_mod_count>
+        <sys_mod_count>78</sys_mod_count>
         <sys_name>Fetch Inference</sys_name>
         <sys_overrides/>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_script_de44cf7793768210d2d070918bba10a5</sys_update_name>
-        <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-15 06:28:34</sys_updated_on>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-22 14:39:30</sys_updated_on>
         <template/>
-        <when>after</when>
+        <when>async_always</when>
     </sys_script>
     <sys_translated_text action="delete_multiple" query="documentkey=de44cf7793768210d2d070918bba10a5"/>
 </record_update>
