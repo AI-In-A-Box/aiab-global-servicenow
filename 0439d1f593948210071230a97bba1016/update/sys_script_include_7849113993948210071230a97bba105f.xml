@@ -256,45 +256,63 @@ aiabAjax.prototype = Object.extendsObject(AbstractAjaxProcessor, {
         var gr = new GlideRecord(table);
         if (!gr.get(sysId)) return '';
         
+        var userId = gs.getUserID();
         var lines = [
             'Table: ' + table,
             'Record: ' + gr.getDisplayValue()
         ];
         
-        // Common task fields
+        // Add number if available
         if (gr.isValidField('number')) {
             lines.push('Number: ' + gr.getValue('number'));
         }
+        
+        // Add short_description if available
         if (gr.isValidField('short_description')) {
             lines.push('Short description: ' + gr.getValue('short_description'));
         }
+        
+        // Add description if available (full details)
         if (gr.isValidField('description') && gr.getValue('description')) {
             var desc = gr.getValue('description');
-            if (desc.length > 500) desc = desc.substring(0, 500) + '...';
+            // Truncate if too long
+            if (desc.length > 500) {
+                desc = desc.substring(0, 500) + '...';
+            }
             lines.push('Description: ' + desc);
         }
+        
+        // Add state if available
         if (gr.isValidField('state')) {
             lines.push('State: ' + gr.getDisplayValue('state'));
         }
+        
+        // Add priority if available
         if (gr.isValidField('priority')) {
             lines.push('Priority: ' + gr.getDisplayValue('priority'));
         }
         
-        // People fields
-        if (gr.isValidField('caller_id') && gr.getValue('caller_id')) {
-            lines.push('Caller: ' + gr.getDisplayValue('caller_id'));
+        // Add caller/requester - check multiple common field names
+        var callerFields = ['caller_id', 'requested_by', 'u_requested_by', 'contact', 'opened_by'];
+        for (var c = 0; c < callerFields.length; c++) {
+            var callerField = callerFields[c];
+            if (gr.isValidField(callerField) && gr.getValue(callerField)) {
+                var callerLabel = gr.getElement(callerField).getLabel();
+                lines.push(callerLabel + ': ' + gr.getDisplayValue(callerField));
+            }
         }
-        if (gr.isValidField('opened_by') && gr.getValue('opened_by')) {
-            lines.push('Opened by: ' + gr.getDisplayValue('opened_by'));
-        }
+        
+        // Add assigned_to if available
         if (gr.isValidField('assigned_to') && gr.getValue('assigned_to')) {
             lines.push('Assigned to: ' + gr.getDisplayValue('assigned_to'));
         }
+        
+        // Add assignment_group if available
         if (gr.isValidField('assignment_group') && gr.getValue('assignment_group')) {
             lines.push('Assignment group: ' + gr.getDisplayValue('assignment_group'));
         }
         
-        // Category fields
+        // Add category/subcategory if available
         if (gr.isValidField('category') && gr.getValue('category')) {
             lines.push('Category: ' + gr.getDisplayValue('category'));
         }
@@ -302,42 +320,80 @@ aiabAjax.prototype = Object.extendsObject(AbstractAjaxProcessor, {
             lines.push('Subcategory: ' + gr.getDisplayValue('subcategory'));
         }
         
-        // Dates
+        // Add created/updated timestamps
         if (gr.isValidField('sys_created_on')) {
-            lines.push('Created: ' + gr.getValue('sys_created_on'));
+            lines.push('Created: ' + gr.getDisplayValue('sys_created_on'));
         }
         if (gr.isValidField('sys_updated_on')) {
-            lines.push('Last updated: ' + gr.getValue('sys_updated_on'));
+            lines.push('Last updated: ' + gr.getDisplayValue('sys_updated_on'));
         }
         
-        // User's relationship to this record
-        var userId = gs.getUserID();
-        var relationships = [];
-        if (gr.isValidField('caller_id') && gr.getValue('caller_id') == userId) {
-            relationships.push('You are the Caller');
-        }
-        if (gr.isValidField('opened_by') && gr.getValue('opened_by') == userId) {
-            relationships.push('You are the Opened by');
-        }
-        if (gr.isValidField('assigned_to') && gr.getValue('assigned_to') == userId) {
-            relationships.push('You are the Assigned to');
-        }
-        if (gr.isValidField('resolved_by') && gr.getValue('resolved_by') == userId) {
-            relationships.push('You are the Resolved by');
-        }
-        if (gr.isValidField('closed_by') && gr.getValue('closed_by') == userId) {
-            relationships.push('You are the Closed by');
-        }
-        
+        // Determine user's relationship to the record
+        var relationships = this._determineUserRelationship(gr, userId);
         if (relationships.length > 0) {
             lines.push('');
             lines.push('Your relationship to this record:');
-            for (var i = 0; i < relationships.length; i++) {
-                lines.push('- ' + relationships[i]);
+            for (var r = 0; r < relationships.length; r++) {
+                lines.push('- ' + relationships[r]);
             }
         }
         
         return lines.join('\n');
+    },
+    
+    /**
+     * Determine user's relationship to the record (for intent prediction)
+     * @param {GlideRecord} gr - The record
+     * @param {string} userId - Current user's sys_id
+     * @returns {array} List of relationships
+     */
+    _determineUserRelationship: function(gr, userId) {
+        var relationships = [];
+        
+        // Check if user is the caller/opened_by/requested_by
+        var callerFields = ['caller_id', 'opened_by', 'requested_by', 'u_requested_by', 'contact'];
+        for (var i = 0; i < callerFields.length; i++) {
+            var field = callerFields[i];
+            if (gr.isValidField(field) && gr.getValue(field) === userId) {
+                relationships.push('You are the ' + gr.getElement(field).getLabel());
+                break;
+            }
+        }
+        
+        // Check if user is assigned_to
+        if (gr.isValidField('assigned_to') && gr.getValue('assigned_to') === userId) {
+            relationships.push('You are assigned to this record');
+        }
+        
+        // Check if user is in the assignment_group
+        if (gr.isValidField('assignment_group') && gr.getValue('assignment_group')) {
+            var groupId = gr.getValue('assignment_group');
+            var groupMember = new GlideRecord('sys_user_grmember');
+            groupMember.addQuery('group', groupId);
+            groupMember.addQuery('user', userId);
+            groupMember.setLimit(1);
+            groupMember.query();
+            if (groupMember.hasNext()) {
+                relationships.push('You are a member of the assignment group');
+            }
+        }
+        
+        // Check if user is the manager of assigned_to
+        if (gr.isValidField('assigned_to') && gr.getValue('assigned_to')) {
+            var assignee = new GlideRecord('sys_user');
+            if (assignee.get(gr.getValue('assigned_to'))) {
+                if (assignee.getValue('manager') === userId) {
+                    relationships.push('You are the manager of the assignee');
+                }
+            }
+        }
+        
+        // If no relationship found
+        if (relationships.length === 0) {
+            relationships.push('You are viewing this record (no direct relationship)');
+        }
+        
+        return relationships;
     },
 
 	askClientScript: function (sys_id, table, prompt, script) {
@@ -570,13 +626,13 @@ aiabAjax.prototype = Object.extendsObject(AbstractAjaxProcessor, {
         <sys_created_by>jacebenson</sys_created_by>
         <sys_created_on>2024-02-12 07:43:24</sys_created_on>
         <sys_id>7849113993948210071230a97bba105f</sys_id>
-        <sys_mod_count>271</sys_mod_count>
+        <sys_mod_count>272</sys_mod_count>
         <sys_name>aiabAjax</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_script_include_7849113993948210071230a97bba105f</sys_update_name>
         <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-22 20:55:56</sys_updated_on>
+        <sys_updated_on>2026-01-22 23:59:38</sys_updated_on>
     </sys_script_include>
 </record_update>
