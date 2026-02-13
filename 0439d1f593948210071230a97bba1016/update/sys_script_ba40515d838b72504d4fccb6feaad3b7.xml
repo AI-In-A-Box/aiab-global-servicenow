@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_script">
+    <sys_script action="INSERT_OR_UPDATE">
+        <abort_action>false</abort_action>
+        <access>package_private</access>
+        <action_delete>false</action_delete>
+        <action_insert>true</action_insert>
+        <action_query>false</action_query>
+        <action_update>true</action_update>
+        <active>true</active>
+        <add_message>false</add_message>
+        <advanced>true</advanced>
+        <change_fields>false</change_fields>
+        <client_callable>false</client_callable>
+        <collection>u_ai_tool</collection>
+        <condition/>
+        <description>Server-side validation that u_parameters contains valid JSON. Formats the JSON and aborts the transaction if invalid.</description>
+        <execute_function>false</execute_function>
+        <filter_condition/>
+        <is_rest>false</is_rest>
+        <message/>
+        <name>Validate and Format Parameters JSON</name>
+        <order>100</order>
+        <priority>100</priority>
+        <rest_method/>
+        <rest_method_text/>
+        <rest_service/>
+        <rest_service_text/>
+        <rest_variables/>
+        <role_conditions/>
+        <script><![CDATA[(function executeRule(current, previous) {
+
+    // Skip if parameters field is empty
+    if (!current.u_parameters) {
+        return;
+    }
+
+    var params = current.u_parameters.toString();
+    
+    try {
+        var parsed = JSON.parse(params);
+        // Format with 2-space indentation
+        current.u_parameters = JSON.stringify(parsed, null, 2);
+    } catch (e) {
+        gs.addErrorMessage('Invalid JSON in Parameters field: ' + e.message);
+        current.setAbortAction(true);
+    }
+
+})(current, previous);]]></script>
+        <sys_class_name>sys_script</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-02-12 23:12:44</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>ba40515d838b72504d4fccb6feaad3b7</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>Validate and Format Parameters JSON</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_script_ba40515d838b72504d4fccb6feaad3b7</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-12 23:12:50</sys_updated_on>
+        <template/>
+        <when>before</when>
+    </sys_script>
+    <sys_translated_text action="delete_multiple" query="documentkey=ba40515d838b72504d4fccb6feaad3b7"/>
+</record_update>

@@ -29,11 +29,62 @@
         <rest_service_text/>
         <rest_variables/>
         <role_conditions/>
-        <script><![CDATA[(function executeRule(current, previous /*null when async*/) {
-    var buildTableMessages = function () {
-
+        <script><![CDATA[(function executeRule(current, previous /*null when async*/ ) {
+    var buildTableMessages = function() {
         var task = new GlideRecord(table);
-        task.get(current.getValue('u_target'));
+        if (!task.get(current.getValue('u_target'))) {
+            return [{
+                role: 'system',
+                content: 'Error: Could not find target record'
+            }];
+        }
+        
+        // Look for a summarize tool for this table
+        var toolName = 'summarize_' + table;
+        var toolGR = new GlideRecord('u_ai_tool');
+        toolGR.addQuery('u_name', toolName);
+        toolGR.addQuery('u_active', true);
+        toolGR.setLimit(1);
+        toolGR.query();
+        
+        if (toolGR.next()) {
+            // Add this tool to the inference's u_tools_included list
+            var toolsList = current.u_tools_included || '';
+            if (toolsList) {
+                toolsList += ',';
+            }
+            toolsList += toolGR.getUniqueValue();
+            current.u_tools_included = toolsList;
+            
+            // Execute the tool to get the prompt
+            var evaluator = new GlideScopedEvaluator();
+            evaluator.putVariable('args', { sys_id: current.getValue('u_target') });
+            evaluator.putVariable('userId', requestingUserId);
+            
+            try {
+                var result = evaluator.evaluateScript(toolGR, 'u_script');
+                
+                if (result && result.found && result.prompt) {
+                    // Build messages array from tool output
+                    messages = [{
+                        role: 'system',
+                        content: 'You are a helpful assistant that summarizes records concisely.'
+                    }, {
+                        role: 'user',
+                        content: result.prompt
+                    }];
+                    
+                    return messages;
+                } else if (result && result.error) {
+                    gs.warn('AIAB: Tool execution error for ' + toolName + ': ' + result.error);
+                }
+            } catch (e) {
+                gs.warn('AIAB: Failed to execute tool ' + toolName + ': ' + e);
+            }
+        }
+        
+        // Fallback to old summarizer logic (temporary - remove after migration)
+        gs.info('AIAB: Falling back to u_ai_summarizer for table ' + table);
         var aiSummarierGR = new GlideRecord('u_ai_summarizer');
         aiSummarierGR.addQuery('u_active', 'true');
         aiSummarierGR.addQuery('u_table', table);
@@ -47,18 +98,12 @@
             });
             var recordTemplate = aiSummarierGR.getValue('u_record_template');
             var recordFieldsFromTemplate = recordTemplate.match(/{{(.*?)}}/g);
-            var fields = recordFieldsFromTemplate.map(function (field) {
+            var fields = recordFieldsFromTemplate.map(function(field) {
                 field = field.replace('{{', '').replace('}}', '');
                 return field;
             });
 
-            var recordA = new GlideRecord(table);
-            recordA.setLimit(1);
             if (aiSummarierGR.getValue('u_record_a_data')) {
-                //messages.push({
-                //    role: 'user',
-                //    content: aiSummarierGR.getValue('u_prompt')
-                //});
                 messages.push({
                     role: 'user',
                     content: aiSummarierGR.getValue('u_record_a_data')
@@ -69,13 +114,7 @@
                 });
             }
 
-            var recordB = new GlideRecord(table);
-            recordB.setLimit(1);
             if (aiSummarierGR.getValue('u_record_b_data')) {
-                //messages.push({
-                //    role: 'user',
-                //    content: aiSummarierGR.getValue('u_prompt')
-                //});
                 messages.push({
                     role: 'user',
                     content: aiSummarierGR.getValue('u_record_b_data')
@@ -87,7 +126,7 @@
             }
 
             var taskText = recordTemplate + '';
-            fields.forEach(function (field) {
+            fields.forEach(function(field) {
                 var value = task.getDisplayValue(field) || '';
                 if (field == "__all_variables__") {
                     value += "Variables:\n";
@@ -97,33 +136,30 @@
                 }
                 if (field.indexOf('__related__') > -1) {
                     try {
-                        // what do i need to get a related list of display values
-                        // i need the table, the query, and the field name
                         var clearField = field.replace('__related__', '');
                         var parts = clearField.split('__');
                         var rTable = parts[0];
                         var rQuery = parts[1];
                         var rField = parts[2].split(',');
-                        (function () {
+                        (function() {
                             var re = /\[\[(.*?)\]\]/g;
                             var match;
                             var result = [];
                             while (match = re.exec(rQuery)) {
                                 result.push(match[1]);
                             }
-                            result.forEach(function (r) {
+                            result.forEach(function(r) {
                                 rQuery = rQuery.replace('[[' + r + ']]', task.getValue(r));
                             });
                         })();
                         var rGR = new GlideRecord(rTable);
                         rGR.addQuery(rQuery);
                         rGR.setLimit(10);
-                        //value = rTable + ':' + rField + ':' + rQuery
                         rGR.query();
                         var rValues = [];
                         while (rGR.next()) {
                             var rFields = [];
-                            rField.forEach(function (dField) {
+                            rField.forEach(function(dField) {
                                 rFields.push(rGR.getElement(dField).getLabel() + ': ' + rGR.getDisplayValue(dField));
                             });
                             rValues.push(rFields.join('\n>'));
@@ -138,10 +174,6 @@
                 }
                 taskText = taskText.replace('{{' + field + '}}', value);
             });
-            //messages.push({
-            //    role: 'user',
-            //    content: aiSummarierGR.getValue('u_prompt')
-            //});
             messages.push({
                 role: 'user',
                 content: taskText
@@ -149,16 +181,15 @@
         }
         return messages;
     };
-    var setPromptToJSON = function (prompt) {
-        var messages = [
-            {
-                role: "system",
-                content: "You are a helpful assistant."
-            }, {
-                role: "user",
-                content: prompt
-            }
-        ];
+    
+    var setPromptToJSON = function(prompt) {
+        var messages = [{
+            role: "system",
+            content: "You are a helpful assistant."
+        }, {
+            role: "user",
+            content: prompt
+        }];
         try {
             var parsedPrompt = JSON.parse(prompt);
             if (Array.isArray(parsedPrompt)) {
@@ -169,102 +200,115 @@
             return messages;
         }
     };
-	var buildAskRecordMessages = function(sysid, table, prompt){
-		var messages = [
-			{
-				role: "system",
-				content: "You are a helpful chatbot who will answer to the best of your ability the request asked.  Do not expand more than necessary."
-			},
-			{
-				role: "user",
-				content: "I need assistance, given the following record, I will ask a few questions about it.  Do you're best to answer the question or request.  Ready?"
-			},
-			{
-				role: "assistant",
-				content: "I'm ready."
-			}
-		];
-		var questionMessage = {
-			role: "user",
-			content: ""
-		}
-		var record = new GlideRecord(table);
-		record.addQuery('sys_id', sysid);
-		record.setLimit(1);
-		record.query();
-		if(record.next()){
-			// now we'll build out this message
-			for(var field in record){
-				var validField = record.isValidField(field);
-				if(validField){
-					var label = record[field].getLabel(field);
-					var value = record.getDisplayValue(field) || "Not set";
-					questionMessage.content += label + ': ' + value + '\n';
-				}
-			}
-		}
-		messages.push(questionMessage);
-		messages.push({
-			role: "assistant",
-			content: "Ask your question."
-		});
-		messages.push({
-			role: "user",
-			content: "What is the records unique id, the sys_id?"
-		});
-		messages.push({
-			role: "assistant",
-			content: "The record's sys_id is " + sysid
-		})
-		messages.push({
-			role: "user",
-			content: prompt
-		});
-		return messages;
-	};
+    
+    var getActiveTools = function() {
+        var tools = [];
+        
+        // First check if u_tools_included is set and use those specific tools
+        if (current.u_tools_included) {
+            var toolIds = current.u_tools_included.toString().split(',');
+            for (var i = 0; i < toolIds.length; i++) {
+                var toolGR = new GlideRecord('u_ai_tool');
+                if (toolGR.get(toolIds[i].trim())) {
+                    if (toolGR.u_active == true) {
+                        try {
+                            tools.push({
+                                type: "function",
+                                "function": {
+                                    name: toolGR.getValue('u_name'),
+                                    description: toolGR.getValue('u_description'),
+                                    parameters: JSON.parse(toolGR.getValue('u_parameters'))
+                                }
+                            });
+                        } catch (e) {
+                            gs.warn('AIAB: Failed to parse tool parameters for ' + toolGR.getValue('u_name') + ': ' + e);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // If no specific tools included, fall back to all active tools
+        if (tools.length === 0) {
+            var toolGR = new GlideRecord('u_ai_tool');
+            toolGR.addQuery('u_active', true);
+            toolGR.query();
+            while (toolGR.next()) {
+                try {
+                    tools.push({
+                        type: "function",
+                        "function": {
+                            name: toolGR.getValue('u_name'),
+                            description: toolGR.getValue('u_description'),
+                            parameters: JSON.parse(toolGR.getValue('u_parameters'))
+                        }
+                    });
+                } catch (e) {
+                    gs.warn('AIAB: Failed to parse tool parameters for ' + toolGR.getValue('u_name') + ': ' + e);
+                }
+            }
+        }
+        
+        return tools;
+    };
+    
     try {
         var prompt = current.getValue('u_prompt');
         var table = current.getValue('u_table');
-		var target = current.getValue('u_target');
-		var type = current.getValue('u_type');
-		var model = current.getValue('u_model') || gs.getProperty('ai_in_a_box.config.server.llm.model');
-		if(type == 'summarize-simple'){
+        var target = current.getValue('u_target');
+        var type = current.getValue('u_type');
+        var model = current.getValue('u_model') || gs.getProperty('ai_in_a_box.config.server.llm.model');
+        var requestingUserId = current.getValue('u_requested_by') || current.getValue('sys_created_by');
+        
+        if (!requestingUserId) {
+            var userGR = new GlideRecord('sys_user');
+            userGR.addQuery('user_name', current.getValue('sys_created_by'));
+            userGR.setLimit(1);
+            userGR.query();
+            if (userGR.next()) {
+                requestingUserId = userGR.getUniqueValue();
+            }
+        }
+        
+        if (type == 'summarize-simple') {
             messages = buildTableMessages();
-		}
-		if(type == 'chat'){
-			messages = setPromptToJSON(prompt);// TODO MAKE A NEW FX
-		}
-		if(type == 'generic'){
-			messages = setPromptToJSON(prompt);
-		}
-		if(type == 'ask-record'){
-			messages = buildAskRecordMessages(target, table, prompt);
-		}
-        //current.u_prompt = JSON.stringify(messages, null, ' ');
+        }
+        if (type == 'chat') {
+            messages = setPromptToJSON(prompt);
+        }
+        if (type == 'generic') {
+            messages = setPromptToJSON(prompt);
+        }
+        
         current.u_prompt = JSON.stringify(messages, null, ' ');
         current.u_state = 'requested';
+        
+        var tools = getActiveTools();
         var aiabRest = new global.aiabRest();
+        var body = {
+            messages: messages,
+            model: model,
+            tools: tools.length > 0 ? tools : undefined
+        };
+        var path = "/openai/v1/chat/completions";
+        var method = "post";
+        var headers = {
+            "ai_in_a_box.inference.id": current.getValue('sys_id'),
+            "ai_in_a_box.user.id": requestingUserId
+        };
+        gs.info('AIAB: Sending inference ' + current.getValue('sys_id') + ' for user ' + requestingUserId + ' with ' + tools.length + ' tools');
         var restMessageNoTable = aiabRest.send({
-            body: {
-                messages: messages,
-				model: model
-            },
-			path: "/openai/v1/chat/completions",
-            method: "post",
-            headers: {
-                "ai_in_a_box.inference.id": current.getValue('sys_id')
-            }
+            body: body,
+            path: path,
+            method: method,
+            headers: headers
         });
         if (restMessageNoTable) {
             var parsed = JSON.parse(restMessageNoTable.body);
-            /*if (parsed.error == 0){
-                current.u_response = "Cannot connect to AI In A Box Server.";
-            }*/
             if (parsed.error) {
                 current.u_response = parsed.contents;
                 current.u_state = 'finished';
             }
-
         }
         current.update();
     } catch (error) {
@@ -277,17 +321,17 @@
         <sys_domain>global</sys_domain>
         <sys_domain_path>/</sys_domain_path>
         <sys_id>de44cf7793768210d2d070918bba10a5</sys_id>
-        <sys_mod_count>73</sys_mod_count>
+        <sys_mod_count>81</sys_mod_count>
         <sys_name>Fetch Inference</sys_name>
         <sys_overrides/>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_script_de44cf7793768210d2d070918bba10a5</sys_update_name>
-        <sys_updated_by>jacebenson</sys_updated_by>
-        <sys_updated_on>2025-09-04 00:16:06</sys_updated_on>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-13 07:12:12</sys_updated_on>
         <template/>
-        <when>after</when>
+        <when>async_always</when>
     </sys_script>
     <sys_translated_text action="delete_multiple" query="documentkey=de44cf7793768210d2d070918bba10a5"/>
 </record_update>

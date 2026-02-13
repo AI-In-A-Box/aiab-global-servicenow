@@ -4,7 +4,7 @@
         <can_delegate>true</can_delegate>
         <description/>
         <elevated_privilege>false</elevated_privilege>
-        <federated_id/>
+        <federated_id>0sjhAu8ECFJJzFMKWrSd6Fo/YdMORTwl8pwIHkdoa4U=</federated_id>
         <grantable>true</grantable>
         <includes_roles/>
         <name>u_ai_in_a_box_admin</name>

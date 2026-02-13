@@ -1,0 +1,518 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($scope, $timeout) {
+  var c = this;
+  
+  // Tool sys_ids for search
+  var KNOWLEDGE_TOOL_ID = '69d910f783da32104d4fccb6feaad357';
+  var CATALOG_TOOL_ID = '8bd9dcf783da32104d4fccb6feaad3e8';
+  
+  c.searchQuery = '';
+  c.searching = false;
+  c.searched = false;
+  c.statusMessage = '';
+  c.knowledgeResults = [];
+  c.catalogResults = [];
+  c.inferenceId = null;
+  c.watcherChannel = null;
+  
+  c.handleKeypress = function(event) {
+    if (event.keyCode === 13) {
+      c.performSearch();
+    }
+  };
+  
+  c.performSearch = function() {
+    if (!c.searchQuery || c.searchQuery.trim() === '') return;
+    
+    c.searching = true;
+    c.searched = true;
+    c.statusMessage = 'Creating search inference...';
+    c.knowledgeResults = [];
+    c.catalogResults = [];
+    c.inferenceId = null;
+    c.unsubscribe();
+    
+    // Create inference with specific search tools
+    var ga = new GlideAjax('aiabAjax');
+    ga.addParam('sysparm_name', 'createAIInference');
+    ga.addParam('sysparm_type', 'generic');
+    ga.addParam('sysparm_prompt', JSON.stringify([{
+      role: 'user',
+      content: 'Search for: ' + c.searchQuery.trim() + '\n\nUse the search_knowledge and search_catalog tools to find relevant information. Return your response as JSON in this exact format: {\"knowledge\": [{\"title\": \"...\", \"description\": \"...\", \"url\": \"...\"}], \"catalog\": [{\"name\": \"...\", \"description\": \"...\", \"url\": \"...\"}]}'
+    }]));
+    ga.addParam('sysparm_tools_included', KNOWLEDGE_TOOL_ID + ',' + CATALOG_TOOL_ID);
+    
+    ga.getXMLAnswer(function(response) {
+      if (!response || response === '') {
+        c.statusMessage = 'Error creating inference';
+        c.searching = false;
+        $scope.$apply();
+        return;
+      }
+      
+      c.inferenceId = response;
+      c.statusMessage = 'Processing search...';
+      c.subscribeToUpdates();
+      $scope.$apply();
+    });
+  };
+  
+  // Watch record using AMB
+  c.watchRecord = function(table, filter, callback) {
+    try {
+      function getFilterString(f) {
+        return btoa(f.replace(/\^EQ/g, '').replace(/\^ORDERBY(?:DESC)?[^^]*/g, '').replace(/^GOTO/, '')).replace(/=/g, '-');
+      }
+      
+      if (table === 'sys_amb_message' || table.startsWith('sys_rw')) return null;
+      
+      var amb = null;
+      try { amb = top.window.top.g_ambClient; } catch (e) {}
+      if (!amb) try { amb = window.parent.g_ambClient; } catch (e) {}
+      if (!amb && typeof g_ambClient !== 'undefined') amb = g_ambClient;
+      if (!amb) return null;
+      
+      var channelName = '/rw/default/' + table + '/' + getFilterString(filter);
+      var watcherChannel = amb.getChannel(channelName);
+      watcherChannel.subscribe(callback);
+      amb.connect();
+      return watcherChannel;
+    } catch (e) {
+      console.log('AIAB Search: AMB not available, will use polling');
+      return null;
+    }
+  };
+  
+  // Subscribe to AMB for streaming updates
+  c.subscribeToUpdates = function() {
+    if (!c.inferenceId) return;
+    
+    var filter = 'sys_id=' + c.inferenceId;
+    
+    c.watcherChannel = c.watchRecord('u_ai_inference', filter, function(message) {
+      $scope.$apply(function() {
+        var record = message.data && message.data.record ? message.data.record : null;
+        if (!record) return;
+        
+        var stateValue = record.u_state ? (record.u_state.value !== undefined ? record.u_state.value : record.u_state) : null;
+        if (stateValue === 'requested') {
+          c.statusMessage = 'Processing search...';
+        }
+        
+        if (record.u_response) {
+          var responseValue = record.u_response.value !== undefined ? record.u_response.value : record.u_response;
+          c.processResponse(responseValue);
+        }
+        
+        if (stateValue === 'finished' || stateValue === 'cancelled' || stateValue === 'error') {
+          c.searching = false;
+          c.statusMessage = '';
+          c.unsubscribe();
+        }
+      });
+    });
+    
+    if (!c.watcherChannel) {
+      c.pollForResults();
+    }
+  };
+  
+  // Fallback polling
+  c.pollForResults = function() {
+    if (!c.inferenceId || !c.searching) return;
+    
+    var ga = new GlideAjax('aiabAjax');
+    ga.addParam('sysparm_name', 'getAIInference');
+    ga.addParam('sysparm_sys_id', c.inferenceId);
+    
+    ga.getXMLAnswer(function(response) {
+      try {
+        var result = JSON.parse(response);
+        
+        if (result.error) {
+          c.statusMessage = 'Error: ' + result.error;
+          c.searching = false;
+          $scope.$apply();
+          return;
+        }
+        
+        if (result.state === 'finished') {
+          c.processResponse(result.response);
+          c.searching = false;
+          c.statusMessage = '';
+          $scope.$apply();
+        } else if (result.state === 'error' || result.state === 'cancelled') {
+          c.statusMessage = 'Search failed';
+          c.searching = false;
+          $scope.$apply();
+        } else {
+          $timeout(c.pollForResults, 1000);
+        }
+      } catch (e) {
+        c.statusMessage = 'Error parsing response';
+        c.searching = false;
+        $scope.$apply();
+      }
+    });
+  };
+  
+  // Unsubscribe from AMB
+  c.unsubscribe = function() {
+    if (c.watcherChannel) {
+      try { c.watcherChannel.unsubscribe(); } catch (e) {}
+      c.watcherChannel = null;
+    }
+  };
+  
+  // Process response - handles both JSON and markdown formats
+  c.processResponse = function(responseText) {
+    c.knowledgeResults = [];
+    c.catalogResults = [];
+    
+    if (!responseText) return;
+    
+    // Try to parse as JSON first
+    try {
+      // Look for JSON block in markdown code fences
+      var jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) {
+        var jsonResponse = JSON.parse(jsonMatch[1].trim());
+        if (jsonResponse.knowledge) {
+          c.knowledgeResults = jsonResponse.knowledge;
+        }
+        if (jsonResponse.catalog) {
+          c.catalogResults = jsonResponse.catalog;
+        }
+        return;
+      }
+      
+      // Try parsing the whole response as JSON
+      var directJson = JSON.parse(responseText);
+      if (directJson.knowledge) {
+        c.knowledgeResults = directJson.knowledge;
+      }
+      if (directJson.catalog) {
+        c.catalogResults = directJson.catalog;
+      }
+      return;
+    } catch (e) {
+      // Not JSON, parse as markdown
+      c.parseMarkdownResponse(responseText);
+    }
+  };
+  
+  // Parse markdown format response
+  c.parseMarkdownResponse = function(text) {
+    var lines = text.split('\n');
+    var currentSection = null;
+    var currentItem = null;
+    
+    lines.forEach(function(line) {
+      var trimmedLine = line.trim();
+      
+      // Detect section headers
+      if (trimmedLine.toLowerCase().indexOf('knowledge') > -1 && trimmedLine.indexOf('###') === 0) {
+        currentSection = 'knowledge';
+        return;
+      }
+      if (trimmedLine.toLowerCase().indexOf('catalog') > -1 && trimmedLine.indexOf('###') === 0) {
+        currentSection = 'catalog';
+        return;
+      }
+      
+      // Parse numbered list items
+      var itemMatch = trimmedLine.match(/^\d+\.\s*(.+)/);
+      if (itemMatch && currentSection) {
+        currentItem = { title: '', description: '', url: '#' };
+        if (currentSection === 'catalog') {
+          currentItem = { name: '', description: '', url: '#' };
+        }
+        
+        // Extract title/name from the line
+        var content = itemMatch[1];
+        
+        // Check for markdown link [text](url)
+        var linkMatch = content.match(/\[(.+?)\]\((.+?)\)/);
+        if (linkMatch) {
+          if (currentSection === 'knowledge') {
+            currentItem.title = linkMatch[1];
+          } else {
+            currentItem.name = linkMatch[1];
+          }
+          currentItem.url = linkMatch[2];
+        } else if (content.toLowerCase().indexOf('title:') > -1 || content.toLowerCase().indexOf('name:') > -1) {
+          // Handle "Title: [text](url)" or "Name: [text](url)" format
+          var fieldMatch = content.match(/(?:Title|Name):\s*(.+)/i);
+          if (fieldMatch) {
+            var fieldContent = fieldMatch[1];
+            var fieldLinkMatch = fieldContent.match(/\[(.+?)\]\((.+?)\)/);
+            if (fieldLinkMatch) {
+              if (currentSection === 'knowledge') {
+                currentItem.title = fieldLinkMatch[1];
+              } else {
+                currentItem.name = fieldLinkMatch[1];
+              }
+              currentItem.url = fieldLinkMatch[2];
+            } else {
+              if (currentSection === 'knowledge') {
+                currentItem.title = fieldContent;
+              } else {
+                currentItem.name = fieldContent;
+              }
+            }
+          }
+        }
+        
+        // Add item to appropriate list
+        if (currentSection === 'knowledge' && currentItem.title) {
+          c.knowledgeResults.push(currentItem);
+        } else if (currentSection === 'catalog' && currentItem.name) {
+          c.catalogResults.push(currentItem);
+        }
+      }
+      
+      // Parse description lines
+      if (currentItem && (trimmedLine.toLowerCase().indexOf('description:') === 0 || trimmedLine.toLowerCase().indexOf('**description**:') === 0)) {
+        var descMatch = trimmedLine.match(/[Dd]escription:\s*(.+)/);
+        if (descMatch) {
+          currentItem.description = descMatch[1];
+        }
+      }
+    });
+    
+    // Add portal URLs if missing
+    c.knowledgeResults.forEach(function(article) {
+      if (article.url === '#' || !article.url) {
+        // Try to extract sys_id from URL
+        var sysIdMatch = article.url && article.url.match(/sys_kb_id=([a-f0-9]+)/);
+        if (sysIdMatch) {
+          article.url = '/kb?id=kb_article_view&sysparm_article=' + sysIdMatch[1];
+        }
+      }
+    });
+    
+    c.catalogResults.forEach(function(item) {
+      if (item.url === '#' || !item.url) {
+        var sysIdMatch = item.url && item.url.match(/sysparm_id=([a-f0-9]+)/);
+        if (sysIdMatch) {
+          item.url = '/sp?id=sc_cat_item&sys_id=' + sysIdMatch[1];
+        }
+      }
+    });
+  };
+  
+  c.hasResults = function() {
+    return c.knowledgeResults.length > 0 || c.catalogResults.length > 0;
+  };
+  
+  // Cleanup
+  $scope.$on('$destroy', function() {
+    c.unsubscribe();
+  });
+};
+]]></client_script>
+        <controller_as>c</controller_as>
+        <css>.aiab-portal-search {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.search-container {
+  margin-bottom: 20px;
+}
+
+.search-box {
+  display: flex;
+  gap: 10px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 12px 16px;
+  font-size: 16px;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #0066cc;
+}
+
+.search-btn {
+  padding: 12px 24px;
+  font-size: 16px;
+  min-width: 120px;
+}
+
+.search-status {
+  padding: 10px;
+  background: #f0f0f0;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  color: #666;
+}
+
+.search-results {
+  margin-top: 20px;
+}
+
+.result-section {
+  margin-bottom: 30px;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #eee;
+  color: #333;
+}
+
+.section-title i {
+  margin-right: 8px;
+  color: #0066cc;
+}
+
+.result-item {
+  padding: 15px;
+  margin-bottom: 10px;
+  background: #f9f9f9;
+  border-radius: 4px;
+  border-left: 3px solid #0066cc;
+}
+
+.result-item:hover {
+  background: #f0f0f0;
+}
+
+.result-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.result-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: #0066cc;
+  margin-bottom: 5px;
+}
+
+.result-desc {
+  color: #666;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.no-results {
+  padding: 40px;
+  text-align: center;
+  color: #999;
+  font-style: italic;
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id>aiab-portal-search</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>AIAB Portal Search</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+  /* populate the 'data' object */
+  /* e.g., data.table = $sp.getValue('table'); */
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-02-13 08:09:58</sys_created_on>
+        <sys_id>6a2b0f11838bb2504d4fccb6feaad311</sys_id>
+        <sys_mod_count>4</sys_mod_count>
+        <sys_name>AIAB Portal Search</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sp_widget_6a2b0f11838bb2504d4fccb6feaad311</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-13 08:20:53</sys_updated_on>
+        <template><![CDATA[<div class="aiab-portal-search">
+  <div class="search-container">
+    <div class="search-box">
+      <input type="text"
+             class="form-control search-input"
+             placeholder="Search knowledge and catalog..."
+             ng-model="c.searchQuery"
+             ng-keypress="c.handleKeypress($event)"
+             aria-label="Search" />
+      <button class="btn btn-primary search-btn"
+              ng-click="c.performSearch()"
+              ng-disabled="c.searching || !c.searchQuery">
+        <span ng-if="!c.searching">Search</span>
+        <span ng-if="c.searching">Searching...</span>
+      </button>
+    </div>
+  </div>
+  
+  <div class="search-status" ng-if="c.statusMessage">
+    {{c.statusMessage}}
+  </div>
+  
+  <div class="search-results" ng-if="c.hasResults()">
+    <!-- Knowledge Results -->
+    <div class="result-section" ng-if="c.knowledgeResults.length > 0">
+      <h3 class="section-title">
+        <i class="fa fa-book"></i> Knowledge Articles
+      </h3>
+      <div class="result-item" ng-repeat="article in c.knowledgeResults">
+        <a href="{{article.url}}" class="result-link" target="_blank">
+          <div class="result-title">{{article.title}}</div>
+          <div class="result-desc" ng-if="article.description">{{article.description}}</div>
+        </a>
+      </div>
+    </div>
+    
+    <!-- Catalog Results -->
+    <div class="result-section" ng-if="c.catalogResults.length > 0">
+      <h3 class="section-title">
+        <i class="fa fa-shopping-cart"></i> Service Catalog
+      </h3>
+      <div class="result-item" ng-repeat="item in c.catalogResults">
+        <a href="{{item.url}}" class="result-link">
+          <div class="result-title">{{item.name}}</div>
+          <div class="result-desc" ng-if="item.description">{{item.description}}</div>
+        </a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="no-results" ng-if="c.searched && !c.hasResults() && !c.searching">
+    No results found. Try a different search term.
+  </div>
+</div>
+]]></template>
+    </sp_widget>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>6a2b0f11838bb2504d4fccb6feaad311</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-02-13 08:09:58</sys_created_on>
+        <sys_id>2c4b0311838bb2504d4fccb6feaad31e</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-13 08:09:58</sys_updated_on>
+        <table>sp_widget</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
+</record_update>

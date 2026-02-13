@@ -10,123 +10,213 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2024-11-11 16:07:53</sys_created_on>
         <sys_id>032641f5c3fdd210594e12f1b4013189</sys_id>
-        <sys_mod_count>47</sys_mod_count>
+        <sys_mod_count>51</sys_mod_count>
         <sys_name>ai-in-a-box-inference-viewer</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_ui_macro_032641f5c3fdd210594e12f1b4013189</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2025-01-11 04:01:19</sys_updated_on>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-15 06:01:10</sys_updated_on>
         <xml><![CDATA[<?xml version="1.0" encoding="utf-8" ?>
 <j:jelly trim="false"
     xmlns:j="jelly:core"
     xmlns:g="glide"
     xmlns:g2="glideui">
-    <div id="dynamic_content" style="font-family: Arial, sans-serif;">
-        <!-- System Message Section -->
-        <div id="system_message" style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
-            <strong style="font-size: 1.2em; color: black;">System Message:</strong>
-            <p id="system_message_content" style="margin-top: 10px;"></p>
+    <div id="aiab_viewer" style="font-family: SourceSansPro, Arial, sans-serif; max-width: 100%;">
+        
+        <!-- System Message -->
+        <div id="system_message" style="display: none; background: #5c6bc0; color: white; padding: 16px 20px; border-radius: 8px; margin-bottom: 20px;">
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.85; margin-bottom: 6px;">System Prompt</div>
+            <p id="system_message_content" style="font-size: 14px; line-height: 1.5; margin: 0;"></p>
         </div>
 
-        <!-- Chat Section -->
-        <div id="chat_container" style="border: 1px solid #ddd; border-radius: 5px; padding: 15px;margin: auto;">
+        <!-- Chat Container -->
+        <div id="chat_container" style="background: #f5f5f5; border-radius: 8px; padding: 20px;">
             <div id="chat_content"></div>
+            <div id="loading_indicator" style="display: none; padding: 20px; color: #666;">
+                <span>AI is thinking...</span>
+            </div>
+        </div>
+
+        <!-- Tool Calls Section -->
+        <div id="tool_calls_section" style="display: none; margin-top: 20px;">
+            <div id="tool_calls_header" style="display: flex; align-items: center; padding: 12px 16px; background: #fff3e0; border: 1px solid #ffcc80; border-radius: 8px 8px 0 0; cursor: pointer;">
+                <span style="margin-right: 8px;">&#9881;</span>
+                <span style="font-size: 13px; font-weight: 600; color: #e65100; text-transform: uppercase;">Tool Calls</span>
+                <span id="tool_calls_count" style="background: #ff9800; color: white; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; margin-left: 8px;">0</span>
+            </div>
+            <div id="tool_calls_body" style="background: #fffaf5; border: 1px solid #ffcc80; border-top: none; border-radius: 0 0 8px 8px; padding: 16px;">
+                <div id="tool_calls_content"></div>
+            </div>
         </div>
     </div>
 
     <script>
         addLoadEvent(function() {
-			function buildMessagesArray(dialogValue){
-				try {
+            function buildMessagesArray(dialogValue) {
+                try {
                     var parsedData = JSON.parse(dialogValue);
-                    parsedData.push({ role: "assistant", content: g_form.getValue('u_response') });
-					return parsedData;
-                    //console.log({ parsedData });
-                } catch (e) {
-                    console.log("error", e);
-                    document.getElementById('system_message_content').innerText = "Invalid JSON format.";
-                }
-			}
-            function updateCurrentValue() {
-                var finished = g_form.getValue('u_state') === "finished";
-                var cancelled = g_form.getValue('u_state') === "cancelled";
-				var newState = g_form.getValue('u_state') === "new";
-				var dialogValue = g_form.getValue('u_prompt');
-				var parsedData = buildMessagesArray(dialogValue)
-                if (finished || cancelled || newState) {
-                    if(interval){
-						console.log("cleared interval")
-                        clearInterval(interval);
+                    var response = g_form.getValue('u_response');
+                    if (response) {
+                        parsedData.push({ role: 'assistant', content: response });
                     }
-					if(finished){
-						renderChat(parsedData);
-					}
+                    return parsedData;
+                } catch (e) {
+                    var response = g_form.getValue('u_response');
+                    var messages = [{ role: 'user', content: dialogValue }];
+                    if (response) {
+                        messages.push({ role: 'assistant', content: response });
+                    }
+                    return messages;
+                }
+            }
+
+            function renderToolCalls() {
+                var toolCallsValue = g_form.getValue('u_tool_calls');
+                var toolCallsSection = document.getElementById('tool_calls_section');
+                var toolCallsContent = document.getElementById('tool_calls_content');
+                var toolCallsCount = document.getElementById('tool_calls_count');
+                
+                if (!toolCallsValue) {
+                    toolCallsSection.style.display = 'none';
                     return;
                 }
-				renderChat(parsedData);
+                
+                try {
+                    var toolCalls = JSON.parse(toolCallsValue);
+                    if (!toolCalls || toolCalls.length === 0) {
+                        toolCallsSection.style.display = 'none';
+                        return;
+                    }
+                    
+                    toolCallsSection.style.display = 'block';
+                    toolCallsCount.innerText = toolCalls.length;
+                    toolCallsContent.innerHTML = '';
+                    
+                    toolCalls.forEach(function(tc) {
+                        var card = document.createElement('div');
+                        card.style.cssText = 'background: white; border: 1px solid #ffe0b2; border-radius: 6px; margin-bottom: 12px; overflow: hidden;';
+                        
+                        var nameDiv = document.createElement('div');
+                        nameDiv.style.cssText = 'background: #fff8e1; padding: 10px 14px; font-weight: 600; font-size: 13px; color: #f57c00; border-bottom: 1px solid #ffe0b2;';
+                        nameDiv.innerText = tc.name;
+                        card.appendChild(nameDiv);
+                        
+                        var contentDiv = document.createElement('div');
+                        contentDiv.style.cssText = 'padding: 12px 14px;';
+                        
+                        var argsLabel = document.createElement('div');
+                        argsLabel.style.cssText = 'font-size: 11px; font-weight: 600; color: #757575; text-transform: uppercase; margin-bottom: 6px;';
+                        argsLabel.innerText = 'Arguments';
+                        contentDiv.appendChild(argsLabel);
+                        
+                        var argsCode = document.createElement('pre');
+                        argsCode.style.cssText = 'background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; padding: 10px; font-size: 12px; margin: 0 0 12px 0; overflow-x: auto; white-space: pre-wrap;';
+                        argsCode.innerText = JSON.stringify(tc.arguments, null, 2);
+                        contentDiv.appendChild(argsCode);
+                        
+                        if (tc.result) {
+                            var resultLabel = document.createElement('div');
+                            resultLabel.style.cssText = 'font-size: 11px; font-weight: 600; color: #757575; text-transform: uppercase; margin-bottom: 6px;';
+                            resultLabel.innerText = 'Result';
+                            contentDiv.appendChild(resultLabel);
+                            
+                            var resultCode = document.createElement('pre');
+                            resultCode.style.cssText = 'background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 4px; padding: 10px; font-size: 12px; margin: 0; overflow-x: auto; max-height: 150px; overflow-y: auto; white-space: pre-wrap;';
+                            resultCode.innerText = JSON.stringify(tc.result, null, 2);
+                            contentDiv.appendChild(resultCode);
+                        }
+                        
+                        card.appendChild(contentDiv);
+                        toolCallsContent.appendChild(card);
+                    });
+                } catch (e) {
+                    console.log('Error parsing tool calls:', e);
+                    toolCallsSection.style.display = 'none';
+                }
             }
 
-            // Function to render chat content
-            // they payload is always a Array of objects
-            // the question is, is there a system message or not
             function renderChat(data) {
-                var userMessageColor = "#28a745";
-                var assistantMessageColor = "#007bff";
-                // Display system message
-                var systemMessageContent = data.find(entry => entry.role === "system")?.content;
-                if(systemMessageContent){
-                    document.getElementById('system_message').style.display = "block";
-                    document.getElementById('system_message_content').innerText = systemMessageContent;
+                var systemMsg = null;
+                var i;
+                for (i = 0; i ${AMP}lt; data.length; i++) {
+                    if (data[i].role === 'system') {
+                        systemMsg = data[i];
+                        break;
+                    }
+                }
+                
+                if (systemMsg) {
+                    document.getElementById('system_message').style.display = 'block';
+                    document.getElementById('system_message_content').innerText = systemMsg.content;
                 } else {
-                    document.getElementById('system_message').style.display = "none";
+                    document.getElementById('system_message').style.display = 'none';
                 }
 
-
-                // Display chat messages
                 var chatContentDiv = document.getElementById('chat_content');
-                chatContentDiv.innerHTML = ''; // Clear previous chat
+                chatContentDiv.innerHTML = '';
 
-                data.forEach(function(entry) {
-                    if (entry.role !== "system") {
-                        var chatBubble = document.createElement('div');
-                        chatBubble.style.marginBottom = "15px";
-                        chatBubble.style.display = "flex";
-                        chatBubble.style.flexDirection = "column";
-                        chatBubble.style.alignItems = entry.role === "user" ? "flex-end" : "flex-start";
-
-                        // Add sender label
-                        var senderLabel = document.createElement('span');
-                        senderLabel.style.fontSize = "12px";
-                        senderLabel.style.fontWeight = "bold";
-                        senderLabel.style.marginBottom = "5px";
-                        senderLabel.style.color = entry.role === "user" ? userMessageColor : assistantMessageColor;
-                        senderLabel.innerText = entry.role === "user" ? "User" : "Assistant";
-
-                        var bubbleContent = document.createElement('div');
-                        bubbleContent.style.minWidth = "100%";
-                        bubbleContent.style.padding = "10px 15px";
-                        bubbleContent.style.borderRadius = "10px";
-                        bubbleContent.style.fontSize = "14px";
-                        bubbleContent.style.color = "#fff";
-                        bubbleContent.style.backgroundColor = entry.role === "user" ? userMessageColor : assistantMessageColor;
-
-                        bubbleContent.innerText = entry.content;
-
-                        chatBubble.appendChild(senderLabel);
-                        chatBubble.appendChild(bubbleContent);
-                        chatContentDiv.appendChild(chatBubble);
+                var j;
+                for (j = 0; j ${AMP}lt; data.length; j++) {
+                    var entry = data[j];
+                    if (entry.role !== 'system' ${AMP}amp;${AMP}amp; entry.content) {
+                        var msgDiv = document.createElement('div');
+                        msgDiv.style.cssText = 'margin-bottom: 16px; display: flex; flex-direction: column;';
+                        msgDiv.style.alignItems = entry.role === 'user' ? 'flex-end' : 'flex-start';
+                        
+                        var label = document.createElement('div');
+                        label.style.cssText = 'font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;';
+                        label.style.color = entry.role === 'user' ? '#2e7d32' : '#1565c0';
+                        label.innerText = entry.role === 'user' ? 'You' : 'Assistant';
+                        msgDiv.appendChild(label);
+                        
+                        var bubble = document.createElement('div');
+                        bubble.style.cssText = 'max-width: 85%; padding: 14px 18px; border-radius: 16px; font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;';
+                        if (entry.role === 'user') {
+                            bubble.style.cssText += 'background: #43a047; color: white; border-bottom-right-radius: 4px;';
+                        } else {
+                            bubble.style.cssText += 'background: white; color: #333; border: 1px solid #e0e0e0; border-bottom-left-radius: 4px;';
+                        }
+                        bubble.innerText = entry.content;
+                        msgDiv.appendChild(bubble);
+                        
+                        chatContentDiv.appendChild(msgDiv);
                     }
-                });
+                }
             }
 
-            // Render chat initially, and on every 500ms until state is cancelled or finished
+            function updateCurrentValue() {
+                var state = g_form.getValue('u_state');
+                var finished = state === 'finished';
+                var cancelled = state === 'cancelled';
+                var newState = state === 'new';
+                var dialogValue = g_form.getValue('u_prompt');
+                var parsedData = buildMessagesArray(dialogValue);
+                
+                var loadingIndicator = document.getElementById('loading_indicator');
+                
+                if (finished || cancelled || newState) {
+                    if (interval) {
+                        clearInterval(interval);
+                    }
+                    if (loadingIndicator) loadingIndicator.style.display = 'none';
+                    if (finished) {
+                        renderChat(parsedData);
+                        renderToolCalls();
+                    }
+                    return;
+                }
+                
+                if (loadingIndicator) loadingIndicator.style.display = 'block';
+                renderChat(parsedData);
+            }
+
             updateCurrentValue();
-            try{
+            try {
                 var interval = setInterval(updateCurrentValue, 500);
-            } catch(e){
-                console.log("error", e);
+            } catch(e) {
+                console.log('error', e);
             }
         });
     </script>

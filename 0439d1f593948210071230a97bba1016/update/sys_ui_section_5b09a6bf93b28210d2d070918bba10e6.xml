@@ -4,13 +4,13 @@
             <element>.begin_split</element>
             <position>0</position>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2025-07-21 05:36:56</sys_created_on>
-            <sys_id>682728fa93fa2210e1bd7fbcebba1088</sys_id>
+            <sys_created_on>2026-02-13 07:09:49</sys_created_on>
+            <sys_id>137d3a51830bb2504d4fccb6feaad332</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_ui_formatter/>
             <sys_ui_section caption="NULL" display_value="" name="u_ai_inference" sys_domain="global" view="Default view">5b09a6bf93b28210d2d070918bba10e6</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2025-07-21 05:36:56</sys_updated_on>
+            <sys_updated_on>2026-02-13 07:09:49</sys_updated_on>
             <sys_user/>
             <type>.begin_split</type>
         </sys_ui_element>
@@ -18,13 +18,13 @@
             <element>u_number</element>
             <position>1</position>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2025-07-21 05:36:56</sys_created_on>
-            <sys_id>a42728fa93fa2210e1bd7fbcebba1089</sys_id>
+            <sys_created_on>2026-02-13 07:09:49</sys_created_on>
+            <sys_id>5b7d3a51830bb2504d4fccb6feaad358</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_ui_formatter/>
             <sys_ui_section caption="NULL" display_value="" name="u_ai_inference" sys_domain="global" view="Default view">5b09a6bf93b28210d2d070918bba10e6</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2025-07-21 05:36:56</sys_updated_on>
+            <sys_updated_on>2026-02-13 07:09:49</sys_updated_on>
             <sys_user/>
             <type/>
         </sys_ui_element>
@@ -32,13 +32,13 @@
             <element>u_table</element>
             <position>2</position>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2025-07-21 05:36:56</sys_created_on>
-            <sys_id>ac2728fa93fa2210e1bd7fbcebba1089</sys_id>
+            <sys_created_on>2026-02-13 07:09:49</sys_created_on>
+            <sys_id>177d3a51830bb2504d4fccb6feaad359</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_ui_formatter/>
             <sys_ui_section caption="NULL" display_value="" name="u_ai_inference" sys_domain="global" view="Default view">5b09a6bf93b28210d2d070918bba10e6</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2025-07-21 05:36:56</sys_updated_on>
+            <sys_updated_on>2026-02-13 07:09:49</sys_updated_on>
             <sys_user/>
             <type/>
         </sys_ui_element>
@@ -46,13 +46,13 @@
             <element>u_target</element>
             <position>3</position>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2025-07-21 05:36:56</sys_created_on>
-            <sys_id>a42728fa93fa2210e1bd7fbcebba108a</sys_id>
+            <sys_created_on>2026-02-13 07:09:49</sys_created_on>
+            <sys_id>df7d3a51830bb2504d4fccb6feaad359</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_ui_formatter/>
             <sys_ui_section caption="NULL" display_value="" name="u_ai_inference" sys_domain="global" view="Default view">5b09a6bf93b28210d2d070918bba10e6</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2025-07-21 05:36:56</sys_updated_on>
+            <sys_updated_on>2026-02-13 07:09:49</sys_updated_on>
             <sys_user/>
             <type/>
         </sys_ui_element>
@@ -60,13 +60,13 @@
             <element>u_model</element>
             <position>4</position>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2025-07-21 05:36:56</sys_created_on>
-            <sys_id>ac2728fa93fa2210e1bd7fbcebba108a</sys_id>
+            <sys_created_on>2026-02-13 07:09:49</sys_created_on>
+            <sys_id>9b7d3a51830bb2504d4fccb6feaad35a</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_ui_formatter/>
             <sys_ui_section caption="NULL" display_value="" name="u_ai_inference" sys_domain="global" view="Default view">5b09a6bf93b28210d2d070918bba10e6</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2025-07-21 05:36:56</sys_updated_on>
+            <sys_updated_on>2026-02-13 07:09:49</sys_updated_on>
             <sys_user/>
             <type/>
         </sys_ui_element>
@@ -74,13 +74,13 @@
             <element>.split</element>
             <position>5</position>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2025-07-21 05:36:56</sys_created_on>
-            <sys_id>a42728fa93fa2210e1bd7fbcebba108b</sys_id>
+            <sys_created_on>2026-02-13 07:09:49</sys_created_on>
+            <sys_id>577d3a51830bb2504d4fccb6feaad35b</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_ui_formatter/>
             <sys_ui_section caption="NULL" display_value="" name="u_ai_inference" sys_domain="global" view="Default view">5b09a6bf93b28210d2d070918bba10e6</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2025-07-21 05:36:56</sys_updated_on>
+            <sys_updated_on>2026-02-13 07:09:49</sys_updated_on>
             <sys_user/>
             <type>.split</type>
         </sys_ui_element>
@@ -88,13 +88,13 @@
             <element>u_state</element>
             <position>6</position>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2025-07-21 05:36:56</sys_created_on>
-            <sys_id>ac2728fa93fa2210e1bd7fbcebba108b</sys_id>
+            <sys_created_on>2026-02-13 07:09:49</sys_created_on>
+            <sys_id>137d3a51830bb2504d4fccb6feaad35c</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_ui_formatter/>
             <sys_ui_section caption="NULL" display_value="" name="u_ai_inference" sys_domain="global" view="Default view">5b09a6bf93b28210d2d070918bba10e6</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2025-07-21 05:36:56</sys_updated_on>
+            <sys_updated_on>2026-02-13 07:09:49</sys_updated_on>
             <sys_user/>
             <type/>
         </sys_ui_element>
@@ -102,13 +102,13 @@
             <element>u_type</element>
             <position>7</position>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2025-07-21 05:36:56</sys_created_on>
-            <sys_id>6c2728fa93fa2210e1bd7fbcebba1098</sys_id>
+            <sys_created_on>2026-02-13 07:09:49</sys_created_on>
+            <sys_id>db7d3a51830bb2504d4fccb6feaad35c</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_ui_formatter/>
             <sys_ui_section caption="NULL" display_value="" name="u_ai_inference" sys_domain="global" view="Default view">5b09a6bf93b28210d2d070918bba10e6</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2025-07-21 05:36:56</sys_updated_on>
+            <sys_updated_on>2026-02-13 07:09:49</sys_updated_on>
             <sys_user/>
             <type/>
         </sys_ui_element>
@@ -116,13 +116,13 @@
             <element>sys_created_by</element>
             <position>8</position>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2025-07-21 05:36:56</sys_created_on>
-            <sys_id>642728fa93fa2210e1bd7fbcebba1099</sys_id>
+            <sys_created_on>2026-02-13 07:09:49</sys_created_on>
+            <sys_id>977d3a51830bb2504d4fccb6feaad35d</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_ui_formatter/>
             <sys_ui_section caption="NULL" display_value="" name="u_ai_inference" sys_domain="global" view="Default view">5b09a6bf93b28210d2d070918bba10e6</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2025-07-21 05:36:56</sys_updated_on>
+            <sys_updated_on>2026-02-13 07:09:49</sys_updated_on>
             <sys_user/>
             <type/>
         </sys_ui_element>
@@ -130,13 +130,13 @@
             <element>u_requested_by</element>
             <position>9</position>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2025-07-21 05:36:56</sys_created_on>
-            <sys_id>6c2728fa93fa2210e1bd7fbcebba1099</sys_id>
+            <sys_created_on>2026-02-13 07:09:49</sys_created_on>
+            <sys_id>537d3a51830bb2504d4fccb6feaad35e</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_ui_formatter/>
             <sys_ui_section caption="NULL" display_value="" name="u_ai_inference" sys_domain="global" view="Default view">5b09a6bf93b28210d2d070918bba10e6</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2025-07-21 05:36:56</sys_updated_on>
+            <sys_updated_on>2026-02-13 07:09:49</sys_updated_on>
             <sys_user/>
             <type/>
         </sys_ui_element>
@@ -144,13 +144,13 @@
             <element>.end_split</element>
             <position>10</position>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2025-07-21 05:36:56</sys_created_on>
-            <sys_id>642728fa93fa2210e1bd7fbcebba109a</sys_id>
+            <sys_created_on>2026-02-13 07:09:49</sys_created_on>
+            <sys_id>1f7d3a51830bb2504d4fccb6feaad35e</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_ui_formatter/>
             <sys_ui_section caption="NULL" display_value="" name="u_ai_inference" sys_domain="global" view="Default view">5b09a6bf93b28210d2d070918bba10e6</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2025-07-21 05:36:56</sys_updated_on>
+            <sys_updated_on>2026-02-13 07:09:49</sys_updated_on>
             <sys_user/>
             <type>.end_split</type>
         </sys_ui_element>
@@ -158,13 +158,13 @@
             <element>ai-in-a-box-inference-viewer</element>
             <position>11</position>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2025-07-21 05:36:56</sys_created_on>
-            <sys_id>6c2728fa93fa2210e1bd7fbcebba109a</sys_id>
+            <sys_created_on>2026-02-13 07:09:49</sys_created_on>
+            <sys_id>d77d3a51830bb2504d4fccb6feaad35f</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_ui_formatter display_value="Rendered Dialog">baf64139c3fdd210594e12f1b40131b6</sys_ui_formatter>
             <sys_ui_section caption="NULL" display_value="" name="u_ai_inference" sys_domain="global" view="Default view">5b09a6bf93b28210d2d070918bba10e6</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2025-07-21 05:36:56</sys_updated_on>
+            <sys_updated_on>2026-02-13 07:09:49</sys_updated_on>
             <sys_user/>
             <type>formatter</type>
         </sys_ui_element>
@@ -172,13 +172,13 @@
             <element>.begin_split</element>
             <position>12</position>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2025-07-21 05:36:56</sys_created_on>
-            <sys_id>a42728fa93fa2210e1bd7fbcebba109b</sys_id>
+            <sys_created_on>2026-02-13 07:09:49</sys_created_on>
+            <sys_id>177d3a51830bb2504d4fccb6feaad360</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_ui_formatter/>
             <sys_ui_section caption="NULL" display_value="" name="u_ai_inference" sys_domain="global" view="Default view">5b09a6bf93b28210d2d070918bba10e6</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2025-07-21 05:36:56</sys_updated_on>
+            <sys_updated_on>2026-02-13 07:09:49</sys_updated_on>
             <sys_user/>
             <type>.begin_split</type>
         </sys_ui_element>
@@ -186,13 +186,13 @@
             <element>u_prompt</element>
             <position>13</position>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2025-07-21 05:36:56</sys_created_on>
-            <sys_id>ac2728fa93fa2210e1bd7fbcebba109b</sys_id>
+            <sys_created_on>2026-02-13 07:09:49</sys_created_on>
+            <sys_id>df7d3a51830bb2504d4fccb6feaad360</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_ui_formatter/>
             <sys_ui_section caption="NULL" display_value="" name="u_ai_inference" sys_domain="global" view="Default view">5b09a6bf93b28210d2d070918bba10e6</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2025-07-21 05:36:56</sys_updated_on>
+            <sys_updated_on>2026-02-13 07:09:49</sys_updated_on>
             <sys_user/>
             <type/>
         </sys_ui_element>
@@ -200,13 +200,13 @@
             <element>.split</element>
             <position>14</position>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2025-07-21 05:36:56</sys_created_on>
-            <sys_id>a42728fa93fa2210e1bd7fbcebba109c</sys_id>
+            <sys_created_on>2026-02-13 07:09:49</sys_created_on>
+            <sys_id>9b7d3a51830bb2504d4fccb6feaad361</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_ui_formatter/>
             <sys_ui_section caption="NULL" display_value="" name="u_ai_inference" sys_domain="global" view="Default view">5b09a6bf93b28210d2d070918bba10e6</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2025-07-21 05:36:56</sys_updated_on>
+            <sys_updated_on>2026-02-13 07:09:49</sys_updated_on>
             <sys_user/>
             <type>.split</type>
         </sys_ui_element>
@@ -214,13 +214,13 @@
             <element>u_response</element>
             <position>15</position>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2025-07-21 05:36:56</sys_created_on>
-            <sys_id>ac2728fa93fa2210e1bd7fbcebba109c</sys_id>
+            <sys_created_on>2026-02-13 07:09:49</sys_created_on>
+            <sys_id>577d3a51830bb2504d4fccb6feaad362</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_ui_formatter/>
             <sys_ui_section caption="NULL" display_value="" name="u_ai_inference" sys_domain="global" view="Default view">5b09a6bf93b28210d2d070918bba10e6</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2025-07-21 05:36:56</sys_updated_on>
+            <sys_updated_on>2026-02-13 07:09:49</sys_updated_on>
             <sys_user/>
             <type/>
         </sys_ui_element>
@@ -228,15 +228,43 @@
             <element>.end_split</element>
             <position>16</position>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2025-07-21 05:36:56</sys_created_on>
-            <sys_id>a42728fa93fa2210e1bd7fbcebba109d</sys_id>
+            <sys_created_on>2026-02-13 07:09:49</sys_created_on>
+            <sys_id>137d3a51830bb2504d4fccb6feaad363</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_ui_formatter/>
             <sys_ui_section caption="NULL" display_value="" name="u_ai_inference" sys_domain="global" view="Default view">5b09a6bf93b28210d2d070918bba10e6</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2025-07-21 05:36:56</sys_updated_on>
+            <sys_updated_on>2026-02-13 07:09:49</sys_updated_on>
             <sys_user/>
             <type>.end_split</type>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>u_tool_calls</element>
+            <position>17</position>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-02-13 07:09:49</sys_created_on>
+            <sys_id>db7d3a51830bb2504d4fccb6feaad363</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="NULL" display_value="" name="u_ai_inference" sys_domain="global" view="Default view">5b09a6bf93b28210d2d070918bba10e6</sys_ui_section>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-02-13 07:09:49</sys_updated_on>
+            <sys_user/>
+            <type/>
+        </sys_ui_element>
+        <sys_ui_element action="INSERT_OR_UPDATE">
+            <element>u_tools_included</element>
+            <position>18</position>
+            <sys_created_by>admin</sys_created_by>
+            <sys_created_on>2026-02-13 07:09:49</sys_created_on>
+            <sys_id>977d3a51830bb2504d4fccb6feaad364</sys_id>
+            <sys_mod_count>0</sys_mod_count>
+            <sys_ui_formatter/>
+            <sys_ui_section caption="NULL" display_value="" name="u_ai_inference" sys_domain="global" view="Default view">5b09a6bf93b28210d2d070918bba10e6</sys_ui_section>
+            <sys_updated_by>admin</sys_updated_by>
+            <sys_updated_on>2026-02-13 07:09:49</sys_updated_on>
+            <sys_user/>
+            <type/>
         </sys_ui_element>
         <sys_ui_section action="INSERT_OR_UPDATE">
             <caption/>

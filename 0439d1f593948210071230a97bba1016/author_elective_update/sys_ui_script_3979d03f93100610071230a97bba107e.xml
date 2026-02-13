@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_script">
+    <sys_ui_script action="DELETE">
+        <active>false</active>
+        <description/>
+        <global>true</global>
+        <ignore_in_now_experience>false</ignore_in_now_experience>
+        <name>ScribeCode</name>
+        <script><![CDATA[// wiat for the monaco editor to be ready
+if(false){
+document.addEventListener('DOMContentLoaded', function () {
+
+    // A ui script running on Servicenow to add a keybinding to the script editor (monaco)
+    // monaco.editor.addKeybindingRule({ ... }) is a function provided by the monaco editor
+    // lets add a console.log when any key is pressed, show the key code and the key name
+    /* example code to add keyboard shortcuts to the monaco editor */
+    // lets add a console.log when ALT+Enter is pressed, then;
+    // when ALT+Enter is pressed, show ghosted text as inline completions
+    // add this to the gsft_main's window.monaco object
+    // switch frame
+    var scribeCurrentUrl = document.location.href;
+    var typeOfMonaco = typeof monaco;
+    console.log("checking if monaco is available on " + scribeCurrentUrl + "\n\n\nwhat is typeof monaco? " + typeOfMonaco);
+    if (typeOfMonaco != "undefined") {
+        monaco.editor.addEditorAction({
+            id: "my-unique-id",
+            label: "My Label!!!",
+            keybindings: [monaco.KeyMod.Alt | monaco.KeyCode.Enter],
+            precondition: null,
+            keybindingContext: null,
+            contextMenuGroupId: "navigation",
+            contextMenuOrder: 1.5,
+            run: function (ed) {
+                var position = ed.getPosition();
+                var line = position.lineNumber;
+                // get the whole script
+                var script = ed.getValue();
+                var text = ed.getModel().getLineContent(line);
+                console.log("ALT+Enter pressed, line: " + line + " text: " + text);
+                var dialog = document.createElement("dialog");
+                dialog.style.backgroundColor = "white";
+                dialog.style.top = "0px";
+                dialog.style.width = "80%";
+                dialog.style.height = "80%";
+                dialog.style.overflow = "auto";
+                dialog.style.border = "1px solid black";
+                dialog.style.zIndex = "9999";
+                var innerHTML = "<h1>Comment to Code</h1>";
+                innerHTML += "Instruction: " + text + "<br>";
+                innerHTML += "<pre>" + script + "</pre>";
+                // show a loading spinner
+                innerHTML += "<div id='loading' style='display: none;'><img src='https://www.w3schools.com/w3css/img_lights.gif' alt='loading...'></div>";
+                // add a button to try g_form.setValue('script', 'console.log("Hello World")');
+                innerHTML += "<textarea id='suggestedText' style='width: 100%; height: 100px;'></textarea>";
+                innerHTML += "<button id='setScriptButton'>Set Script</button>";
+                innerHTML += "<button id='closeButton'>Close</button>";
+                dialog.innerHTML = innerHTML;
+
+                try {
+                    var ga = new GlideAjax('ollama');
+                    ga.addParam('sysparm_name', 'commentToCode');
+                    ga.addParam('sysparm_instruction', text);
+                    ga.addParam('sysparm_script', script);
+                    ga.getXML(function (response) {
+                        var answer = response.responseXML.documentElement.getAttribute('answer');
+                        var suggestedText = dialog.querySelector("#suggestedText");
+                        suggestedText.value = answer;
+                    });
+                } catch (e) {
+                    console.log(e);
+                }
+
+                // now wait 4 seconds and hide the loading spinner
+                //setTimeout(function () {
+                //    var loading = dialog.querySelector("#loading");
+                //    loading.style.display = "none";
+                //}, 4000);
+                // Append the dialog to the body
+                document.body.appendChild(dialog);
+
+                // Add event listener to close button
+                var closeButton = dialog.querySelector("#closeButton");
+                closeButton.addEventListener("click", function () {
+                    dialog.close();
+                });
+                var setScriptButton = dialog.querySelector("#setScriptButton");
+                setScriptButton.addEventListener("click", function () {
+                    try {
+                        //g_form.setValue('script', text + "/*FROM THE BUTTON*/"); // ghosted text
+                        //g_form.setValue('script', 'console.log("Hello World")');
+                        var suggestedText = dialog.querySelector("#suggestedText").value;
+                        g_form.setValue('script', suggestedText);
+                    } catch (e) {
+                        console.log(e);
+                    }
+                    dialog.close();
+                });
+
+                // Show the dialog
+                dialog.showModal();
+            },
+        });
+    }
+
+});
+}]]></script>
+        <script_name/>
+        <sys_class_name>sys_ui_script</sys_class_name>
+        <sys_created_by>jacebenson</sys_created_by>
+        <sys_created_on>2024-02-18 08:13:40</sys_created_on>
+        <sys_id>3979d03f93100610071230a97bba107e</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>ScribeCode</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_ui_script_3979d03f93100610071230a97bba107e</sys_update_name>
+        <sys_updated_by>jacebenson</sys_updated_by>
+        <sys_updated_on>2025-01-03 08:12:44</sys_updated_on>
+        <ui_type>0</ui_type>
+        <use_scoped_format>false</use_scoped_format>
+    </sys_ui_script>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="AI in a Box">0439d1f593948210071230a97bba1016</application>
+        <file_path/>
+        <instance_id>3e01943a1b79f9901024eb9b2d4bcb05</instance_id>
+        <instance_name>dev184755</instance_name>
+        <name>sys_ui_script_3979d03f93100610071230a97bba107e</name>
+        <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sys_ui_script"&gt;&lt;sys_ui_script action="INSERT_OR_UPDATE"&gt;&lt;active&gt;false&lt;/active&gt;&lt;description/&gt;&lt;global&gt;true&lt;/global&gt;&lt;ignore_in_now_experience&gt;false&lt;/ignore_in_now_experience&gt;&lt;name&gt;ScribeCode&lt;/name&gt;&lt;script&gt;&lt;![CDATA[// wiat for the monaco editor to be ready
+if(false){
+document.addEventListener('DOMContentLoaded', function () {
+
+    // A ui script running on Servicenow to add a keybinding to the script editor (monaco)
+    // monaco.editor.addKeybindingRule({ ... }) is a function provided by the monaco editor
+    // lets add a console.log when any key is pressed, show the key code and the key name
+    /* example code to add keyboard shortcuts to the monaco editor */
+    // lets add a console.log when ALT+Enter is pressed, then;
+    // when ALT+Enter is pressed, show ghosted text as inline completions
+    // add this to the gsft_main's window.monaco object
+    // switch frame
+    var scribeCurrentUrl = document.location.href;
+    var typeOfMonaco = typeof monaco;
+    console.log("checking if monaco is available on " + scribeCurrentUrl + "\n\n\nwhat is typeof monaco? " + typeOfMonaco);
+    if (typeOfMonaco != "undefined") {
+        monaco.editor.addEditorAction({
+            id: "my-unique-id",
+            label: "My Label!!!",
+            keybindings: [monaco.KeyMod.Alt | monaco.KeyCode.Enter],
+            precondition: null,
+            keybindingContext: null,
+            contextMenuGroupId: "navigation",
+            contextMenuOrder: 1.5,
+            run: function (ed) {
+                var position = ed.getPosition();
+                var line = position.lineNumber;
+                // get the whole script
+                var script = ed.getValue();
+                var text = ed.getModel().getLineContent(line);
+                console.log("ALT+Enter pressed, line: " + line + " text: " + text);
+                var dialog = document.createElement("dialog");
+                dialog.style.backgroundColor = "white";
+                dialog.style.top = "0px";
+                dialog.style.width = "80%";
+                dialog.style.height = "80%";
+                dialog.style.overflow = "auto";
+                dialog.style.border = "1px solid black";
+                dialog.style.zIndex = "9999";
+                var innerHTML = "&lt;h1&gt;Comment to Code&lt;/h1&gt;";
+                innerHTML += "Instruction: " + text + "&lt;br&gt;";
+                innerHTML += "&lt;pre&gt;" + script + "&lt;/pre&gt;";
+                // show a loading spinner
+                innerHTML += "&lt;div id='loading' style='display: none;'&gt;&lt;img src='https://www.w3schools.com/w3css/img_lights.gif' alt='loading...'&gt;&lt;/div&gt;";
+                // add a button to try g_form.setValue('script', 'console.log("Hello World")');
+                innerHTML += "&lt;textarea id='suggestedText' style='width: 100%; height: 100px;'&gt;&lt;/textarea&gt;";
+                innerHTML += "&lt;button id='setScriptButton'&gt;Set Script&lt;/button&gt;";
+                innerHTML += "&lt;button id='closeButton'&gt;Close&lt;/button&gt;";
+                dialog.innerHTML = innerHTML;
+
+                try {
+                    var ga = new GlideAjax('ollama');
+                    ga.addParam('sysparm_name', 'commentToCode');
+                    ga.addParam('sysparm_instruction', text);
+                    ga.addParam('sysparm_script', script);
+                    ga.getXML(function (response) {
+                        var answer = response.responseXML.documentElement.getAttribute('answer');
+                        var suggestedText = dialog.querySelector("#suggestedText");
+                        suggestedText.value = answer;
+                    });
+                } catch (e) {
+                    console.log(e);
+                }
+
+                // now wait 4 seconds and hide the loading spinner
+                //setTimeout(function () {
+                //    var loading = dialog.querySelector("#loading");
+                //    loading.style.display = "none";
+                //}, 4000);
+                // Append the dialog to the body
+                document.body.appendChild(dialog);
+
+                // Add event listener to close button
+                var closeButton = dialog.querySelector("#closeButton");
+                closeButton.addEventListener("click", function () {
+                    dialog.close();
+                });
+                var setScriptButton = dialog.querySelector("#setScriptButton");
+                setScriptButton.addEventListener("click", function () {
+                    try {
+                        //g_form.setValue('script', text + "/*FROM THE BUTTON*/"); // ghosted text
+                        //g_form.setValue('script', 'console.log("Hello World")');
+                        var suggestedText = dialog.querySelector("#suggestedText").value;
+                        g_form.setValue('script', suggestedText);
+                    } catch (e) {
+                        console.log(e);
+                    }
+                    dialog.close();
+                });
+
+                // Show the dialog
+                dialog.showModal();
+            },
+        });
+    }
+
+});
+}]]&gt;&lt;/script&gt;&lt;script_name/&gt;&lt;sys_class_name&gt;sys_ui_script&lt;/sys_class_name&gt;&lt;sys_created_by&gt;jacebenson&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2024-02-18 08:13:40&lt;/sys_created_on&gt;&lt;sys_id&gt;3979d03f93100610071230a97bba107e&lt;/sys_id&gt;&lt;sys_mod_count&gt;3&lt;/sys_mod_count&gt;&lt;sys_name&gt;ScribeCode&lt;/sys_name&gt;&lt;sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016"&gt;0439d1f593948210071230a97bba1016&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="AI in a Box"&gt;0439d1f593948210071230a97bba1016&lt;/sys_scope&gt;&lt;sys_update_name&gt;sys_ui_script_3979d03f93100610071230a97bba107e&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;jacebenson&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2025-01-03 08:12:44&lt;/sys_updated_on&gt;&lt;ui_type&gt;0&lt;/ui_type&gt;&lt;use_scoped_format&gt;false&lt;/use_scoped_format&gt;&lt;/sys_ui_script&gt;&lt;/record_update&gt;</payload>
+        <payload_hash>-435437595</payload_hash>
+        <record_name>ScribeCode</record_name>
+        <reverted_from/>
+        <source>ee32c045831afe104d4fccb6feaad328</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-01-05 16:06:22</sys_created_on>
+        <sys_id>7e428c45831afe104d4fccb6feaad3d3</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>19b8ee8d4ec0000001</sys_recorded_at>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-05 16:06:22</sys_updated_on>
+        <type>UI Script</type>
+        <update_guid>c47234af94e7221026b182a22418473b</update_guid>
+        <update_guid_history>c47234af94e7221026b182a22418473b:-435437595</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete/>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>jacebenson</sys_created_by>
+        <sys_created_on>2026-01-22 21:41:30</sys_created_on>
+        <sys_db_object display_value="" name="sys_ui_script">sys_ui_script</sys_db_object>
+        <sys_id>8c66dc8c82134220a563839f7568c904</sys_id>
+        <sys_metadata>3979d03f93100610071230a97bba107e</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>ScribeCode</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_scope_delete display_value="">c1a48f6b4a924506a5b1a6becbc665a1</sys_scope_delete>
+        <sys_update_name>sys_ui_script_3979d03f93100610071230a97bba107e</sys_update_name>
+        <sys_update_version display_value="sys_ui_script_3979d03f93100610071230a97bba107e">7e428c45831afe104d4fccb6feaad3d3</sys_update_version>
+        <sys_updated_by>jacebenson</sys_updated_by>
+        <sys_updated_on>2026-01-22 21:41:30</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_ui_policy">
     <sys_ui_policy action="INSERT_OR_UPDATE">
         <active>true</active>
-        <conditions table="u_ai_inference">u_type=ask-record^ORu_type=summarize-simple^EQ<item display_value="Ask Record" endquery="false" field="u_type" goto="false" newquery="false" operator="=" or="false" value="ask-record"/>
+        <conditions table="u_ai_inference">u_type=ask-record^ORu_type=summarize-simple^EQ<item display_value="ask-record" endquery="false" field="u_type" goto="false" newquery="false" operator="=" or="false" value="ask-record"/>
             <item display_value="Summarize" endquery="false" field="u_type" goto="false" newquery="false" operator="=" or="true" value="summarize-simple"/>
             <item endquery="true" field="" goto="false" newquery="false" operator="=" or="false" value=""/>
         </conditions>

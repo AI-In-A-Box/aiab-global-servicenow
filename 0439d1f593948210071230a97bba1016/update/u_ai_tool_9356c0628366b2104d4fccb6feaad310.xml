@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="u_ai_tool">
+    <u_ai_tool action="INSERT_OR_UPDATE">
+        <sys_class_name>u_ai_tool</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-01-22 18:30:43</sys_created_on>
+        <sys_id>9356c0628366b2104d4fccb6feaad310</sys_id>
+        <sys_mod_count>4</sys_mod_count>
+        <sys_name>get_related_incidents</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>u_ai_tool_9356c0628366b2104d4fccb6feaad310</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-23 22:38:35</sys_updated_on>
+        <u_active>true</u_active>
+        <u_description>Get other incidents from the same caller as the current incident. Useful for understanding if this is a recurring issue or if the caller has a pattern of related problems.</u_description>
+        <u_execute_in>servicenow</u_execute_in>
+        <u_name>get_related_incidents</u_name>
+        <u_parameters>{&#13;
+    "type": "object",&#13;
+    "properties": {&#13;
+        "caller_sys_id": {&#13;
+            "type": "string",&#13;
+            "description": "sys_id of the caller (from current incident context)"&#13;
+        },&#13;
+        "caller_name": {&#13;
+            "type": "string",&#13;
+            "description": "Name of the caller to search for"&#13;
+        },&#13;
+        "exclude_number": {&#13;
+            "type": "string",&#13;
+            "description": "Incident number to exclude (usually the current incident)"&#13;
+        },&#13;
+        "state": {&#13;
+            "type": "string",&#13;
+            "enum": [&#13;
+                "open",&#13;
+                "resolved",&#13;
+                "closed",&#13;
+                "all"&#13;
+            ],&#13;
+            "description": "Filter by state: open (new/in_progress/on_hold), resolved, closed, or all"&#13;
+        },&#13;
+        "days_back": {&#13;
+            "type": "integer",&#13;
+            "description": "How many days back to search (default 90, max 365)"&#13;
+        },&#13;
+        "limit": {&#13;
+            "type": "integer",&#13;
+            "description": "Max incidents to return (default 5, max 10)"&#13;
+        },&#13;
+       "similar_incidents_by_category": {&#13;
+           "type": "string",&#13;
+           "description": "find incidents with the same category"&#13;
+       }&#13;
+    },&#13;
+    "required": []&#13;
+}</u_parameters>
+        <u_script><![CDATA[(function(args, userId) {
+    var gr = new GlideRecordSecure('incident');
+    
+    // Must have caller_sys_id or caller_name
+    if (args.caller_sys_id) {
+        gr.addQuery('caller_id', args.caller_sys_id);
+    } else if (args.caller_name) {
+        gr.addQuery('caller_id.name', 'LIKE', args.caller_name);
+    } else {
+        return { found: false, message: 'Either caller_sys_id or caller_name is required' };
+    }
+    
+    // Exclude current incident if provided
+    if (args.exclude_number) {
+        gr.addQuery('number', '!=', args.exclude_number);
+    }
+    
+    // State filter
+    var state = (args.state || 'open').toLowerCase();
+    if (state === 'open') {
+        gr.addQuery('state', 'IN', '1,2,3'); // new, in_progress, on_hold
+    } else if (state === 'resolved') {
+        gr.addQuery('state', '6');
+    } else if (state === 'closed') {
+        gr.addQuery('state', '7');
+    }
+    // 'all' = no state filter
+    
+    // Days back filter
+    var daysBack = Math.min(args.days_back || 90, 365);
+    var cutoffDate = new GlideDateTime();
+    cutoffDate.addDaysLocalTime(-daysBack);
+    gr.addQuery('opened_at', '>=', cutoffDate);
+    
+	// similar incidents
+	if(args.similar_incidents_by_category){
+		//https://dev184755.service-now.com/sys_choice_list.do?sysparm_query=element%3Dcategory%5Ename%3Dincident%5Elabel%3DInquiry%20%2F%20Help&sysparm_view=
+		var choicesGR = new GlideRecord('sys_choice');
+		choicesGR.addQuery('element', 'category');
+		choicesGR.addQuery('name', 'incident');
+		choicesGR.addQuery('label', args.similar_incidents_by_category);
+		choicesGR.addQuery('language', 'en');
+		choicesGR.setLimit(1);
+		choicesGR.query();
+		if(choicesGR.next()){
+			gr.addQuery('category', choicesGR.getValue('value'));
+		}
+	}
+
+    gr.orderByDesc('opened_at');
+    gr.setLimit(Math.min(args.limit || 5, 10));
+    gr.query();
+    
+    var incidents = [];
+    while (gr.next()) {
+        incidents.push({
+            number: '' + gr.number,
+            short_description: '' + gr.short_description,
+            state: gr.getDisplayValue('state'),
+            priority: gr.getDisplayValue('priority'),
+            opened_at: '' + gr.opened_at,
+            resolved_at: '' + gr.resolved_at
+        });
+    }
+    
+    if (incidents.length === 0) {
+        return { found: false, count: 0, message: 'No related incidents found for this caller' };
+    }
+    return { found: true, count: incidents.length, incidents: incidents };
+})(args, userId);]]></u_script>
+    </u_ai_tool>
+</record_update>

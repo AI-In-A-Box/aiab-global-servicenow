@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="u_ai_tool">
+    <u_ai_tool action="INSERT_OR_UPDATE">
+        <sys_class_name>u_ai_tool</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-02-13 06:52:42</sys_created_on>
+        <sys_id>a499fe1983c7b2504d4fccb6feaad377</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>summarize_sc_req_item</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>u_ai_tool_a499fe1983c7b2504d4fccb6feaad377</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-13 06:56:58</sys_updated_on>
+        <u_active>true</u_active>
+        <u_description>Summarize this Requested Item.</u_description>
+        <u_execute_in>servicenow</u_execute_in>
+        <u_name>summarize_sc_req_item</u_name>
+        <u_parameters>{
+  "type": "object",
+  "properties": {
+    "sys_id": {
+      "type": "string",
+      "description": "Record sys_id (sc_req_item)"
+    }
+  },
+  "required": [
+    "sys_id"
+  ]
+}</u_parameters>
+        <u_script><![CDATA[(function(args, userId) {
+  try {
+    if (!args || !args.sys_id) return { error: 'missing sys_id' };
+    var gr = new GlideRecordSecure('sc_req_item');
+    if (!gr.get(args.sys_id)) return { error: 'record not found or access denied' };
+    
+    // Build structured data for the LLM
+    var parts = [];
+    
+    // Basic info
+    parts.push('REQUESTED ITEM SUMMARY');
+    parts.push('======================');
+    
+    // Number (if available)
+    if (gr.isValidField('number') && gr.getValue('number')) {
+      parts.push('Number: ' + gr.getDisplayValue('number'));
+    }
+    
+    // Item name
+    if (gr.isValidField('cat_item') && gr.getValue('cat_item')) {
+      parts.push('Catalog Item: ' + gr.getDisplayValue('cat_item'));
+    }
+    
+    // Requested for
+    if (gr.isValidField('requested_for') && gr.getValue('requested_for')) {
+      parts.push('Requested For: ' + gr.getDisplayValue('requested_for'));
+    }
+    
+    // Requested by
+    if (gr.isValidField('request') && gr.getValue('request')) {
+      var reqGR = new GlideRecordSecure('sc_request');
+      if (reqGR.get(gr.getValue('request'))) {
+        if (reqGR.isValidField('opened_by') && reqGR.getValue('opened_by')) {
+          parts.push('Requested By: ' + reqGR.getDisplayValue('opened_by'));
+        }
+        if (reqGR.isValidField('number') && reqGR.getValue('number')) {
+          parts.push('Parent Request: ' + reqGR.getDisplayValue('number'));
+        }
+      }
+    }
+    
+    // Status info
+    parts.push('');
+    parts.push('STATUS');
+    parts.push('------');
+    if (gr.isValidField('state') && gr.getValue('state')) {
+      parts.push('State: ' + gr.getDisplayValue('state'));
+    }
+    if (gr.isValidField('stage') && gr.getValue('stage')) {
+      parts.push('Stage: ' + gr.getDisplayValue('stage'));
+    }
+    if (gr.isValidField('approval') && gr.getValue('approval')) {
+      parts.push('Approval: ' + gr.getDisplayValue('approval'));
+    }
+    
+    // Assignment
+    if (gr.isValidField('assignment_group') && gr.getValue('assignment_group')) {
+      parts.push('Assignment Group: ' + gr.getDisplayValue('assignment_group'));
+    }
+    if (gr.isValidField('assigned_to') && gr.getValue('assigned_to')) {
+      parts.push('Assigned To: ' + gr.getDisplayValue('assigned_to'));
+    }
+    
+    // Dates
+    parts.push('');
+    parts.push('DATES');
+    parts.push('-----');
+    if (gr.isValidField('opened_at') && gr.getValue('opened_at')) {
+      parts.push('Opened: ' + gr.getDisplayValue('opened_at'));
+    }
+    if (gr.isValidField('sys_updated_on') && gr.getValue('sys_updated_on')) {
+      parts.push('Last Updated: ' + gr.getDisplayValue('sys_updated_on'));
+    }
+    
+    // Description / Short description
+    if (gr.isValidField('short_description') && gr.getValue('short_description')) {
+      parts.push('');
+      parts.push('DESCRIPTION');
+      parts.push('-----------');
+      parts.push(gr.getValue('short_description'));
+    }
+    if (gr.isValidField('description') && gr.getValue('description')) {
+      parts.push('');
+      parts.push('DETAILS');
+      parts.push('-------');
+      parts.push(gr.getValue('description'));
+    }
+    
+    // Get approvals
+    var approvalGR = new GlideRecordSecure('sysapproval_approver');
+    approvalGR.addQuery('sysapproval', args.sys_id);
+    approvalGR.query();
+    if (approvalGR.hasNext()) {
+      parts.push('');
+      parts.push('APPROVALS');
+      parts.push('---------');
+      while (approvalGR.next()) {
+        var approver = approvalGR.getDisplayValue('approver') || 'Unknown';
+        var state = approvalGR.getDisplayValue('state') || 'Pending';
+        parts.push('- ' + approver + ': ' + state);
+      }
+    }
+    
+    // Get variables (if any)
+    if (gr.isValidField('variables') && gr.variables) {
+      parts.push('');
+      parts.push('VARIABLES');
+      parts.push('---------');
+      try {
+        for (var prop in gr.variables) {
+          if (gr.variables[prop]) {
+            parts.push(prop + ': ' + gr.variables[prop]);
+          }
+        }
+      } catch(e) {
+        // Ignore variable errors
+      }
+    }
+    
+    // Comments / work notes
+    if (gr.isValidField('comments') && gr.comments) {
+      var comments = gr.comments.getJournalEntry(5);
+      if (comments && comments.length > 0) {
+        parts.push('');
+        parts.push('RECENT COMMENTS');
+        parts.push('---------------');
+        for (var i = 0; i < Math.min(comments.length, 5); i++) {
+          parts.push(comments[i]);
+        }
+      }
+    }
+    
+    // Work notes
+    if (gr.isValidField('work_notes') && gr.work_notes) {
+      var workNotes = gr.work_notes.getJournalEntry(5);
+      if (workNotes && workNotes.length > 0) {
+        parts.push('');
+        parts.push('WORK NOTES');
+        parts.push('----------');
+        for (var j = 0; j < Math.min(workNotes.length, 5); j++) {
+          parts.push(workNotes[j]);
+        }
+      }
+    }
+    
+    var rendered = parts.join('\n');
+    var prompt = 'You are a helpful assistant. Summarize the following requested item concisely, highlighting key details, status, and any blockers or next steps needed.\n\n' + rendered;
+    
+    return { 
+      found: true, 
+      prompt: prompt, 
+      rendered: rendered,
+      record_number: gr.getDisplayValue('number') || gr.getDisplayValue('request') || args.sys_id
+    };
+    
+  } catch(err) {
+    return { error: err.message || String(err) };
+  }
+})(args, userId);]]></u_script>
+    </u_ai_tool>
+</record_update>

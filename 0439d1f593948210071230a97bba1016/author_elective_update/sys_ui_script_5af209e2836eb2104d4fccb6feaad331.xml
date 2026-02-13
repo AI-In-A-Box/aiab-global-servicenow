@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_script">
+    <sys_ui_script action="DELETE">
+        <active>true</active>
+        <description>Simple injector that loads the AIAB Chat SP widget in an iframe. The widget handles its own floating button, dialog, snooze, etc.</description>
+        <global>true</global>
+        <ignore_in_now_experience>false</ignore_in_now_experience>
+        <name>AIAB Chat Iframe Injector</name>
+        <script><![CDATA[// AIAB Chat Iframe Injector
+// Injects the SP widget iframe on UI16 pages.
+(function() {
+  console.log('AIAB Chat Iframe Injector: Starting...', window.location.pathname);
+  
+  // Skip Service Portal pages (check both current window and top)
+  var pathname = window.location.pathname;
+  try {
+    pathname = window.top.location.pathname;
+  } catch (e) {
+    // Cross-origin, use current window
+  }
+  
+  if (pathname.indexOf('/sp') === 0 ||
+      pathname.indexOf('/$sp.do') === 0 ||
+      pathname.indexOf('/aiab') === 0 ||
+      pathname.indexOf('/now/') === 0) {
+    console.log('AIAB Chat Iframe Injector: Service Portal or Workspace page, skipping');
+    return;
+  }
+  
+  // Skip if already injected in top document
+  try {
+    if (window.top.document.getElementById('aiab-chat-iframe')) {
+      console.log('AIAB Chat Iframe Injector: Already injected, skipping');
+      return;
+    }
+  } catch (e) {
+    console.log('AIAB Chat Iframe Injector: Cannot access top document, skipping');
+    return;
+  }
+  
+  // Mark that we're attempting injection (prevent race conditions from multiple frames)
+  try {
+    if (window.top._aiabChatInjecting) {
+      console.log('AIAB Chat Iframe Injector: Another frame is already injecting, skipping');
+      return;
+    }
+    window.top._aiabChatInjecting = true;
+  } catch (e) {
+    // Can't set flag, continue anyway
+  }
+  
+  console.log('AIAB Chat Iframe Injector: Checking if chat is enabled...');
+  
+  // Check if GlideAjax is available
+  if (typeof GlideAjax === 'undefined') {
+    console.log('AIAB Chat Iframe Injector: GlideAjax not available in this frame, skipping');
+    try { window.top._aiabChatInjecting = false; } catch (e) {}
+    return;
+  }
+  
+  // Check if chat is enabled for this user
+  var ga = new GlideAjax('x_1756832_aiab.aiabAjax');
+  ga.addParam('sysparm_name', 'isChatEnabled');
+  ga.getXMLAnswer(function(response) {
+    console.log('AIAB Chat Iframe Injector: isChatEnabled response:', response);
+    
+    if (response !== 'true') {
+      console.log('AIAB Chat Iframe Injector: Chat not enabled for user, response was:', JSON.stringify(response));
+      try { window.top._aiabChatInjecting = false; } catch (e) {}
+      return;
+    }
+    
+    // Double-check it wasn't injected while we waited for AJAX
+    try {
+      if (window.top.document.getElementById('aiab-chat-iframe')) {
+        console.log('AIAB Chat Iframe Injector: Was injected while waiting, skipping');
+        return;
+      }
+    } catch (e) {
+      return;
+    }
+    
+    console.log('AIAB Chat Iframe Injector: Chat is enabled, creating iframe...');
+    
+    // Build iframe URL using /aiab portal
+    var iframeSrc = '/aiab?id=aiab_chat';
+    
+    // Try to get record context from gsft_main frame
+    try {
+      var mainFrame = window.top.document.getElementById('gsft_main');
+      if (mainFrame && mainFrame.contentWindow) {
+        var g_form = mainFrame.contentWindow.g_form;
+        if (g_form && g_form.getTableName && g_form.getUniqueValue) {
+          var recordTable = g_form.getTableName() || '';
+          var recordSysId = g_form.getUniqueValue() || '';
+          var recordDisplay = '';
+          if (g_form.getValue) {
+            recordDisplay = g_form.getValue('number') || g_form.getValue('name') || '';
+          }
+          
+          if (recordTable && recordSysId) {
+            iframeSrc += '&record_table=' + encodeURIComponent(recordTable);
+            iframeSrc += '&record_sys_id=' + encodeURIComponent(recordSysId);
+            if (recordDisplay) {
+              iframeSrc += '&record_display=' + encodeURIComponent(recordDisplay);
+            }
+            console.log('AIAB Chat Iframe Injector: Added record context:', recordTable, recordSysId);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('AIAB Chat Iframe Injector: Could not get record context', e);
+    }
+    
+    console.log('AIAB Chat Iframe Injector: Iframe src:', iframeSrc);
+    
+    // Create iframe - positioned bottom-right, sized for widget
+    var iframe = document.createElement('iframe');
+    iframe.id = 'aiab-chat-iframe';
+    iframe.src = iframeSrc;
+    iframe.style.cssText = 'position:fixed;bottom:0;right:0;width:420px;height:560px;border:none;z-index:10000;background:transparent;pointer-events:auto;';
+    iframe.setAttribute('allowtransparency', 'true');
+    
+    try {
+      window.top.document.body.appendChild(iframe);
+      console.log('AIAB Chat Iframe Injector: Iframe appended to top document body');
+    } catch (e) {
+      console.error('AIAB Chat Iframe Injector: Failed to append iframe to top document', e);
+    }
+  });
+})();]]></script>
+        <script_name/>
+        <sys_class_name>sys_ui_script</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-01-22 22:55:31</sys_created_on>
+        <sys_id>5af209e2836eb2104d4fccb6feaad331</sys_id>
+        <sys_mod_count>4</sys_mod_count>
+        <sys_name>AIAB Chat Iframe Injector</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_ui_script_5af209e2836eb2104d4fccb6feaad331</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-22 23:22:50</sys_updated_on>
+        <ui_type>0</ui_type>
+        <use_scoped_format>false</use_scoped_format>
+    </sys_ui_script>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="AI in a Box">0439d1f593948210071230a97bba1016</application>
+        <file_path/>
+        <instance_id>3e01943a1b79f9901024eb9b2d4bcb05</instance_id>
+        <instance_name>dev184755</instance_name>
+        <name>sys_ui_script_5af209e2836eb2104d4fccb6feaad331</name>
+        <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sys_ui_script"&gt;&lt;sys_ui_script action="INSERT_OR_UPDATE"&gt;&lt;active&gt;true&lt;/active&gt;&lt;description&gt;Simple injector that loads the AIAB Chat SP widget in an iframe. The widget handles its own floating button, dialog, snooze, etc.&lt;/description&gt;&lt;global&gt;true&lt;/global&gt;&lt;ignore_in_now_experience&gt;false&lt;/ignore_in_now_experience&gt;&lt;name&gt;AIAB Chat Iframe Injector&lt;/name&gt;&lt;script&gt;&lt;![CDATA[// AIAB Chat Iframe Injector
+// Injects the SP widget iframe on UI16 pages.
+(function() {
+  console.log('AIAB Chat Iframe Injector: Starting...', window.location.pathname);
+  
+  // Skip Service Portal pages (check both current window and top)
+  var pathname = window.location.pathname;
+  try {
+    pathname = window.top.location.pathname;
+  } catch (e) {
+    // Cross-origin, use current window
+  }
+  
+  if (pathname.indexOf('/sp') === 0 ||
+      pathname.indexOf('/$sp.do') === 0 ||
+      pathname.indexOf('/aiab') === 0 ||
+      pathname.indexOf('/now/') === 0) {
+    console.log('AIAB Chat Iframe Injector: Service Portal or Workspace page, skipping');
+    return;
+  }
+  
+  // Skip if already injected in top document
+  try {
+    if (window.top.document.getElementById('aiab-chat-iframe')) {
+      console.log('AIAB Chat Iframe Injector: Already injected, skipping');
+      return;
+    }
+  } catch (e) {
+    console.log('AIAB Chat Iframe Injector: Cannot access top document, skipping');
+    return;
+  }
+  
+  // Mark that we're attempting injection (prevent race conditions from multiple frames)
+  try {
+    if (window.top._aiabChatInjecting) {
+      console.log('AIAB Chat Iframe Injector: Another frame is already injecting, skipping');
+      return;
+    }
+    window.top._aiabChatInjecting = true;
+  } catch (e) {
+    // Can't set flag, continue anyway
+  }
+  
+  console.log('AIAB Chat Iframe Injector: Checking if chat is enabled...');
+  
+  // Check if GlideAjax is available
+  if (typeof GlideAjax === 'undefined') {
+    console.log('AIAB Chat Iframe Injector: GlideAjax not available in this frame, skipping');
+    try { window.top._aiabChatInjecting = false; } catch (e) {}
+    return;
+  }
+  
+  // Check if chat is enabled for this user
+  var ga = new GlideAjax('x_1756832_aiab.aiabAjax');
+  ga.addParam('sysparm_name', 'isChatEnabled');
+  ga.getXMLAnswer(function(response) {
+    console.log('AIAB Chat Iframe Injector: isChatEnabled response:', response);
+    
+    if (response !== 'true') {
+      console.log('AIAB Chat Iframe Injector: Chat not enabled for user, response was:', JSON.stringify(response));
+      try { window.top._aiabChatInjecting = false; } catch (e) {}
+      return;
+    }
+    
+    // Double-check it wasn't injected while we waited for AJAX
+    try {
+      if (window.top.document.getElementById('aiab-chat-iframe')) {
+        console.log('AIAB Chat Iframe Injector: Was injected while waiting, skipping');
+        return;
+      }
+    } catch (e) {
+      return;
+    }
+    
+    console.log('AIAB Chat Iframe Injector: Chat is enabled, creating iframe...');
+    
+    // Build iframe URL using /aiab portal
+    var iframeSrc = '/aiab?id=aiab_chat';
+    
+    // Try to get record context from gsft_main frame
+    try {
+      var mainFrame = window.top.document.getElementById('gsft_main');
+      if (mainFrame &amp;&amp; mainFrame.contentWindow) {
+        var g_form = mainFrame.contentWindow.g_form;
+        if (g_form &amp;&amp; g_form.getTableName &amp;&amp; g_form.getUniqueValue) {
+          var recordTable = g_form.getTableName() || '';
+          var recordSysId = g_form.getUniqueValue() || '';
+          var recordDisplay = '';
+          if (g_form.getValue) {
+            recordDisplay = g_form.getValue('number') || g_form.getValue('name') || '';
+          }
+          
+          if (recordTable &amp;&amp; recordSysId) {
+            iframeSrc += '&amp;record_table=' + encodeURIComponent(recordTable);
+            iframeSrc += '&amp;record_sys_id=' + encodeURIComponent(recordSysId);
+            if (recordDisplay) {
+              iframeSrc += '&amp;record_display=' + encodeURIComponent(recordDisplay);
+            }
+            console.log('AIAB Chat Iframe Injector: Added record context:', recordTable, recordSysId);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('AIAB Chat Iframe Injector: Could not get record context', e);
+    }
+    
+    console.log('AIAB Chat Iframe Injector: Iframe src:', iframeSrc);
+    
+    // Create iframe - positioned bottom-right, sized for widget
+    var iframe = document.createElement('iframe');
+    iframe.id = 'aiab-chat-iframe';
+    iframe.src = iframeSrc;
+    iframe.style.cssText = 'position:fixed;bottom:0;right:0;width:420px;height:560px;border:none;z-index:10000;background:transparent;pointer-events:auto;';
+    iframe.setAttribute('allowtransparency', 'true');
+    
+    try {
+      window.top.document.body.appendChild(iframe);
+      console.log('AIAB Chat Iframe Injector: Iframe appended to top document body');
+    } catch (e) {
+      console.error('AIAB Chat Iframe Injector: Failed to append iframe to top document', e);
+    }
+  });
+})();]]&gt;&lt;/script&gt;&lt;script_name/&gt;&lt;sys_class_name&gt;sys_ui_script&lt;/sys_class_name&gt;&lt;sys_created_by&gt;opencode&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-01-22 22:55:31&lt;/sys_created_on&gt;&lt;sys_id&gt;5af209e2836eb2104d4fccb6feaad331&lt;/sys_id&gt;&lt;sys_mod_count&gt;4&lt;/sys_mod_count&gt;&lt;sys_name&gt;AIAB Chat Iframe Injector&lt;/sys_name&gt;&lt;sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016"&gt;0439d1f593948210071230a97bba1016&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="AI in a Box"&gt;0439d1f593948210071230a97bba1016&lt;/sys_scope&gt;&lt;sys_update_name&gt;sys_ui_script_5af209e2836eb2104d4fccb6feaad331&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;opencode&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-01-22 23:22:50&lt;/sys_updated_on&gt;&lt;ui_type&gt;0&lt;/ui_type&gt;&lt;use_scoped_format&gt;false&lt;/use_scoped_format&gt;&lt;/sys_ui_script&gt;&lt;/record_update&gt;</payload>
+        <payload_hash>-1248107115</payload_hash>
+        <record_name>AIAB Chat Iframe Injector</record_name>
+        <reverted_from/>
+        <source>fb79436b835232104d4fccb6feaad310</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-01-22 23:22:50</sys_created_on>
+        <sys_id>5239c92283aeb2104d4fccb6feaad3f2</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>19be8048b7c0000001</sys_recorded_at>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-22 23:22:50</sys_updated_on>
+        <type>UI Script</type>
+        <update_guid>5239c922efaeb210aa0ccf9c1be3f6f1</update_guid>
+        <update_guid_history>5239c922efaeb210aa0ccf9c1be3f6f1:-1248107115,4ed8cdee2f6eb21045c3a92b01f5235a:-1783327916,a0f6412e036eb21070dbbd71e10def86:1080730295,d9948da6186eb210174c568b9e5d6c47:184669944,52f289e26f6eb21038086c6a2b6cd74b:1809417676</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete/>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-01-22 23:23:18</sys_created_on>
+        <sys_db_object display_value="" name="sys_ui_script">sys_ui_script</sys_db_object>
+        <sys_id>12e3bc6e92a24388b58364ed3af31c90</sys_id>
+        <sys_metadata>5af209e2836eb2104d4fccb6feaad331</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>AIAB Chat Iframe Injector</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_scope_delete display_value="">c1a48f6b4a924506a5b1a6becbc665a1</sys_scope_delete>
+        <sys_update_name>sys_ui_script_5af209e2836eb2104d4fccb6feaad331</sys_update_name>
+        <sys_update_version display_value="sys_ui_script_5af209e2836eb2104d4fccb6feaad331">5239c92283aeb2104d4fccb6feaad3f2</sys_update_version>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-22 23:23:18</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

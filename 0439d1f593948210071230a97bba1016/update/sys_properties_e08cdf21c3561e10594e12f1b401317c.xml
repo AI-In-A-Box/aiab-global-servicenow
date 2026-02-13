@@ -20,16 +20,16 @@ WIth Serverless: https://2025-08-30-azure-aiab.azurewebsites.net&#13;
         <sys_created_by>aiinaboxadmin</sys_created_by>
         <sys_created_on>2024-12-06 04:54:25</sys_created_on>
         <sys_id>e08cdf21c3561e10594e12f1b401317c</sys_id>
-        <sys_mod_count>37</sys_mod_count>
+        <sys_mod_count>38</sys_mod_count>
         <sys_name>ai_in_a_box.config.server.aiab.url</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_properties_e08cdf21c3561e10594e12f1b401317c</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2025-12-22 14:35:50</sys_updated_on>
+        <sys_updated_on>2026-01-14 00:39:38</sys_updated_on>
         <type>string</type>
-        <value>https://2025-08-30-azure-aiab.azurewebsites.net</value>
+        <value>https://aiab-dev.azurewebsites.net</value>
         <write_roles/>
     </sys_properties>
     <sys_translated_text action="delete_multiple" query="documentkey=e08cdf21c3561e10594e12f1b401317c"/>

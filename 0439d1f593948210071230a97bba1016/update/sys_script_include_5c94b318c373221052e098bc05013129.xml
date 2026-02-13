@@ -26,8 +26,6 @@ aiabRest.prototype = {
             var midServerName = gs.getProperty('ai_in_a_box.config.midserver', '676578c1fc77-mid.docker');
             restMessage.setMIDServer(midServerName);
         }
-        //can't use auth profiles cause we can't decrpyt them.
-        //restMessage.setAuthenticationProfile('basic','d3d
         var aiabAuth = gs.getProperty('ai_in_a_box.config.server.aiiab.auth');
         aiabAuth = 'Basic ' + GlideStringUtil.base64Encode(aiabAuth);
         restMessage.setRequestHeader('authorization', aiabAuth);
@@ -46,16 +44,20 @@ aiabRest.prototype = {
             restMessage.setRequestHeader(name, value);
         }
         restMessage.setRequestHeader('ai_in_a_box.config.endpoint', 'https://' + gs.getProperty('instance_name') + '.service-now.com');
+        // Set custom headers from caller - these override defaults
         for (var header in headers) {
             restMessage.setRequestHeader(header, headers[header]);
         }
-        if (typeof body.stream == "undefined") {
-            body.stream = gs.getProperty('ai_in_a_box.feature.stream.enabled') == "true";
-        }
+        // Always stream - no option to disable
+        body.stream = true;
         if (typeof body.model == "undefined") {
             body.model = gs.getProperty('ai_in_a_box.config.server.llm.model');
         }
         restMessage.setRequestBody(JSON.stringify(body));
+        // Only set user.id if not already provided in headers
+        if (!headers['ai_in_a_box.user.id']) {
+            restMessage.setRequestHeader('ai_in_a_box.user.id', gs.getUserID());
+        }
         var response = restMessage.executeAsync();
         var error = response.haveError();
         var statusCode = response.getStatusCode();
@@ -76,9 +78,6 @@ aiabRest.prototype = {
             };
         } else {
             var responseBody = response.getBody();
-            //gs.info(statusCode);
-            //gs.info(responseBody);
-            //gs.info(typeof responseBody);
             return {
                 body: responseBody,
                 status: statusCode
@@ -91,13 +90,13 @@ aiabRest.prototype = {
         <sys_created_by>jacebenson</sys_created_by>
         <sys_created_on>2025-09-01 19:12:27</sys_created_on>
         <sys_id>5c94b318c373221052e098bc05013129</sys_id>
-        <sys_mod_count>10</sys_mod_count>
+        <sys_mod_count>13</sys_mod_count>
         <sys_name>aiabRest</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_script_include_5c94b318c373221052e098bc05013129</sys_update_name>
-        <sys_updated_by>jacebenson</sys_updated_by>
-        <sys_updated_on>2025-09-07 03:41:57</sys_updated_on>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-15 07:14:45</sys_updated_on>
     </sys_script_include>
 </record_update>

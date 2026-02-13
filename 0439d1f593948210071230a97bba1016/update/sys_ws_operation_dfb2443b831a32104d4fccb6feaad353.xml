@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ws_operation">
+    <sys_ws_operation action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <consumes>application/json,application/xml,text/xml</consumes>
+        <consumes_customized>false</consumes_customized>
+        <default_operation_uri/>
+        <enforce_acl/>
+        <http_method>POST</http_method>
+        <name>Execute Tool</name>
+        <operation_script><![CDATA[(function process(/*RESTAPIRequest*/ request, /*RESTAPIResponse*/ response) {
+
+    var serverSecret = gs.getProperty("ai_in_a_box.feature.stream.auth", "");
+    var requestSecret = request.getHeader("x-aiab-secret") || (request.body.data && request.body.data.secret);
+
+    if (!serverSecret || !requestSecret || requestSecret !== serverSecret) {
+        response.setStatus(401);
+        return { error: "Unauthorized" };
+    }
+
+    var body = request.body.data;
+    var toolName = body.tool_name;
+    var args = body.arguments || {};
+    var userId = body.user_id;
+    var inferenceId = body.inference_id;
+
+    if (!toolName) {
+        response.setStatus(400);
+        return { error: "tool_name is required" };
+    }
+
+    // SECURITY: Validate user_id matches the inference creator
+    // This prevents impersonation attacks where an attacker could
+    // execute tools as a different user by providing their sys_id
+    if (inferenceId && userId) {
+        var inferenceGR = new GlideRecord("u_ai_inference");
+        if (inferenceGR.get(inferenceId)) {
+            var inferenceCreator = inferenceGR.getValue("sys_created_by");
+            // Get sys_id of the user who created the inference
+            var creatorGR = new GlideRecord("sys_user");
+            creatorGR.addQuery("user_name", inferenceCreator);
+            creatorGR.setLimit(1);
+            creatorGR.query();
+            
+            if (creatorGR.next()) {
+                var creatorSysId = creatorGR.getUniqueValue();
+                if (creatorSysId !== userId) {
+                    gs.warn("AIAB Security: user_id " + userId + " does not match inference creator " + creatorSysId + " (" + inferenceCreator + ")");
+                    response.setStatus(403);
+                    return { error: "User ID does not match inference creator" };
+                }
+            }
+        } else {
+            gs.warn("AIAB Security: Inference not found: " + inferenceId);
+            response.setStatus(404);
+            return { error: "Inference not found" };
+        }
+    } else if (userId && !inferenceId) {
+        // If user_id is provided but no inference_id, reject the request
+        // This prevents direct tool execution without an inference context
+        gs.warn("AIAB Security: user_id provided without inference_id");
+        response.setStatus(400);
+        return { error: "inference_id is required when user_id is provided" };
+    }
+
+    gs.info("AIAB Execute Tool: " + toolName + " for user: " + userId);
+
+    // Impersonate the requesting user to respect ACLs
+    // Using global Script Include since gs.impersonate() is global-scope only
+    var impersonator = new global.AIABGlobalHelper();
+    var originalUser = null;
+
+    if (userId) {
+        originalUser = impersonator.impersonate(userId);
+        if (originalUser) {
+            gs.info("AIAB: Impersonating user " + userId);
+        } else {
+            gs.warn("AIAB: Failed to impersonate user " + userId + ", running as current user");
+        }
+    }
+
+    var toolGR = new GlideRecord("u_ai_tool");
+    toolGR.addQuery("u_name", toolName);
+    toolGR.addQuery("u_active", true);
+    toolGR.setLimit(1);
+    toolGR.query();
+
+    if (!toolGR.next()) {
+        if (originalUser) impersonator.revert(originalUser);
+        response.setStatus(404);
+        return { error: "Unknown tool: " + toolName };
+    }
+
+    var script = toolGR.getValue("u_script");
+    if (!script || script.trim() === "") {
+        if (originalUser) impersonator.revert(originalUser);
+        response.setStatus(501);
+        return { error: "Tool has no script: " + toolName };
+    }
+
+    var result;
+    try {
+        var evaluator = new GlideScopedEvaluator();
+        evaluator.putVariable("args", args);
+        evaluator.putVariable("userId", userId);
+        result = evaluator.evaluateScript(toolGR, "u_script");
+    } catch (e) {
+        gs.error("AIAB Tool Error (" + toolName + "): " + e);
+        if (originalUser) impersonator.revert(originalUser);
+        response.setStatus(500);
+        return { error: e.message || String(e) };
+    }
+
+    // Revert impersonation
+    if (originalUser) {
+        impersonator.revert(originalUser);
+        gs.info("AIAB: Reverted impersonation to " + originalUser);
+    }
+
+    return { tool_name: toolName, result: result };
+
+})(request, response);
+]]></operation_script>
+        <operation_uri>/api/8821/ai_in_a_box_partials/tools/execute</operation_uri>
+        <produces>application/json,application/xml,text/xml</produces>
+        <produces_customized>false</produces_customized>
+        <relative_path>/tools/execute</relative_path>
+        <request_example/>
+        <requires_acl_authorization>true</requires_acl_authorization>
+        <requires_authentication>true</requires_authentication>
+        <requires_snc_internal_role>false</requires_snc_internal_role>
+        <short_description/>
+        <sys_class_name>sys_ws_operation</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-01-14 05:11:51</sys_created_on>
+        <sys_id>dfb2443b831a32104d4fccb6feaad353</sys_id>
+        <sys_mod_count>29</sys_mod_count>
+        <sys_name>Execute Tool</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_ws_operation_dfb2443b831a32104d4fccb6feaad353</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-22 16:23:36</sys_updated_on>
+        <web_service_definition display_value="AI in a Box Partials">6f21415793368210d2d070918bba1002</web_service_definition>
+        <web_service_version/>
+    </sys_ws_operation>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>dfb2443b831a32104d4fccb6feaad353</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-01-14 05:11:51</sys_created_on>
+        <sys_id>07c2443b831a32104d4fccb6feaad35e</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-14 05:11:51</sys_updated_on>
+        <table>sys_ws_operation</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
+</record_update>

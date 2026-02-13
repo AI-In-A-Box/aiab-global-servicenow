@@ -1,0 +1,1189 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($scope, $sce, $timeout, $location) {
+  var c = this;
+  
+  // State
+  c.isOpen = false;
+  c.isWide = false;
+  c.isSnoozed = false;
+  c.isLoading = false;
+  c.userInput = '';
+  c.messages = [];
+  c.currentInferenceId = null;
+  c.watcherChannel = null;
+  c.showHistoryMenu = false;
+  c.isViewingHistory = false;
+  c.previousChats = c.data.previousChats || [];
+  
+  // Get URL params
+  var urlParams = $location.search();
+  
+  // Get record context
+  c.recordTable = c.data.recordTable || urlParams.record_table || '';
+  c.recordSysId = c.data.recordSysId || urlParams.record_sys_id || '';
+  c.recordDisplay = c.data.recordDisplay || urlParams.record_display || '';
+  
+  // Initial welcome message
+  c.messages.push({
+    role: 'assistant',
+    content: c.options.welcomeMessage || 'Hi! How can I help you today?'
+  });
+  
+  // Toggle chat open/closed
+  c.toggleChat = function() {
+    c.isOpen = !c.isOpen;
+    c.showHistoryMenu = false;
+    c.notifyParent();
+  };
+  
+  // Toggle wide mode
+  c.toggleWide = function() {
+    c.isWide = !c.isWide;
+    c.notifyParent();
+  };
+  
+  // Snooze - hide the chat button
+  c.snooze = function() {
+    c.isOpen = false;
+    c.isSnoozed = true;
+    c.notifyParent();
+  };
+  
+  // Unsnooze - show the chat button again
+  c.unsnooze = function() {
+    c.isSnoozed = false;
+    c.notifyParent();
+  };
+  
+  // Notify parent frame about state changes (for iframe resizing)
+  c.notifyParent = function() {
+    try {
+      window.parent.postMessage({
+        type: 'aiab-chat-state',
+        isOpen: c.isOpen,
+        isWide: c.isWide,
+        isSnoozed: c.isSnoozed
+      }, '*');
+    } catch (e) {
+      // Ignore cross-origin errors
+    }
+  };
+  
+  // Load a previous conversation
+  c.loadConversation = function(conversationId) {
+    c.showHistoryMenu = false;
+    c.isLoading = true;
+    
+    c.server.get({
+      action: 'loadConversation',
+      conversationId: conversationId
+    }).then(function(response) {
+      c.isLoading = false;
+      if (response.data.success) {
+        c.messages = response.data.messages || [];
+        c.isViewingHistory = true;
+        c.scrollToBottom();
+      } else {
+        console.error('AIAB Chat: Failed to load conversation:', response.data.error);
+      }
+    });
+  };
+  
+  // Start a new chat
+  c.startNewChat = function() {
+    c.messages = [{
+      role: 'assistant',
+      content: c.options.welcomeMessage || 'Hi! How can I help you today?'
+    }];
+    c.isViewingHistory = false;
+    c.currentInferenceId = null;
+  };
+  
+  // Simple markdown to HTML converter
+  c.markdownToHtml = function(text) {
+    if (!text) return '';
+    
+    var html = text;
+    
+    // Escape HTML entities
+    html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    
+    // Code blocks
+    html = html.replace(/```([\s\S]*?)```/g, function(match, code) {
+      return '<pre><code>' + code.trim() + '</code></pre>';
+    });
+    
+    // Inline code
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    
+    // Bold
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+    
+    // Italic
+    html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    
+    // Headings
+    html = html.replace(/^### (.+)$/gm, '<h5>$1</h5>');
+    html = html.replace(/^## (.+)$/gm, '<h4>$1</h4>');
+    html = html.replace(/^# (.+)$/gm, '<h3>$1</h3>');
+    
+    // Links
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    
+    // Line breaks
+    var parts = html.split(/(<pre>.*?<\/pre>)/s);
+    html = parts.map(function(part) {
+      if (part.indexOf('<pre>') === 0) return part;
+      return part.replace(/\n/g, '<br>');
+    }).join('');
+    
+    return html;
+  };
+  
+  // Render message content
+  c.renderMessage = function(content) {
+    if (!content) return '';
+    return $sce.trustAsHtml(c.markdownToHtml(content));
+  };
+  
+  // Handle Enter key
+  c.handleKeypress = function(event) {
+    if (event.key === 'Enter' && c.userInput && !c.isLoading) {
+      c.sendMessage();
+    }
+  };
+  
+  // Build conversation history
+  c.getConversationHistory = function() {
+    return c.messages.filter(function(msg) {
+      return msg.content && msg.content.trim() !== '';
+    }).map(function(msg) {
+      return { role: msg.role, content: msg.content };
+    });
+  };
+  
+  // Send message
+  c.sendMessage = function() {
+    if (!c.userInput || c.isLoading) return;
+    
+    var userMessage = c.userInput;
+    c.userInput = '';
+    c.isLoading = true;
+    c.isViewingHistory = false;
+    
+    c.messages.push({ role: 'user', content: userMessage });
+    c.scrollToBottom();
+    
+    var conversationHistory = c.getConversationHistory();
+    
+    c.server.get({
+      action: 'createChat',
+      conversation: JSON.stringify(conversationHistory),
+      recordTable: c.recordTable,
+      recordSysId: c.recordSysId
+    }).then(function(response) {
+      if (response.data.success) {
+        c.currentInferenceId = response.data.inferenceId;
+        c.messages.push({ role: 'assistant', content: '' });
+        c.subscribeToUpdates(c.currentInferenceId);
+      } else {
+        c.isLoading = false;
+        c.messages.push({ role: 'assistant', content: 'Sorry, something went wrong. Please try again.' });
+      }
+    });
+  };
+  
+  // Watch record using AMB
+  c.watchRecord = function(table, filter, callback) {
+    try {
+      function getFilterString(f) {
+        return btoa(f.replace(/\^EQ/g, '').replace(/\^ORDERBY(?:DESC)?[^^]*/g, '').replace(/^GOTO/, '')).replace(/=/g, '-');
+      }
+      
+      if (table === 'sys_amb_message' || table.startsWith('sys_rw')) return null;
+      
+      var amb = null;
+      try { amb = top.window.top.g_ambClient; } catch (e) {}
+      if (!amb) try { amb = window.parent.g_ambClient; } catch (e) {}
+      if (!amb && typeof g_ambClient !== 'undefined') amb = g_ambClient;
+      if (!amb) return null;
+      
+      var channelName = '/rw/default/' + table + '/' + getFilterString(filter);
+      var watcherChannel = amb.getChannel(channelName);
+      watcherChannel.subscribe(callback);
+      amb.connect();
+      return watcherChannel;
+    } catch (e) {
+      return null;
+    }
+  };
+  
+  // Subscribe to AMB for streaming updates
+  c.subscribeToUpdates = function(inferenceId) {
+    var filter = 'sys_id=' + inferenceId;
+    
+    c.watcherChannel = c.watchRecord('u_ai_inference', filter, function(message) {
+      $scope.$apply(function() {
+        var record = message.data && message.data.record ? message.data.record : null;
+        if (!record) return;
+        
+        if (record.u_response) {
+          var responseValue = record.u_response.value !== undefined ? record.u_response.value : record.u_response;
+          c.messages[c.messages.length - 1].content = responseValue;
+          c.scrollToBottom();
+        }
+        
+        var stateValue = record.u_state ? (record.u_state.value !== undefined ? record.u_state.value : record.u_state) : null;
+        if (stateValue === 'finished' || stateValue === 'cancelled') {
+          c.isLoading = false;
+          c.unsubscribe();
+        }
+      });
+    });
+    
+    if (!c.watcherChannel) {
+      c.pollForUpdates(inferenceId);
+    }
+  };
+  
+  // Fallback polling
+  c.pollForUpdates = function(inferenceId) {
+    var pollCount = 0;
+    var poll = function() {
+      if (!c.isLoading || pollCount >= 120) return;
+      pollCount++;
+      
+      c.server.get({ action: 'getInference', inferenceId: inferenceId }).then(function(response) {
+        if (response.data.success) {
+          c.messages[c.messages.length - 1].content = response.data.response || '';
+          c.scrollToBottom();
+          if (response.data.state === 'finished' || response.data.state === 'cancelled') {
+            c.isLoading = false;
+          } else {
+            $timeout(poll, 1000);
+          }
+        } else {
+          c.isLoading = false;
+        }
+      });
+    };
+    $timeout(poll, 1000);
+  };
+  
+  // Unsubscribe
+  c.unsubscribe = function() {
+    if (c.watcherChannel) {
+      try { c.watcherChannel.unsubscribe(); } catch (e) {}
+      c.watcherChannel = null;
+    }
+  };
+  
+  // Stop generation
+  c.stopGeneration = function() {
+    if (!c.currentInferenceId) return;
+    c.server.get({ action: 'cancelInference', inferenceId: c.currentInferenceId }).then(function() {
+      c.isLoading = false;
+      c.unsubscribe();
+    });
+  };
+  
+  // Scroll to bottom
+  c.scrollToBottom = function() {
+    $timeout(function() {
+      var container = document.getElementById('aiab-chat-messages');
+      if (container) container.scrollTop = container.scrollHeight;
+    }, 50);
+  };
+  
+  // Cleanup
+  $scope.$on('$destroy', function() { c.unsubscribe(); });
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>/* AIAB Chat Widget */
+.aiab-chat-container {
+  --aiab-primary: #1f6feb;
+  --aiab-primary-hover: #1558d6;
+  --aiab-danger: #dc3545;
+  --aiab-bg: #ffffff;
+  --aiab-border: #e1e4e8;
+  --aiab-text: #24292f;
+  --aiab-muted: #57606a;
+  --aiab-user-bg: #1f6feb;
+  --aiab-user-text: #ffffff;
+  --aiab-assistant-bg: #f6f8fa;
+  --aiab-assistant-text: #24292f;
+  
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 10000;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Floating Button */
+.aiab-chat-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: var(--aiab-primary);
+  color: white;
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: all 0.2s ease;
+}
+
+.aiab-chat-button:hover {
+  background: var(--aiab-primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+}
+
+.aiab-chat-button-icon {
+  font-size: 18px;
+}
+
+/* Snoozed button (minimized) */
+.aiab-chat-snoozed-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: var(--aiab-muted);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  opacity: 0.7;
+  transition: all 0.2s ease;
+}
+
+.aiab-chat-snoozed-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Chat Dialog */
+.aiab-chat-dialog {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 380px;
+  height: 500px;
+  background: var(--aiab-bg);
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: width 0.2s ease, height 0.2s ease;
+}
+
+/* Wide mode */
+.aiab-chat-wide .aiab-chat-dialog {
+  width: 600px;
+  height: 600px;
+}
+
+/* Header */
+.aiab-chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--aiab-border);
+  background: var(--aiab-bg);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.aiab-chat-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--aiab-text);
+}
+
+.aiab-chat-header-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.aiab-chat-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--aiab-muted);
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.aiab-chat-btn:hover {
+  background: var(--aiab-border);
+  color: var(--aiab-text);
+}
+
+.aiab-chat-close {
+  font-size: 24px;
+  font-weight: 300;
+}
+
+/* History Menu */
+.aiab-history-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 250px;
+  overflow-y: auto;
+  background: var(--aiab-bg);
+  border: 1px solid var(--aiab-border);
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  z-index: 100;
+}
+
+.aiab-history-header {
+  padding: 10px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--aiab-muted);
+  text-transform: uppercase;
+  background: var(--aiab-assistant-bg);
+  border-bottom: 1px solid var(--aiab-border);
+}
+
+.aiab-history-menu button {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.aiab-history-menu button:hover {
+  background: var(--aiab-assistant-bg);
+}
+
+.aiab-history-preview {
+  font-size: 14px;
+  color: var(--aiab-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aiab-history-date {
+  font-size: 11px;
+  color: var(--aiab-muted);
+  margin-top: 2px;
+}
+
+/* Record Context */
+.aiab-chat-context {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--aiab-assistant-bg);
+  border-bottom: 1px solid var(--aiab-border);
+  font-size: 12px;
+  color: var(--aiab-muted);
+  flex-shrink: 0;
+}
+
+.aiab-chat-context-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  background: var(--aiab-primary);
+  color: white;
+  border-radius: 10px;
+}
+
+/* Messages */
+.aiab-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.aiab-chat-message {
+  display: flex;
+  max-width: 85%;
+}
+
+.aiab-chat-message--user {
+  align-self: flex-end;
+}
+
+.aiab-chat-message--assistant {
+  align-self: flex-start;
+}
+
+.aiab-chat-bubble {
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.aiab-chat-message--user .aiab-chat-bubble {
+  background: var(--aiab-user-bg);
+  color: var(--aiab-user-text);
+  border-bottom-right-radius: 4px;
+}
+
+.aiab-chat-message--assistant .aiab-chat-bubble {
+  background: var(--aiab-assistant-bg);
+  color: var(--aiab-assistant-text);
+  border-bottom-left-radius: 4px;
+}
+
+/* Markdown in bubbles */
+.aiab-chat-bubble code {
+  background: rgba(0,0,0,0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.aiab-chat-bubble pre {
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+.aiab-chat-bubble pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Loading */
+.aiab-chat-loading {
+  display: flex;
+  gap: 4px;
+  padding: 14px 18px;
+}
+
+.aiab-chat-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--aiab-muted);
+  border-radius: 50%;
+  animation: aiab-bounce 1.4s ease-in-out infinite;
+}
+
+.aiab-chat-dot:nth-child(2) { animation-delay: 0.2s; }
+.aiab-chat-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes aiab-bounce {
+  0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* Input Area */
+.aiab-chat-input-area {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--aiab-border);
+  background: var(--aiab-bg);
+  flex-shrink: 0;
+}
+
+.aiab-chat-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--aiab-border);
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+}
+
+.aiab-chat-input:focus {
+  border-color: var(--aiab-primary);
+}
+
+.aiab-chat-send,
+.aiab-chat-stop {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.aiab-chat-send {
+  background: var(--aiab-primary);
+  color: white;
+}
+
+.aiab-chat-send:hover:not(:disabled) {
+  background: var(--aiab-primary-hover);
+}
+
+.aiab-chat-send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.aiab-chat-stop {
+  background: var(--aiab-danger);
+  color: white;
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data>false</demo_data>
+        <description>AI In A Box floating chat widget with real-time streaming responses. Customizable via CSS variables.</description>
+        <docs/>
+        <field_list/>
+        <has_preview>false</has_preview>
+        <id>aiab_chat</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {  }]]></link>
+        <name>AIAB Chat</name>
+        <option_schema/>
+        <public>true</public>
+        <roles/>
+        <script><![CDATA[(function() {
+  // Check if chat is enabled for this user
+  var enabled = gs.getProperty('ai_in_a_box.feature.chat.enabled') == 'true';
+  if (enabled) {
+    var roles = gs.getProperty('ai_in_a_box.feature.chat.roles') || '';
+    if (roles) {
+      enabled = gs.hasRole(roles);
+    }
+  }
+  data.chatEnabled = enabled;
+  data.options = options;
+  
+  // Check if embedded in a modal (no floating button, starts open)
+  data.embedded = $sp.getParameter('embedded') === 'true';
+  
+  // Get record context from URL params (passed from global injector)
+  data.recordTable = $sp.getParameter('record_table') || '';
+  data.recordSysId = $sp.getParameter('record_sys_id') || '';
+  data.recordDisplay = $sp.getParameter('record_display') || '';
+  
+  // If we have table and sys_id but no display, look it up server-side
+  if (data.recordTable && data.recordSysId && !data.recordDisplay) {
+    var gr = new GlideRecord(data.recordTable);
+    if (gr.get(data.recordSysId)) {
+      // Try to get a good display value
+      if (gr.isValidField('number')) {
+        data.recordDisplay = gr.getValue('number');
+      } else if (gr.isValidField('name')) {
+        data.recordDisplay = gr.getValue('name');
+      } else {
+        data.recordDisplay = gr.getDisplayValue();
+      }
+    }
+  }
+  
+  // Fetch previous conversations for this record (created by current user)
+  data.previousChats = [];
+  if (data.recordTable && data.recordSysId) {
+    var chatGR = new GlideRecord('u_ai_inference');
+    chatGR.addQuery('u_type', 'chat');
+    chatGR.addQuery('u_table', data.recordTable);
+    chatGR.addQuery('u_target', data.recordSysId);
+    chatGR.addQuery('sys_created_by', gs.getUserName());
+    chatGR.addQuery('u_state', 'finished'); // Only show completed chats
+    chatGR.orderByDesc('sys_created_on');
+    chatGR.setLimit(10); // Limit to last 10 conversations
+    chatGR.query();
+    
+    while (chatGR.next()) {
+      // Extract first user message as preview
+      var preview = '';
+      try {
+        var prompt = JSON.parse(chatGR.getValue('u_prompt') || '[]');
+        for (var p = 0; p < prompt.length; p++) {
+          if (prompt[p].role === 'user') {
+            preview = prompt[p].content;
+            if (preview.length > 50) {
+              preview = preview.substring(0, 50) + '...';
+            }
+            break;
+          }
+        }
+      } catch (e) {
+        preview = 'Chat';
+      }
+      
+      data.previousChats.push({
+        sys_id: chatGR.getValue('sys_id'),
+        created: chatGR.getDisplayValue('sys_created_on'),
+        preview: preview || 'Chat conversation'
+      });
+    }
+  }
+  
+  // Handle actions from client
+  if (input && input.action) {
+    switch (input.action) {
+      case 'createChat':
+        try {
+          var inference = new GlideRecord('u_ai_inference');
+          inference.newRecord();
+          inference.setValue('u_type', 'chat');
+          
+          // Build context starting with system prompt
+          var systemPrompt = gs.getProperty('ai_in_a_box.feature.chat.system_prompt') || 
+            "You are a helpful AI assistant. Answer questions clearly and concisely. If you don't know the answer, say so.";
+          
+          // Build combined system context
+          var systemContext = systemPrompt;
+          
+          // Add user context
+          var userContext = _buildUserContext();
+          if (userContext) {
+            systemContext += '\n\n--- Current User Context ---\n' + userContext;
+          }
+          
+          // Build record context if viewing a record
+          var recordTable = input.recordTable || '';
+          var recordSysId = input.recordSysId || '';
+          if (recordTable && recordSysId) {
+            var recordContext = _buildRecordContext(recordTable, recordSysId);
+            if (recordContext) {
+              systemContext += '\n\n--- Current Record Context ---\n' + recordContext;
+            }
+            
+            // Store record reference on inference
+            inference.setValue('u_table', recordTable);
+            inference.setValue('u_target', recordSysId);
+          }
+          
+          // Single system message with all context
+          var context = [{
+            role: 'system',
+            content: systemContext
+          }];
+          
+          // Parse conversation history from client
+          var conversation = [];
+          try {
+            conversation = JSON.parse(input.conversation || '[]');
+          } catch (e) {
+            gs.error('AIAB Chat: Failed to parse conversation: ' + e.message);
+          }
+          
+          // Add all conversation messages (skip the welcome message which is assistant-generated)
+          for (var i = 0; i < conversation.length; i++) {
+            var msg = conversation[i];
+            if (msg.role && msg.content) {
+              context.push({
+                role: msg.role,
+                content: msg.content
+              });
+            }
+          }
+          
+          inference.setValue('u_prompt', JSON.stringify(context, null, 2));
+          var inferenceId = inference.insert();
+          
+          data.success = !!inferenceId;
+          data.inferenceId = inferenceId;
+        } catch (e) {
+          data.success = false;
+          data.error = e.message;
+        }
+        break;
+        
+      case 'loadConversation':
+        try {
+          var loadGR = new GlideRecord('u_ai_inference');
+          if (loadGR.get(input.conversationId)) {
+            // Verify user owns this conversation
+            if (loadGR.getValue('sys_created_by') !== gs.getUserName()) {
+              data.success = false;
+              data.error = 'Access denied';
+              break;
+            }
+            
+            data.success = true;
+            data.conversationId = input.conversationId;
+            data.messages = [];
+            
+            // Parse the prompt to get user messages
+            try {
+              var promptData = JSON.parse(loadGR.getValue('u_prompt') || '[]');
+              for (var m = 0; m < promptData.length; m++) {
+                if (promptData[m].role === 'user' || promptData[m].role === 'assistant') {
+                  data.messages.push({
+                    role: promptData[m].role,
+                    content: promptData[m].content
+                  });
+                }
+              }
+            } catch (parseErr) {
+              gs.error('AIAB Chat: Failed to parse prompt: ' + parseErr.message);
+            }
+            
+            // Add the final response
+            var response = loadGR.getValue('u_response');
+            if (response) {
+              // Check if last message is already an assistant message
+              if (data.messages.length === 0 || data.messages[data.messages.length - 1].role !== 'assistant') {
+                data.messages.push({
+                  role: 'assistant',
+                  content: response
+                });
+              } else {
+                // Update last assistant message with full response
+                data.messages[data.messages.length - 1].content = response;
+              }
+            }
+          } else {
+            data.success = false;
+            data.error = 'Conversation not found';
+          }
+        } catch (e) {
+          data.success = false;
+          data.error = e.message;
+        }
+        break;
+        
+      case 'cancelInference':
+        try {
+          var cancelGR = new GlideRecord('u_ai_inference');
+          if (cancelGR.get(input.inferenceId)) {
+            cancelGR.setValue('u_state', 'cancelled');
+            cancelGR.update();
+          }
+          data.success = true;
+        } catch (e) {
+          data.success = false;
+          data.error = e.message;
+        }
+        break;
+        
+      case 'getInference':
+        try {
+          var getGR = new GlideRecord('u_ai_inference');
+          if (getGR.get(input.inferenceId)) {
+            data.success = true;
+            data.response = getGR.getValue('u_response');
+            data.state = getGR.getValue('u_state');
+          } else {
+            data.success = false;
+            data.error = 'Inference not found';
+          }
+        } catch (e) {
+          data.success = false;
+          data.error = e.message;
+        }
+        break;
+    }
+  }
+  
+  /**
+   * Build user context string with current user info
+   * @returns {string} User context
+   */
+  function _buildUserContext() {
+    var user = new GlideRecord('sys_user');
+    if (!user.get(gs.getUserID())) return '';
+    
+    var lines = [
+      'Logged in user: ' + user.getDisplayValue('name'),
+      '- Email: ' + (user.getValue('email') || 'Not set'),
+      '- Title: ' + (user.getValue('title') || 'Not set'),
+      '- Department: ' + (user.getDisplayValue('department') || 'Not set'),
+      '- Location: ' + (user.getDisplayValue('location') || 'Not set'),
+      '- Manager: ' + (user.getDisplayValue('manager') || 'Not set')
+    ];
+    
+    // Add user's roles (summarized)
+    var userRoles = gs.getUser().getRoles().toString();
+    if (userRoles) {
+      lines.push('- Roles: ' + userRoles);
+    }
+    
+    return lines.join('\n');
+  }
+  
+  /**
+   * Build record context with key fields and user relationship
+   * @param {string} table - Table name
+   * @param {string} sysId - Record sys_id
+   * @returns {string} Record context
+   */
+  function _buildRecordContext(table, sysId) {
+    var gr = new GlideRecord(table);
+    if (!gr.get(sysId)) return '';
+    
+    var userId = gs.getUserID();
+    var lines = [
+      'Table: ' + table,
+      'Record: ' + gr.getDisplayValue()
+    ];
+    
+    // Add number if available
+    if (gr.isValidField('number')) {
+      lines.push('Number: ' + gr.getValue('number'));
+    }
+    
+    // Add short_description if available
+    if (gr.isValidField('short_description')) {
+      lines.push('Short description: ' + gr.getValue('short_description'));
+    }
+    
+    // Add description if available (full details)
+    if (gr.isValidField('description') && gr.getValue('description')) {
+      var desc = gr.getValue('description');
+      // Truncate if too long
+      if (desc.length > 500) {
+        desc = desc.substring(0, 500) + '...';
+      }
+      lines.push('Description: ' + desc);
+    }
+    
+    // Add state if available
+    if (gr.isValidField('state')) {
+      lines.push('State: ' + gr.getDisplayValue('state'));
+    }
+    
+    // Add priority if available
+    if (gr.isValidField('priority')) {
+      lines.push('Priority: ' + gr.getDisplayValue('priority'));
+    }
+    
+    // Add caller/requester - THIS IS THE PERSON WHO REPORTED THE ISSUE
+    var callerFields = ['caller_id', 'requested_by', 'u_requested_by', 'contact', 'opened_by'];
+    for (var c = 0; c < callerFields.length; c++) {
+      var callerField = callerFields[c];
+      if (gr.isValidField(callerField) && gr.getValue(callerField)) {
+        var callerLabel = gr.getElement(callerField).getLabel();
+        lines.push(callerLabel + ': ' + gr.getDisplayValue(callerField));
+      }
+    }
+    
+    // Add assigned_to if available
+    if (gr.isValidField('assigned_to') && gr.getValue('assigned_to')) {
+      lines.push('Assigned to: ' + gr.getDisplayValue('assigned_to'));
+    }
+    
+    // Add assignment_group if available
+    if (gr.isValidField('assignment_group') && gr.getValue('assignment_group')) {
+      lines.push('Assignment group: ' + gr.getDisplayValue('assignment_group'));
+    }
+    
+    // Add category/subcategory if available
+    if (gr.isValidField('category') && gr.getValue('category')) {
+      lines.push('Category: ' + gr.getDisplayValue('category'));
+    }
+    if (gr.isValidField('subcategory') && gr.getValue('subcategory')) {
+      lines.push('Subcategory: ' + gr.getDisplayValue('subcategory'));
+    }
+    
+    // Add created/updated timestamps
+    if (gr.isValidField('sys_created_on')) {
+      lines.push('Created: ' + gr.getDisplayValue('sys_created_on'));
+    }
+    if (gr.isValidField('sys_updated_on')) {
+      lines.push('Last updated: ' + gr.getDisplayValue('sys_updated_on'));
+    }
+    
+    // Determine user's relationship to the record
+    var relationship = _determineUserRelationship(gr, userId);
+    if (relationship.length > 0) {
+      lines.push('');
+      lines.push('Your relationship to this record:');
+      for (var i = 0; i < relationship.length; i++) {
+        lines.push('- ' + relationship[i]);
+      }
+    }
+    
+    return lines.join('\n');
+  }
+  
+  /**
+   * Determine user's relationship to the record (for intent prediction)
+   * @param {GlideRecord} gr - The record
+   * @param {string} userId - Current user's sys_id
+   * @returns {array} List of relationships
+   */
+  function _determineUserRelationship(gr, userId) {
+    var relationships = [];
+    
+    // Check if user is the caller/opened_by/requested_by
+    var callerFields = ['caller_id', 'opened_by', 'requested_by', 'u_requested_by', 'contact'];
+    for (var i = 0; i < callerFields.length; i++) {
+      var field = callerFields[i];
+      if (gr.isValidField(field) && gr.getValue(field) === userId) {
+        relationships.push('You are the ' + gr.getElement(field).getLabel());
+        break;
+      }
+    }
+    
+    // Check if user is assigned_to
+    if (gr.isValidField('assigned_to') && gr.getValue('assigned_to') === userId) {
+      relationships.push('You are assigned to this record');
+    }
+    
+    // Check if user is in the assignment_group
+    if (gr.isValidField('assignment_group') && gr.getValue('assignment_group')) {
+      var groupId = gr.getValue('assignment_group');
+      var groupMember = new GlideRecord('sys_user_grmember');
+      groupMember.addQuery('group', groupId);
+      groupMember.addQuery('user', userId);
+      groupMember.setLimit(1);
+      groupMember.query();
+      if (groupMember.hasNext()) {
+        relationships.push('You are a member of the assignment group');
+      }
+    }
+    
+    // Check if user is the manager of assigned_to
+    if (gr.isValidField('assigned_to') && gr.getValue('assigned_to')) {
+      var assignee = new GlideRecord('sys_user');
+      if (assignee.get(gr.getValue('assigned_to'))) {
+        if (assignee.getValue('manager') === userId) {
+          relationships.push('You are the manager of the assignee');
+        }
+      }
+    }
+    
+    // If no relationship found
+    if (relationships.length === 0) {
+      relationships.push('You are viewing this record (no direct relationship)');
+    }
+    
+    return relationships;
+  }
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-01-22 17:03:51</sys_created_on>
+        <sys_id>3e72f39a83a2b2104d4fccb6feaad33d</sys_id>
+        <sys_mod_count>35</sys_mod_count>
+        <sys_name>AIAB Chat</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sp_widget_3e72f39a83a2b2104d4fccb6feaad33d</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-01-22 23:37:36</sys_updated_on>
+        <template><![CDATA[<div class="aiab-chat-container" ng-if="data.chatEnabled" ng-class="{'aiab-chat-wide': c.isWide, 'aiab-chat-snoozed': c.isSnoozed}">
+  <!-- Floating Chat Button -->
+  <button class="aiab-chat-button" ng-click="c.toggleChat()" ng-hide="c.isOpen || c.isSnoozed" title="Chat with AI Assistant">
+    <span class="aiab-chat-button-icon">]]>💬<![CDATA[</span>
+    <span class="aiab-chat-button-text">Chat</span>
+  </button>
+
+  <!-- Snoozed indicator (small button to restore) -->
+  <button class="aiab-chat-snoozed-btn" ng-show="c.isSnoozed" ng-click="c.unsnooze()" title="Show chat">
+    <span>]]>💬<![CDATA[</span>
+  </button>
+
+  <!-- Chat Dialog -->
+  <div class="aiab-chat-dialog" ng-show="c.isOpen">
+    <!-- Header -->
+    <div class="aiab-chat-header">
+      <h5 class="aiab-chat-title">{{c.options.title || 'AI Assistant'}}</h5>
+      <div class="aiab-chat-header-buttons">
+        <!-- History button -->
+        <button class="aiab-chat-btn" ng-if="c.previousChats.length > 0" ng-click="c.showHistoryMenu = !c.showHistoryMenu" title="Previous conversations">
+          <span>]]>📜<![CDATA[</span>
+        </button>
+        <!-- New chat button -->
+        <button class="aiab-chat-btn" ng-if="c.isViewingHistory" ng-click="c.startNewChat()" title="New conversation">
+          <span>➕</span>
+        </button>
+        <!-- Enlarge/shrink button -->
+        <button class="aiab-chat-btn" ng-click="c.toggleWide()" title="{{c.isWide ? 'Shrink' : 'Enlarge'}}">
+          <span ng-hide="c.isWide">⤢</span>
+          <span ng-show="c.isWide">⤡</span>
+        </button>
+        <!-- Snooze button -->
+        <button class="aiab-chat-btn" ng-click="c.snooze()" title="Hide for now">
+          <span>]]>🔕<![CDATA[</span>
+        </button>
+        <!-- Close button -->
+        <button class="aiab-chat-btn aiab-chat-close" ng-click="c.toggleChat()" title="Close">
+          <span>×</span>
+        </button>
+      </div>
+      <!-- History dropdown menu -->
+      <div class="aiab-history-menu" ng-show="c.showHistoryMenu">
+        <div class="aiab-history-header">Previous Conversations</div>
+        <button ng-repeat="chat in c.previousChats" ng-click="c.loadConversation(chat.sys_id)" title="{{chat.created}}">
+          <span class="aiab-history-preview">{{chat.preview}}</span>
+          <span class="aiab-history-date">{{chat.created}}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Record context indicator -->
+    <div class="aiab-chat-context" ng-if="c.recordTable">
+      <span class="aiab-chat-context-icon">]]>📋<![CDATA[</span>
+      <span class="aiab-chat-context-text">{{c.recordTable}}: {{c.recordDisplay || c.recordSysId}}</span>
+      <span class="aiab-chat-context-badge" ng-if="c.isViewingHistory">(viewing history)</span>
+    </div>
+
+    <!-- Messages -->
+    <div class="aiab-chat-messages" id="aiab-chat-messages">
+      <div ng-repeat="msg in c.messages track by $index" 
+           class="aiab-chat-message" 
+           ng-class="{'aiab-chat-message--user': msg.role === 'user', 'aiab-chat-message--assistant': msg.role === 'assistant'}">
+        <div class="aiab-chat-bubble" ng-bind-html="c.renderMessage(msg.content)"></div>
+      </div>
+      <div ng-if="c.isLoading" class="aiab-chat-message aiab-chat-message--assistant">
+        <div class="aiab-chat-bubble aiab-chat-loading">
+          <span class="aiab-chat-dot"></span>
+          <span class="aiab-chat-dot"></span>
+          <span class="aiab-chat-dot"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="aiab-chat-input-area">
+      <input type="text" 
+             class="aiab-chat-input" 
+             ng-model="c.userInput" 
+             ng-keypress="c.handleKeypress($event)"
+             placeholder="{{c.isViewingHistory ? 'Continue this conversation...' : (c.options.placeholder || 'Type a message...')}}"
+             ng-disabled="c.isLoading" />
+      <button class="aiab-chat-send" 
+              ng-click="c.sendMessage()" 
+              ng-hide="c.isLoading"
+              ng-disabled="!c.userInput">
+        Send
+      </button>
+      <button class="aiab-chat-stop" 
+              ng-click="c.stopGeneration()" 
+              ng-show="c.isLoading">
+        Stop
+      </button>
+    </div>
+  </div>
+</div>]]></template>
+    </sp_widget>
+</record_update>

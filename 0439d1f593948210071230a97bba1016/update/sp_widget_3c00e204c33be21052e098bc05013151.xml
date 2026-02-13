@@ -105,6 +105,10 @@
     margin-bottom: 25px;&#13;
   }&#13;
 &#13;
+  .status-checks-section {&#13;
+    margin-bottom: 25px;&#13;
+  }&#13;
+&#13;
   .config-section {&#13;
     margin-bottom: 20px;&#13;
   }&#13;
@@ -140,72 +144,63 @@
         <script><![CDATA[(function() {
   /*global gs, data, console*/
   try {
-    // Initialize AIIAB and get status
     var status = new global.aiabStatus();
-    // Core settings data
     data.settingsTitle = 'AI In A Box Settings';
-    data.settingsDescription = 'Configure and manage your AI In A Box features';
     
-    // Get feature status from AIIAB
+    // Features (streaming, summarize, chat)
     data.features = status.featuresAndProperties;
     
-    // Add core configuration links
+    // Tool Calling (callbackAuth + serviceAccount + helperScript)
+    var statusResult = status.status();
+    if (statusResult && statusResult.callbackAuth && statusResult.serviceAccount && statusResult.helperScript) {
+      var authOk = statusResult.callbackAuth.className.indexOf('btn-success') >= 0;
+      var accountOk = statusResult.serviceAccount.className.indexOf('btn-success') >= 0;
+      var scriptOk = statusResult.helperScript.className.indexOf('btn-success') >= 0;
+      data.toolCalling = {
+        enabled: authOk && accountOk && scriptOk,
+        callbackAuth: statusResult.callbackAuth,
+        serviceAccount: statusResult.serviceAccount,
+        helperScript: statusResult.helperScript
+      };
+    }
+    
+    // Config links
     data.coreSettings = [
       {
         label: 'System Properties',
-        description: 'Configure all AI In A Box system properties',
         url: '/system_properties_ui.do?sysparm_title=Properties&sysparm_category=AI%20In%20A%20Box&sysparm_domain_restore=false&sysparm_stack=no',
-        buttonText: 'Configure',
-        className: 'btn btn-primary',
-        icon: 'fa fa-cogs'
-      },
-      {
-        label: 'AI Summarizers',
-        description: 'Manage AI summarization configurations',
-        url: '/u_ai_summarizer_list.do',
-        buttonText: 'Manage',
-        className: 'btn btn-primary',
-        icon: 'fa fa-list-alt'
+        buttonText: 'Configure'
       },
       {
         label: 'AI Inferences',
-        description: 'View and manage AI inference records',
         url: '/u_ai_inference_list.do',
-        buttonText: 'View',
-        className: 'btn btn-primary',
-        icon: 'fa fa-brain'
+        buttonText: 'View'
+      },
+      {
+        label: 'AI Tools',
+        url: '/u_ai_tool_list.do',
+        buttonText: 'Manage'
       }
     ];
     
-    // Get midserver configuration
-    data.midserverEnabled = gs.getProperty('ai_in_a_box.config.midserver.enabled') == 'true';
-    data.midserverName = gs.getProperty('ai_in_a_box.config.midserver') || 'Not configured';
-    
-    // Get key system properties for quick overview
-    data.systemInfo = {
-      installString: gs.getProperty('ai_in_a_box.install_string') || 'Not set',
-      version: gs.getProperty('ai_in_a_box.version') || 'Unknown',
-      instanceName: gs.getProperty('instance_name') || 'Unknown'
-    };
-    
   } catch (error) {
     data.error = 'Error loading settings: ' + error.message;
-    console.log(error);
   }
-})();]]></script>
+})();
+]]></script>
         <servicenow>false</servicenow>
         <sys_class_name>sp_widget</sys_class_name>
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2025-08-31 18:24:53</sys_created_on>
         <sys_id>3c00e204c33be21052e098bc05013151</sys_id>
-        <sys_mod_count>30</sys_mod_count>
+        <sys_mod_count>49</sys_mod_count>
         <sys_name>AIAB Settings</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sp_widget_3c00e204c33be21052e098bc05013151</sys_update_name>
-        <sys_updated_by>jacebenson</sys_updated_by>
-        <sys_updated_on>2025-09-04 01:12:51</sys_updated_on>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-13 07:26:54</sys_updated_on>
         <template><![CDATA[<div class="aiab-settings-widget">
   <div class="panel panel-default">
     
@@ -225,48 +220,15 @@
         <i class="fa fa-exclamation-triangle"></i> {{data.error}}
       </div>
       
-      <!-- Description -->
-      <p class="text-muted">{{data.settingsDescription}}</p>
-      
-      <!-- System Overview -->
-      <div class="system-overview">
-        <h5 class="section-title">System Overview</h5>
-        <div class="well well-sm">
-          <div class="row">
-            <div class="col-sm-4">
-              <strong>Version:</strong><br>
-              <span class="text-muted">{{data.systemInfo.version}}</span>
-            </div>
-            <div class="col-sm-4">
-              <strong>Instance:</strong><br>
-              <span class="text-muted">{{data.systemInfo.instanceName}}</span>
-            </div>
-            <div class="col-sm-4">
-              <strong>
-                <span ng-if="data.midserverEnabled">Using Midserver</span>
-                <span ng-if="!data.midserverEnabled">Not Using Midserver</span>
-              </strong><br>
-              <span class="text-muted">{{data.midserverName}}</span>
-            </div>
-          </div>
-          <div ng-if="data.midserverEnabled" class="row" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
-            <div class="col-sm-12">
-              <strong>Midserver:</strong>
-              <span class="label label-info">{{data.midserverName}}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      
       <!-- Feature Status -->
       <div ng-if="data.features.length > 0" class="features-section">
-        <h5 class="section-title">Feature Status</h5>
+        <h5 class="section-title">Features</h5>
         <div class="list-group">
           <div ng-repeat="feature in data.features" class="list-group-item">
             <div class="row">
               <div class="col-sm-8">
                 <strong>{{feature.label}}</strong>
-                <span class="{{feature.enabled == true ? 'text-success' : 'text-danger'}}">
+                <span class="{{feature.enabled == true ? 'text-success' : 'text-muted'}}">
                   {{feature.enabled == true ? 'Enabled' : 'Disabled'}}
                 </span>
               </div>
@@ -279,6 +241,65 @@
               </div>
             </div>
           </div>
+          
+          <!-- Tool Calling Feature -->
+          <div ng-if="data.toolCalling" class="list-group-item">
+            <div class="row">
+              <div class="col-sm-8">
+                <strong>Tool Calling</strong>
+                <span class="{{data.toolCalling.enabled ? 'text-success' : 'text-muted'}}">
+                  {{data.toolCalling.enabled ? 'Ready' : 'Not Configured'}}
+                </span>
+              </div>
+              <div class="col-sm-4" style="display: flex; justify-content: flex-end;">
+                <a ng-href="https://getaiinabox.com/docs/tools" 
+                   class="btn btn-default btn-sm"
+                   target="_blank">
+                  Docs
+                </a>
+              </div>
+            </div>
+            <!-- Callback Auth line -->
+            <div class="row" style="margin-top: 6px;">
+              <div class="col-sm-8">
+                <span class="text-muted" style="padding-left: 10px;">Callback Auth</span>
+              </div>
+              <div class="col-sm-4" style="display: flex; justify-content: flex-end;">
+                <a ng-href="{{data.toolCalling.callbackAuth.url}}" 
+                   class="{{data.toolCalling.callbackAuth.className}} btn-sm"
+                   target="_blank">
+                  {{data.toolCalling.callbackAuth.buttonText}}
+                </a>
+              </div>
+            </div>
+            <!-- Service Account line -->
+            <div class="row" style="margin-top: 4px;">
+              <div class="col-sm-8">
+                <span class="text-muted" style="padding-left: 10px;">Service Account</span>
+              </div>
+              <div class="col-sm-4" style="display: flex; justify-content: flex-end;">
+                <a ng-href="{{data.toolCalling.serviceAccount.url}}" 
+                   class="{{data.toolCalling.serviceAccount.className}} btn-sm"
+                   target="_blank">
+                  {{data.toolCalling.serviceAccount.buttonText}}
+                </a>
+              </div>
+            </div>
+            <!-- Helper Script line -->
+            <div class="row" style="margin-top: 4px;">
+              <div class="col-sm-8">
+                <span class="text-muted" style="padding-left: 10px;">Helper Script</span>
+              </div>
+              <div class="col-sm-4" style="display: flex; justify-content: flex-end;">
+                <a ng-href="{{data.toolCalling.helperScript.url}}" 
+                   class="{{data.toolCalling.helperScript.className}} btn-sm"
+                   target="_blank">
+                  {{data.toolCalling.helperScript.buttonText}}
+                </a>
+              </div>
+            </div>
+          </div>
+          
         </div>
       </div>
       
@@ -289,21 +310,11 @@
           <div ng-repeat="setting in data.coreSettings" class="list-group-item">
             <div class="row">
               <div class="col-sm-8">
-                <div class="media">
-                  <div class="media-left">
-                    <i class="{{setting.icon}}" style="color: #6c757d; margin-top: 5px;"></i>
-                  </div>
-                  <div class="media-body">
-                    <strong>{{setting.label}}</strong>
-                    <div class="text-muted" style="font-size: 0.9em; margin-top: 2px;">
-                      {{setting.description}}
-                    </div>
-                  </div>
-                </div>
+                <strong>{{setting.label}}</strong>
               </div>
               <div class="col-sm-4 text-right">
                 <a ng-href="{{setting.url}}" 
-                   class="{{setting.className}} btn btn-sm"
+                   class="btn btn-default btn-sm"
                    target="_blank">
                   {{setting.buttonText}}
                 </a>
@@ -313,17 +324,10 @@
         </div>
       </div>
       
-      <!-- Footer Note -->
-      <div class="footer-note">
-        <small class="text-muted">
-          <i class="fa fa-info-circle info-icon"></i>
-          Changes to system properties may require a restart to take effect
-        </small>
-      </div>
-      
     </div>
   </div>
-</div>]]></template>
+</div>
+]]></template>
     </sp_widget>
     <sys_es_latest_script action="INSERT_OR_UPDATE">
         <id>3c00e204c33be21052e098bc05013151</id>
