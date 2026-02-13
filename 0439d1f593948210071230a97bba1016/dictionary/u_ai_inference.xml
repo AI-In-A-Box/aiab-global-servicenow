@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?><database>
     <element db_object_id="9d586a7f93b28210d2d070918bba1030" label="AI Inference" max_length="40" name="u_ai_inference" type="collection">
+        <element attributes="array=denormalized,no_sort=true,slushbucket_ref_no_expand=true" label="Tools Included" max_length="1024" name="u_tools_included" reference="u_ai_tool" type="glide_list"/>
         <element attributes="edge_encryption_enabled=true" choice="1" default="new" label="State" max_length="40" name="u_state" type="string">
             <choice>
                 <element inactive_on_update="false" label="Cancelled" sequence="20" value="cancelled"/>

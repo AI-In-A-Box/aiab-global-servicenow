@@ -36,11 +36,12 @@
     var SNOOZED_WIDTH = '60px';
     var SNOOZED_HEIGHT = '60px';
     
-    // Create iframe
+    // Create iframe - START WITH BUTTON SIZE ONLY
     var iframe = top.document.createElement('iframe');
     iframe.id = 'aiab-chat-iframe';
     iframe.src = src;
-    iframe.style.cssText = 'position:fixed;bottom:0;right:0;width:' + NORMAL_WIDTH + ';height:' + NORMAL_HEIGHT + ';border:none;z-index:10000;background:transparent;pointer-events:auto;';
+    // Key fix: Start with button size, position at bottom-right, use pointer-events:auto only when needed
+    iframe.style.cssText = 'position:fixed;bottom:20px;right:20px;width:' + BUTTON_WIDTH + ';height:' + BUTTON_HEIGHT + ';border:none;z-index:10000;background:transparent;pointer-events:auto;transition:width 0.2s,height 0.2s;';
     iframe.setAttribute('allowtransparency', 'true');
     
     top.document.body.appendChild(iframe);
@@ -56,11 +57,13 @@
       console.log('AIAB Chat Injector: Received state', event.data);
       
       if (event.data.isSnoozed) {
-        // Snoozed - tiny button
+        // Snoozed - tiny button in corner
         chatIframe.style.width = SNOOZED_WIDTH;
         chatIframe.style.height = SNOOZED_HEIGHT;
+        chatIframe.style.bottom = '20px';
+        chatIframe.style.right = '20px';
       } else if (event.data.isOpen) {
-        // Open - full dialog
+        // Open - full dialog, positioned from bottom-right corner
         if (event.data.isWide) {
           chatIframe.style.width = WIDE_WIDTH;
           chatIframe.style.height = WIDE_HEIGHT;
@@ -68,10 +71,14 @@
           chatIframe.style.width = NORMAL_WIDTH;
           chatIframe.style.height = NORMAL_HEIGHT;
         }
+        chatIframe.style.bottom = '20px';
+        chatIframe.style.right = '20px';
       } else {
         // Closed - just the button
         chatIframe.style.width = BUTTON_WIDTH;
         chatIframe.style.height = BUTTON_HEIGHT;
+        chatIframe.style.bottom = '20px';
+        chatIframe.style.right = '20px';
       }
     });
     
@@ -85,7 +92,7 @@
         <sys_domain>global</sys_domain>
         <sys_domain_path>/</sys_domain_path>
         <sys_id>775a45e283aeb2104d4fccb6feaad3cb</sys_id>
-        <sys_mod_count>8</sys_mod_count>
+        <sys_mod_count>9</sys_mod_count>
         <sys_name>AIAB Chat Injector</sys_name>
         <sys_overrides/>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
@@ -93,7 +100,7 @@
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_script_client_775a45e283aeb2104d4fccb6feaad3cb</sys_update_name>
         <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-22 23:38:47</sys_updated_on>
+        <sys_updated_on>2026-02-13 07:34:46</sys_updated_on>
         <table>task</table>
         <type>onLoad</type>
         <ui_type>0</ui_type>

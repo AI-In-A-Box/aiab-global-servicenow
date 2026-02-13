@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="u_ai_tool">
+    <u_ai_tool action="INSERT_OR_UPDATE">
+        <sys_class_name>u_ai_tool</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-02-13 07:03:17</sys_created_on>
+        <sys_id>f3fb329d83c7b2504d4fccb6feaad33a</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>summarize_change_request</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>u_ai_tool_f3fb329d83c7b2504d4fccb6feaad33a</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-13 07:03:17</sys_updated_on>
+        <u_active>true</u_active>
+        <u_description>Summarize a change request with focus on change type, assigned personnel, main actions, and relevant dates.</u_description>
+        <u_execute_in>servicenow</u_execute_in>
+        <u_name>summarize_change_request</u_name>
+        <u_parameters>{
+  "type": "object",
+  "properties": {
+    "sys_id": {
+      "type": "string",
+      "description": "Record sys_id (change_request)"
+    }
+  },
+  "required": [
+    "sys_id"
+  ]
+}</u_parameters>
+        <u_script><![CDATA[(function(args, userId) {
+  try {
+    if (!args || !args.sys_id) return { error: 'missing sys_id' };
+    var gr = new GlideRecordSecure('change_request');
+    if (!gr.get(args.sys_id)) return { error: 'record not found or access denied' };
+    
+    var parts = [];
+    parts.push('CHANGE REQUEST SUMMARY');
+    parts.push('======================');
+    
+    if (gr.isValidField('number') && gr.getValue('number')) {
+      parts.push('Change Number: ' + gr.getDisplayValue('number'));
+    }
+    
+    if (gr.isValidField('short_description') && gr.getValue('short_description')) {
+      parts.push('Short Description: ' + gr.getValue('short_description'));
+    }
+    
+    parts.push('');
+    parts.push('CHANGE DETAILS');
+    parts.push('--------------');
+    if (gr.isValidField('type') && gr.getValue('type')) {
+      parts.push('Change Type: ' + gr.getDisplayValue('type'));
+    }
+    if (gr.isValidField('state') && gr.getValue('state')) {
+      parts.push('State: ' + gr.getDisplayValue('state'));
+    }
+    if (gr.isValidField('approval') && gr.getValue('approval')) {
+      parts.push('Approval Status: ' + gr.getDisplayValue('approval'));
+    }
+    if (gr.isValidField('risk') && gr.getValue('risk')) {
+      parts.push('Risk Level: ' + gr.getDisplayValue('risk'));
+    }
+    if (gr.isValidField('scope') && gr.getValue('scope')) {
+      parts.push('Scope: ' + gr.getDisplayValue('scope'));
+    }
+    
+    parts.push('');
+    parts.push('REQUESTER & CI');
+    parts.push('--------------');
+    if (gr.isValidField('requested_by') && gr.getValue('requested_by')) {
+      parts.push('Requested By: ' + gr.getDisplayValue('requested_by'));
+    }
+    if (gr.isValidField('cmdb_ci') && gr.getValue('cmdb_ci')) {
+      parts.push('Configuration Item: ' + gr.getDisplayValue('cmdb_ci'));
+    }
+    if (gr.isValidField('u_business_service') && gr.getValue('u_business_service')) {
+      parts.push('Business Service: ' + gr.getDisplayValue('u_business_service'));
+    }
+    
+    parts.push('');
+    parts.push('ASSIGNMENT');
+    parts.push('----------');
+    if (gr.isValidField('assignment_group') && gr.getValue('assignment_group')) {
+      parts.push('Assignment Group: ' + gr.getDisplayValue('assignment_group'));
+    }
+    if (gr.isValidField('assigned_to') && gr.getValue('assigned_to')) {
+      parts.push('Assigned To: ' + gr.getDisplayValue('assigned_to'));
+    }
+    
+    parts.push('');
+    parts.push('SCHEDULE');
+    parts.push('--------');
+    if (gr.isValidField('start_date') && gr.getValue('start_date')) {
+      parts.push('Planned Start: ' + gr.getDisplayValue('start_date'));
+    }
+    if (gr.isValidField('end_date') && gr.getValue('end_date')) {
+      parts.push('Planned End: ' + gr.getDisplayValue('end_date'));
+    }
+    if (gr.isValidField('work_start') && gr.getValue('work_start')) {
+      parts.push('Actual Start: ' + gr.getDisplayValue('work_start'));
+    }
+    if (gr.isValidField('work_end') && gr.getValue('work_end')) {
+      parts.push('Actual End: ' + gr.getDisplayValue('work_end'));
+    }
+    
+    if (gr.isValidField('implementation_plan') && gr.getValue('implementation_plan')) {
+      parts.push('');
+      parts.push('IMPLEMENTATION PLAN');
+      parts.push('-------------------');
+      parts.push(gr.getValue('implementation_plan'));
+    }
+    
+    if (gr.isValidField('backout_plan') && gr.getValue('backout_plan')) {
+      parts.push('');
+      parts.push('BACKOUT PLAN');
+      parts.push('------------');
+      parts.push(gr.getValue('backout_plan'));
+    }
+    
+    if (gr.isValidField('justification') && gr.getValue('justification')) {
+      parts.push('');
+      parts.push('JUSTIFICATION');
+      parts.push('-------------');
+      parts.push(gr.getValue('justification'));
+    }
+    
+    // Get approvals
+    var approvalGR = new GlideRecordSecure('sysapproval_approver');
+    approvalGR.addQuery('sysapproval', args.sys_id);
+    approvalGR.query();
+    if (approvalGR.hasNext()) {
+      parts.push('');
+      parts.push('APPROVALS');
+      parts.push('---------');
+      while (approvalGR.next()) {
+        var approver = approvalGR.getDisplayValue('approver') || 'Unknown';
+        var state = approvalGR.getDisplayValue('state') || 'Pending';
+        parts.push('- ' + approver + ': ' + state);
+      }
+    }
+    
+    // Work notes
+    if (gr.isValidField('work_notes') && gr.work_notes) {
+      var workNotes = gr.work_notes.getJournalEntry(8);
+      if (workNotes && workNotes.length > 0) {
+        parts.push('');
+        parts.push('WORK NOTES (Recent 8)');
+        parts.push('---------------------');
+        for (var j = 0; j < Math.min(workNotes.length, 8); j++) {
+          parts.push(workNotes[j]);
+          if (j < workNotes.length - 1) parts.push('');
+        }
+      }
+    }
+    
+    // Comments
+    if (gr.isValidField('comments') && gr.comments) {
+      var comments = gr.comments.getJournalEntry(5);
+      if (comments && comments.length > 0) {
+        parts.push('');
+        parts.push('COMMENTS (Recent 5)');
+        parts.push('-------------------');
+        for (var i = 0; i < Math.min(comments.length, 5); i++) {
+          parts.push(comments[i]);
+        }
+      }
+    }
+    
+    // Related incidents (if any linked)
+    if (gr.isValidField('u_related_incidents') && gr.getValue('u_related_incidents')) {
+      parts.push('');
+      parts.push('RELATED INCIDENTS');
+      parts.push('-----------------');
+      parts.push(gr.getDisplayValue('u_related_incidents'));
+    }
+    
+    var rendered = parts.join('\n');
+    var prompt = 'You are a change management assistant. Summarize the following change request concisely, focusing on: the change type and scope, assigned personnel and their roles, the implementation plan and key actions, the schedule and any timing concerns, and the approval status. Identify any risks or blockers. Be concise and actionable.\n\n' + rendered;
+    
+    return { 
+      found: true, 
+      prompt: prompt, 
+      rendered: rendered,
+      record_number: gr.getDisplayValue('number') || args.sys_id
+    };
+    
+  } catch(err) {
+    return { error: err.message || String(err) };
+  }
+})(args, userId);]]></u_script>
+    </u_ai_tool>
+</record_update>
