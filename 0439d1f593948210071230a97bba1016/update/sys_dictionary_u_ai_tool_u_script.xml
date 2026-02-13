@@ -11,7 +11,13 @@
         <column_label>Script</column_label>
         <comments/>
         <create_roles/>
-        <default_value/>
+        <default_value>(function(args, userId) {&#13;
+    var returnObj = {};&#13;
+    if (!args.query) return { error: "query is required" };&#13;
+    returnObj.example = true;&#13;
+    returnObj.args.query = "Query provided was '" + query + "' please update script to use this tool";&#13;
+    return returnObj;&#13;
+})(args, userId);</default_value>
         <defaultsort/>
         <delete_roles/>
         <dependent/>
@@ -28,7 +34,7 @@
         <function_definition/>
         <function_field>false</function_field>
         <internal_type display_value="Script">script</internal_type>
-        <mandatory>false</mandatory>
+        <mandatory>true</mandatory>
         <max_length>4000</max_length>
         <name>u_ai_tool</name>
         <next_element/>
@@ -53,7 +59,7 @@
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_dictionary_u_ai_tool_u_script</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-01-15 00:13:15</sys_updated_on>
+        <sys_updated_on>2026-02-12 23:37:07</sys_updated_on>
         <table_reference>false</table_reference>
         <text_index>false</text_index>
         <unique>false</unique>

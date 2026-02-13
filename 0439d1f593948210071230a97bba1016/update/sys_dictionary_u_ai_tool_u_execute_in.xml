@@ -11,7 +11,7 @@
         <column_label>Execute In</column_label>
         <comments/>
         <create_roles/>
-        <default_value/>
+        <default_value>servicenow</default_value>
         <defaultsort/>
         <delete_roles/>
         <dependent/>
@@ -53,7 +53,7 @@
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_dictionary_u_ai_tool_u_execute_in</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-01-14 07:12:15</sys_updated_on>
+        <sys_updated_on>2026-02-12 23:36:24</sys_updated_on>
         <table_reference>false</table_reference>
         <text_index>false</text_index>
         <unique>false</unique>

@@ -2,16 +2,33 @@
     <sys_dictionary action="INSERT_OR_UPDATE" element="u_parameters" table="u_ai_tool">
         <active>true</active>
         <array>false</array>
-        <attributes/>
+        <attributes>client_script=false</attributes>
         <audit>false</audit>
         <calculation/>
-        <choice>0</choice>
+        <choice/>
         <choice_field/>
         <choice_table/>
         <column_label>Parameters</column_label>
         <comments/>
         <create_roles/>
-        <default_value/>
+        <default_value>{&#13;
+  "type": "object",&#13;
+  "properties": {&#13;
+    "query": {&#13;
+      "type": "string",&#13;
+      "description": "Search text to find in catalog item name or description"&#13;
+    },&#13;
+    "category": {&#13;
+      "type": "string",&#13;
+      "description": "Catalog category name to filter by"&#13;
+    },&#13;
+    "limit": {&#13;
+      "type": "integer",&#13;
+      "description": "Max items to return (default 5, max 10)"&#13;
+    }&#13;
+  },&#13;
+  "required": []&#13;
+}</default_value>
         <defaultsort/>
         <delete_roles/>
         <dependent/>
@@ -28,7 +45,7 @@
         <function_definition/>
         <function_field>false</function_field>
         <internal_type display_value="String">string</internal_type>
-        <mandatory>false</mandatory>
+        <mandatory>true</mandatory>
         <max_length>4000</max_length>
         <name>u_ai_tool</name>
         <next_element/>
@@ -53,7 +70,7 @@
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_dictionary_u_ai_tool_u_parameters</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-01-14 07:12:14</sys_updated_on>
+        <sys_updated_on>2026-02-12 23:32:11</sys_updated_on>
         <table_reference>false</table_reference>
         <text_index>false</text_index>
         <unique>false</unique>

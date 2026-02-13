@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_script_client">
+    <sys_script_client action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <applies_extended>false</applies_extended>
+        <condition/>
+        <description>Validates that u_parameters contains valid JSON and formats it on change. Shows error message if JSON is invalid.</description>
+        <field>u_parameters</field>
+        <global>true</global>
+        <isolate_script>true</isolate_script>
+        <messages/>
+        <name>Validate and Format Parameters JSON</name>
+        <order/>
+        <script><![CDATA[function onChange(control, oldValue, newValue, isLoading) {
+    if (isLoading || !newValue) {
+        return;
+    }
+
+    // Clear any previous error messages
+    g_form.hideFieldMsg('u_parameters', true);
+
+    try {
+        var parsed = JSON.parse(newValue);
+        var formatted = JSON.stringify(parsed, null, 2);
+        
+        // Only update if formatting changed something
+        if (formatted !== newValue) {
+            g_form.setValue('u_parameters', formatted);
+            g_form.showFieldMsg('u_parameters', 'JSON formatted successfully', 'info');
+        }
+    } catch (e) {
+        var errorMsg = parseJsonError(newValue, e);
+        g_form.showFieldMsg('u_parameters', errorMsg, 'error');
+    }
+}
+
+function parseJsonError(jsonString, error) {
+    var msg = error.message || 'Unknown error';
+    
+    // Try to extract position from error message
+    // Common formats: "at position 42", "at line 3 column 5"
+    var posMatch = msg.match(/position\s+(\d+)/i);
+    var lineColMatch = msg.match(/line\s+(\d+).*column\s+(\d+)/i);
+    
+    if (posMatch) {
+        var pos = parseInt(posMatch[1], 10);
+        var context = getErrorContext(jsonString, pos);
+        return 'Invalid JSON at position ' + pos + ': ' + context.description + '\n' + context.snippet;
+    } else if (lineColMatch) {
+        var line = parseInt(lineColMatch[1], 10);
+        var col = parseInt(lineColMatch[2], 10);
+        return 'Invalid JSON at line ' + line + ', column ' + col + ': ' + msg;
+    }
+    
+    // Fallback: try to find common issues
+    var hint = detectCommonIssues(jsonString);
+    if (hint) {
+        return 'Invalid JSON: ' + hint;
+    }
+    
+    return 'Invalid JSON: ' + msg;
+}
+
+function getErrorContext(str, position) {
+    var start = Math.max(0, position - 20);
+    var end = Math.min(str.length, position + 20);
+    var before = str.substring(start, position);
+    var after = str.substring(position, end);
+    var pointer = (start > 0 ? '...' : '') + before + ' >>> HERE >>> ' + after + (end < str.length ? '...' : '');
+    
+    // Try to describe what's wrong
+    var charAtPos = str.charAt(position) || 'END OF INPUT';
+    var description = 'Unexpected character: "' + charAtPos + '"';
+    
+    return {
+        snippet: pointer,
+        description: description
+    };
+}
+
+function detectCommonIssues(jsonString) {
+    var trimmed = jsonString.trim();
+    
+    // Check if it starts correctly
+    if (trimmed && trimmed[0] !== '{' && trimmed[0] !== '[') {
+        return 'JSON must start with { or [';
+    }
+    
+    // Check for trailing commas (common mistake)
+    if (/,\s*[}\]]/.test(jsonString)) {
+        return 'Trailing comma detected - remove comma before } or ]';
+    }
+    
+    // Check for single quotes (common mistake)
+    if (/'[^']*'\s*:/.test(jsonString)) {
+        return 'Use double quotes (") not single quotes (\') for property names';
+    }
+    
+    // Check for unquoted keys
+    if (/[{,]\s*[a-zA-Z_][a-zA-Z0-9_]*\s*:/.test(jsonString)) {
+        var match = jsonString.match(/[{,]\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:/);
+        if (match && !/'"/.test(jsonString.charAt(jsonString.indexOf(match[1]) - 1))) {
+            return 'Property names must be quoted: "' + match[1] + '" not ' + match[1];
+        }
+    }
+    
+    // Count brackets
+    var openBraces = (jsonString.match(/{/g) || []).length;
+    var closeBraces = (jsonString.match(/}/g) || []).length;
+    var openBrackets = (jsonString.match(/\[/g) || []).length;
+    var closeBrackets = (jsonString.match(/\]/g) || []).length;
+    
+    if (openBraces > closeBraces) {
+        return 'Missing closing brace } - found ' + openBraces + ' open and ' + closeBraces + ' close';
+    } else if (closeBraces > openBraces) {
+        return 'Extra closing brace } - found ' + openBraces + ' open and ' + closeBraces + ' close';
+    }
+    
+    if (openBrackets > closeBrackets) {
+        return 'Missing closing bracket ] - found ' + openBrackets + ' open and ' + closeBrackets + ' close';
+    } else if (closeBrackets > openBrackets) {
+        return 'Extra closing bracket ] - found ' + openBrackets + ' open and ' + closeBrackets + ' close';
+    }
+    
+    return null;
+}]]></script>
+        <sys_class_name>sys_script_client</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-02-12 23:12:40</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>ca40115d838b72504d4fccb6feaad380</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>Validate and Format Parameters JSON</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_script_client_ca40115d838b72504d4fccb6feaad380</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-12 23:19:13</sys_updated_on>
+        <table>u_ai_tool</table>
+        <type>onChange</type>
+        <ui_type>0</ui_type>
+        <view/>
+    </sys_script_client>
+</record_update>

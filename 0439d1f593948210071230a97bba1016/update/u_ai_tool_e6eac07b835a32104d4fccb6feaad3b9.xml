@@ -4,14 +4,14 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2026-01-14 05:47:46</sys_created_on>
         <sys_id>e6eac07b835a32104d4fccb6feaad3b9</sys_id>
-        <sys_mod_count>33</sys_mod_count>
+        <sys_mod_count>34</sys_mod_count>
         <sys_name>get_incident</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>u_ai_tool_e6eac07b835a32104d4fccb6feaad3b9</sys_update_name>
-        <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-22 16:39:52</sys_updated_on>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-23 18:44:29</sys_updated_on>
         <u_active>true</u_active>
         <u_description>Search for incidents in ServiceNow. Can search by number, caller, assigned user, state, priority, or find recent incidents. Returns up to 5 matching incidents</u_description>
         <u_execute_in>servicenow</u_execute_in>
@@ -133,7 +133,8 @@
             state: incidentRecord.getDisplayValue("state"),
             priority: incidentRecord.getDisplayValue("priority"),
             assigned_to: incidentRecord.getDisplayValue("assigned_to"),
-            opened_at: "" + incidentRecord.opened_at
+            opened_at: "" + incidentRecord.opened_at,
+			link: gs.getProperty('instance_name') + '.service-now.com' + incidentRecord.getLink()
         };
         // Only include caller_id if user can read it
         if (incidentRecord.caller_id.canRead()) {
@@ -155,7 +156,8 @@
             state: incidentRecord.getDisplayValue("state"),
             priority: incidentRecord.getDisplayValue("priority"),
             assigned_to: incidentRecord.getDisplayValue("assigned_to"),
-            opened_at: "" + incidentRecord.opened_at
+            opened_at: "" + incidentRecord.opened_at,
+			link: gs.getProperty('instance_name') + '.service-now.com' + incidentRecord.getLink()
         };
         // Only include caller_id if user can read it
         if (incidentRecord.caller_id.canRead()) {

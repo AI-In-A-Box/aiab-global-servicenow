@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_page">
+    <sys_ui_page action="INSERT_OR_UPDATE">
+        <category>general</category>
+        <client_script/>
+        <description>Dialog for testing AI Tool definitions</description>
+        <direct>false</direct>
+        <endpoint/>
+        <html><![CDATA[<?xml version="1.0" encoding="utf-8" ?>
+<j:jelly trim="false" xmlns:j="jelly:core" xmlns:g="glide" xmlns:j2="null" xmlns:g2="null">
+<style>
+    .test-tool-container { padding: 15px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .test-tool-section { margin-bottom: 15px; }
+    .test-tool-label { font-weight: 600; margin-bottom: 5px; display: block; color: #333; font-size: 13px; }
+    .test-tool-input { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; }
+    .test-tool-input:focus { border-color: #0066cc; outline: none; }
+    .test-tool-textarea { width: 100%; height: 120px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; font-size: 13px; resize: vertical; box-sizing: border-box; }
+    .test-tool-btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 10px; }
+    .test-tool-btn-primary { background: #0066cc; color: white; }
+    .test-tool-btn-primary:hover { background: #0055aa; }
+    .test-tool-result { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 15px; margin-top: 15px; display: none; }
+    .test-tool-result-header { font-weight: 600; margin-bottom: 10px; }
+    .test-tool-result-content { font-family: monospace; font-size: 13px; white-space: pre-wrap; word-break: break-word; max-height: 300px; overflow-y: auto; }
+    .test-tool-error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+    .test-tool-success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+    .test-tool-info { background: #e7f1ff; border-color: #b6d4fe; color: #084298; font-size: 12px; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
+    .test-tool-spinner { display: none; margin-left: 10px; }
+    .test-tool-field { margin-bottom: 12px; }
+    .test-tool-field-desc { font-size: 11px; color: #666; margin-top: 3px; }
+    .test-tool-field-type { font-size: 10px; color: #999; margin-left: 5px; font-weight: normal; }
+    .test-tool-field-required { color: #dc3545; margin-left: 3px; }
+    .test-tool-no-params { color: #666; font-style: italic; padding: 10px 0; }
+    .test-tool-details { margin-top: 15px; }
+    .test-tool-details summary { cursor: pointer; color: #666; font-size: 12px; }
+    .test-tool-details summary:hover { color: #333; }
+    .test-tool-details[open] summary { margin-bottom: 10px; }
+    .test-tool-select { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; background: white; }
+    .test-tool-checkbox-wrapper { display: flex; align-items: center; gap: 8px; }
+    .test-tool-checkbox { width: 18px; height: 18px; }
+</style>
+
+<!-- Hidden inputs to store sysparm values -->
+<input type="hidden" id="hidden_tool_id" value="$[sysparm_tool_id]"/>
+<input type="hidden" id="hidden_tool_name" value="$[sysparm_tool_name]"/>
+<input type="hidden" id="hidden_tool_desc" value="$[sysparm_tool_desc]"/>
+<input type="hidden" id="hidden_tool_params" value="$[sysparm_tool_params]"/>
+
+<div class="test-tool-container">
+    <div class="test-tool-info">
+        <strong>Tool:</strong> <span id="display_tool_name"></span><br/>
+        <strong>Description:</strong> <span id="display_tool_desc"></span>
+    </div>
+    
+    <div class="test-tool-section">
+        <div id="param_fields_container"></div>
+    </div>
+    
+    <div class="test-tool-section">
+        <button type="button" class="test-tool-btn test-tool-btn-primary" onclick="runToolTest()">Test Tool</button>
+        <span id="test_spinner" class="test-tool-spinner">Testing...</span>
+    </div>
+    
+    <div id="test_result" class="test-tool-result">
+        <div class="test-tool-result-header" id="result_header">Result</div>
+        <div class="test-tool-result-content" id="result_content"></div>
+    </div>
+    
+    <details class="test-tool-details">
+        <summary>Advanced: Test with raw JSON arguments</summary>
+        <textarea id="test_args" class="test-tool-textarea" style="height: 80px;" placeholder='{"number": "INC0000001"}'></textarea>
+        <button type="button" class="test-tool-btn test-tool-btn-primary" style="margin-top: 10px;" onclick="runToolTestRaw()">Test with Raw JSON</button>
+    </details>
+</div>
+
+<script>
+// Read values from hidden inputs on page load
+var toolId = document.getElementById('hidden_tool_id').value;
+var toolName = document.getElementById('hidden_tool_name').value;
+var toolDesc = document.getElementById('hidden_tool_desc').value;
+var toolParams = document.getElementById('hidden_tool_params').value;
+var paramSchema = null;
+
+// Populate display elements
+document.getElementById('display_tool_name').textContent = toolName;
+document.getElementById('display_tool_desc').textContent = toolDesc;
+
+// Parse parameter schema and build form fields
+function buildParamFields() {
+    var container = document.getElementById('param_fields_container');
+    
+    if (!toolParams || toolParams.trim() === '') {
+        container.innerHTML = '<div class="test-tool-no-params">This tool has no parameters defined.</div>';
+        return;
+    }
+    
+    try {
+        paramSchema = JSON.parse(toolParams);
+    } catch (e) {
+        container.innerHTML = '<div class="test-tool-error" style="display:block;">Invalid parameter schema JSON: ' + e.message + '</div>';
+        return;
+    }
+    
+    var properties = paramSchema.properties || {};
+    var required = paramSchema.required || [];
+    var propKeys = Object.keys(properties);
+    
+    if (propKeys.length === 0) {
+        container.innerHTML = '<div class="test-tool-no-params">This tool has no parameters defined.</div>';
+        return;
+    }
+    
+    var html = '';
+    for (var i = 0; i < propKeys.length; i++) {
+        var key = propKeys[i];
+        var prop = properties[key];
+        var isRequired = required.indexOf(key) > -1;
+        var fieldType = prop.type || 'string';
+        var fieldDesc = prop.description || '';
+        var fieldEnum = prop.enum || null;
+        
+        html += '<div class="test-tool-field">';
+        html += '<label class="test-tool-label" for="param_' + key + '">';
+        html += key;
+        html += '<span class="test-tool-field-type">(' + fieldType + ')</span>';
+        if (isRequired) {
+            html += '<span class="test-tool-field-required">*</span>';
+        }
+        html += '</label>';
+        
+        if (fieldType === 'boolean') {
+            html += '<div class="test-tool-checkbox-wrapper">';
+            html += '<input type="checkbox" class="test-tool-checkbox" id="param_' + key + '" data-type="boolean"/>';
+            html += '<span style="font-size: 13px; color: #666;">Check for true</span>';
+            html += '</div>';
+        } else if (fieldEnum && fieldEnum.length > 0) {
+            html += '<select class="test-tool-select" id="param_' + key + '" data-type="' + fieldType + '">';
+            html += '<option value="">-- Select --</option>';
+            for (var e = 0; e < fieldEnum.length; e++) {
+                html += '<option value="' + fieldEnum[e] + '">' + fieldEnum[e] + '</option>';
+            }
+            html += '</select>';
+        } else if (fieldType === 'integer' || fieldType === 'number') {
+            html += '<input type="number" class="test-tool-input" id="param_' + key + '" data-type="' + fieldType + '" placeholder="Enter ' + key + '"/>';
+        } else {
+            html += '<input type="text" class="test-tool-input" id="param_' + key + '" data-type="' + fieldType + '" placeholder="Enter ' + key + '"/>';
+        }
+        
+        if (fieldDesc) {
+            html += '<div class="test-tool-field-desc">' + fieldDesc + '</div>';
+        }
+        html += '</div>';
+    }
+    
+    container.innerHTML = html;
+}
+
+// Build args object from form fields (only include non-empty values)
+function buildArgsFromFields() {
+    var args = {};
+    
+    if (!paramSchema || !paramSchema.properties) {
+        return args;
+    }
+    
+    var properties = paramSchema.properties;
+    var propKeys = Object.keys(properties);
+    
+    for (var i = 0; i < propKeys.length; i++) {
+        var key = propKeys[i];
+        var prop = properties[key];
+        var fieldType = prop.type || 'string';
+        var el = document.getElementById('param_' + key);
+        
+        if (!el) continue;
+        
+        var value;
+        if (fieldType === 'boolean') {
+            // Only include if checked (true), skip if unchecked
+            if (el.checked) {
+                args[key] = true;
+            }
+        } else if (fieldType === 'integer') {
+            value = el.value.trim();
+            if (value !== '') {
+                args[key] = parseInt(value, 10);
+            }
+        } else if (fieldType === 'number') {
+            value = el.value.trim();
+            if (value !== '') {
+                args[key] = parseFloat(value);
+            }
+        } else {
+            value = el.value.trim();
+            if (value !== '') {
+                args[key] = value;
+            }
+        }
+    }
+    
+    return args;
+}
+
+function runToolTest() {
+    var args = buildArgsFromFields();
+    executeTest(JSON.stringify(args));
+}
+
+function runToolTestRaw() {
+    var argsText = document.getElementById('test_args').value.trim();
+    if (!argsText) {
+        argsText = '{}';
+    }
+    
+    try {
+        JSON.parse(argsText);
+    } catch (e) {
+        showError('Invalid JSON', e.message);
+        return;
+    }
+    
+    executeTest(argsText);
+}
+
+function executeTest(argsJson) {
+    var resultDiv = document.getElementById('test_result');
+    var spinner = document.getElementById('test_spinner');
+    
+    resultDiv.style.display = 'none';
+    resultDiv.className = 'test-tool-result';
+    spinner.style.display = 'inline';
+    
+    if (!toolId) {
+        spinner.style.display = 'none';
+        showError('Error', 'Tool ID is missing');
+        return;
+    }
+    
+    var ga = new GlideAjax('aiabAjax');
+    ga.addParam('sysparm_name', 'testToolDirect');
+    ga.addParam('sysparm_tool_id', toolId);
+    ga.addParam('sysparm_args', argsJson);
+    
+    ga.getXMLAnswer(function(response) {
+        spinner.style.display = 'none';
+        resultDiv.style.display = 'block';
+        
+        try {
+            var result = JSON.parse(response);
+            if (result.error) {
+                showError('Error', result.error);
+            } else {
+                showSuccess('Success (' + result.execution_time + 'ms)', JSON.stringify(result.result, null, 2));
+            }
+        } catch (e) {
+            showError('Error', response || 'No response received');
+        }
+    });
+}
+
+function showError(header, content) {
+    var resultDiv = document.getElementById('test_result');
+    var resultHeader = document.getElementById('result_header');
+    var resultContent = document.getElementById('result_content');
+    
+    resultDiv.style.display = 'block';
+    resultDiv.className = 'test-tool-result test-tool-error';
+    resultHeader.textContent = header;
+    resultContent.textContent = content;
+}
+
+function showSuccess(header, content) {
+    var resultDiv = document.getElementById('test_result');
+    var resultHeader = document.getElementById('result_header');
+    var resultContent = document.getElementById('result_content');
+    
+    resultDiv.style.display = 'block';
+    resultDiv.className = 'test-tool-result test-tool-success';
+    resultHeader.textContent = header;
+    resultContent.textContent = content;
+}
+
+// Initialize
+buildParamFields();
+</script>
+</j:jelly>]]></html>
+        <name>aiab_test_tool_dialog</name>
+        <processing_script/>
+        <sys_class_name>sys_ui_page</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-02-12 23:39:05</sys_created_on>
+        <sys_id>0156595983cb72504d4fccb6feaad316</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>aiab_test_tool_dialog</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_ui_page_0156595983cb72504d4fccb6feaad316</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-12 23:51:40</sys_updated_on>
+    </sys_ui_page>
+</record_update>

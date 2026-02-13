@@ -4,19 +4,36 @@
         <sys_created_by>opencode</sys_created_by>
         <sys_created_on>2026-01-14 06:52:37</sys_created_on>
         <sys_id>8bd9dcf783da32104d4fccb6feaad3e8</sys_id>
-        <sys_mod_count>4</sys_mod_count>
+        <sys_mod_count>5</sys_mod_count>
         <sys_name>search_catalog</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>u_ai_tool_8bd9dcf783da32104d4fccb6feaad3e8</sys_update_name>
-        <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-15 00:16:59</sys_updated_on>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-12 23:15:53</sys_updated_on>
         <u_active>true</u_active>
-        <u_description>Search service catalog items that users can request. Can search by name, description, or category.</u_description>
+        <u_description>Search service catalog items that users can request. Can search by name, description, or category</u_description>
         <u_execute_in>servicenow</u_execute_in>
         <u_name>search_catalog</u_name>
-        <u_parameters>{"type": "object", "properties": {"query": {"type": "string", "description": "Search text to find in catalog item name or description"}, "category": {"type": "string", "description": "Catalog category name to filter by"}, "limit": {"type": "integer", "description": "Max items to return (default 5, max 10)"}}, "required": []}</u_parameters>
+        <u_parameters>{
+  "type": "object",
+  "properties": {
+    "query": {
+      "type": "string",
+      "description": "Search text to find in catalog item name or description"
+    },
+    "category": {
+      "type": "string",
+      "description": "Catalog category name to filter by"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Max items to return (default 5, max 10)"
+    }
+  },
+  "required": []
+}</u_parameters>
         <u_script><![CDATA[(function(args, userId) {
     var gr = new GlideRecord("sc_cat_item");
     gr.addQuery("active", true);
