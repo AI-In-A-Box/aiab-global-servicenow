@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="u_ai_tool">
+    <u_ai_tool action="INSERT_OR_UPDATE">
+        <sys_class_name>u_ai_tool</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-02-14 03:31:45</sys_created_on>
+        <sys_id>59251fad834b36504d4fccb6feaad33a</sys_id>
+        <sys_mod_count>9</sys_mod_count>
+        <sys_name>build_report</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>u_ai_tool_59251fad834b36504d4fccb6feaad33a</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-14 04:15:03</sys_updated_on>
+        <u_active>true</u_active>
+        <u_description>Creates a bar chart report in ServiceNow. Groups records by a specified field and optionally filters them. Use this when users ask for reports, charts, or breakdowns of data.</u_description>
+        <u_execute_in>servicenow</u_execute_in>
+        <u_name>build_report</u_name>
+        <u_parameters>{
+  "type": "object",
+  "properties": {
+    "table": {
+      "type": "string",
+      "description": "The table name to report on (e.g., 'incident', 'change_request', 'problem'). Use the table name, not the label."
+    },
+    "field": {
+      "type": "string",
+      "description": "The field to group the bar chart by (e.g., 'category', 'priority', 'state', 'caller_id'). This determines what the bars represent."
+    },
+    "query": {
+      "type": "string",
+      "description": "Optional: ServiceNow encoded query to filter records. Examples: 'active=true' for active records, 'caller_id.nameLIKEBeth' for incidents by caller Beth Anglin, 'priority=1' for critical priority. Use field names from sys_dictionary. For reference fields like caller, use 'caller_id.nameLIKE&lt;name&gt;' not 'caller.name'."
+    }
+  },
+  "required": [
+    "table",
+    "field"
+  ]
+}</u_parameters>
+        <u_script><![CDATA[(function(args, userId) {
+    // Validate required parameters
+    if (!args.table) {
+        return { error: "No table identified" };
+    }
+    if (!args.field) {
+        return { error: "No field identified for grouping" };
+    }
+
+    var returnObj = {};
+    var tableName = null;
+    var tableHierarchy = [];
+
+    // Resolve table name - try exact match first, then label match
+    var grDBObj = new GlideRecord('sys_db_object');
+    grDBObj.addQuery('name', args.table);
+    grDBObj.setLimit(1);
+    grDBObj.query();
+    
+    if (!grDBObj.next()) {
+        // Try label match if exact name fails
+        grDBObj = new GlideRecord('sys_db_object');
+        grDBObj.addQuery('label', 'CONTAINS', args.table);
+        grDBObj.setLimit(1);
+        grDBObj.query();
+        if (!grDBObj.next()) {
+            return { error: "Table not found: " + args.table };
+        }
+    }
+    
+    tableName = grDBObj.name.toString();
+    var tableLabel = grDBObj.label.toString();
+    returnObj.resolved_table = tableName;
+    returnObj.table_label = tableLabel;
+
+    // Build table hierarchy for field lookup (current table + all parents)
+    var currentTableName = tableName;
+    var maxDepth = 10;
+    var depth = 0;
+    
+    while (currentTableName && depth < maxDepth) {
+        tableHierarchy.push(currentTableName);
+        
+        var parentCheck = new GlideRecord('sys_db_object');
+        parentCheck.addQuery('name', currentTableName);
+        parentCheck.query();
+        
+        if (parentCheck.next() && parentCheck.super_class) {
+            var parentGR = new GlideRecord('sys_db_object');
+            if (parentGR.get(parentCheck.super_class.toString())) {
+                currentTableName = parentGR.name.toString();
+            } else {
+                currentTableName = null;
+            }
+        } else {
+            currentTableName = null;
+        }
+        depth++;
+    }
+    
+    returnObj.table_hierarchy = tableHierarchy;
+
+    // Search for field across table hierarchy
+    var grDict = new GlideRecord('sys_dictionary');
+    var tableQuery = tableHierarchy.join(',');
+    grDict.addQuery('name', 'IN', tableQuery);
+    grDict.addEncodedQuery('element=' + args.field + '^ORcolumn_labelLIKE' + args.field);
+    grDict.addQuery('active', true);
+    grDict.setLimit(1);
+    grDict.query();
+    
+    var fieldName = null;
+    var fieldLabel = null;
+    if (grDict.next()) {
+        fieldName = grDict.element.toString();
+        fieldLabel = grDict.column_label.toString();
+        returnObj.resolved_field = fieldName;
+        returnObj.field_label = fieldLabel;
+        returnObj.field_defined_on = grDict.name.toString();
+    } else {
+        return { 
+            error: "Field not found: " + args.field + " on table or parent tables",
+            searched_tables: tableHierarchy
+        };
+    }
+
+    // Get user info for the report
+    var userGR = new GlideRecord('sys_user');
+    if (!userGR.get(userId)) {
+        return { error: "User not found" };
+    }
+    var userName = userGR.getDisplayValue('name');
+
+    // Generate report name
+    var timestamp = new GlideDateTime();
+    var reportName = "Bar Chart: " + tableLabel + " by " + fieldLabel + " - " + userName + " - " + timestamp.getDisplayValue();
+
+    // Create the report
+    var reportGR = new GlideRecord('sys_report');
+    reportGR.initialize();
+    reportGR.title = reportName;
+    reportGR.table = tableName;
+    reportGR.type = 'bar';
+    reportGR.field = fieldName;
+    reportGR.group_by = fieldName;
+    reportGR.aggregate_type = 'COUNT';
+    reportGR.aggregate_field = 'sys_id';
+    reportGR.chart_size = 'large';
+    reportGR.chart_title = tableLabel + " by " + fieldLabel;
+    reportGR.show_data_labels = false;
+    reportGR.show_legend = true;
+    reportGR.user = userId;
+    reportGR.is_published = true;
+    reportGR.sys_scope = 'global';
+    
+    // Add filter if provided
+    if (args.query) {
+        reportGR.filter = args.query;
+        returnObj.query_applied = args.query;
+    }
+
+    var reportSysId = reportGR.insert();
+
+    if (!reportSysId) {
+        return { error: "Failed to create report" };
+    }
+
+    // Build the direct report link
+    var instanceName = gs.getProperty('instance_name');
+	var reportURL = 'https://' + instanceName + '.service-now.com/sys_report_template.do?jvar_report_id=' + reportSysId;
+
+    returnObj.report_name = reportName;
+    returnObj.report_sys_id = reportSysId;
+    returnObj.report_url = reportURL;
+    returnObj.summary = "Created bar chart report on " + tableLabel + " grouped by " + fieldLabel;
+    
+    return returnObj;
+})(args, userId);]]></u_script>
+    </u_ai_tool>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>59251fad834b36504d4fccb6feaad33a</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-02-14 03:31:44</sys_created_on>
+        <sys_id>7e251fad834b36504d4fccb6feaad35c</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-14 03:31:44</sys_updated_on>
+        <table>u_ai_tool</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
+</record_update>

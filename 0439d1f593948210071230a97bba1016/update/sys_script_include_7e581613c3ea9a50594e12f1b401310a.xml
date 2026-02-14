@@ -20,15 +20,7 @@ aiabStatus.prototype = {
     if (enabled === false) return false;
     var userHasRole = gs.hasRole(gs.getProperty('ai_in_a_box.feature.summarize.roles'.split(',')));
     if (userHasRole === false) return false;
-    var summarizer = new GlideRecord('u_ai_summarizer');
-    summarizer.addQuery('u_active', 'true');
-    summarizer.addQuery('u_table', table);
-    summarizer.setLimit(1);
-    summarizer.query();
-    if (summarizer.next()) {
-      return true;
-    }
-    return false;
+    return true;
   },
   featuresAndProperties: [
     {
@@ -558,14 +550,14 @@ aiabStatus.prototype = {
         <sys_created_by>aiinaboxadmin</sys_created_by>
         <sys_created_on>2024-12-23 20:42:04</sys_created_on>
         <sys_id>7e581613c3ea9a50594e12f1b401310a</sys_id>
-        <sys_mod_count>142</sys_mod_count>
+        <sys_mod_count>143</sys_mod_count>
         <sys_name>aiabStatus</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_script_include_7e581613c3ea9a50594e12f1b401310a</sys_update_name>
-        <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-22 16:09:49</sys_updated_on>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-14 02:58:03</sys_updated_on>
     </sys_script_include>
     <sys_es_latest_script action="INSERT_OR_UPDATE">
         <id>7e581613c3ea9a50594e12f1b401310a</id>
