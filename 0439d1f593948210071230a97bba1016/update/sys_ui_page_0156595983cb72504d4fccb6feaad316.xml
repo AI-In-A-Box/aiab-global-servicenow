@@ -38,7 +38,6 @@
     .test-tool-checkbox { width: 18px; height: 18px; }
 </style>
 
-<!-- Hidden inputs to store sysparm values -->
 <input type="hidden" id="hidden_tool_id" value="$[sysparm_tool_id]"/>
 <input type="hidden" id="hidden_tool_name" value="$[sysparm_tool_name]"/>
 <input type="hidden" id="hidden_tool_desc" value="$[sysparm_tool_desc]"/>
@@ -72,130 +71,162 @@
 </div>
 
 <script>
-// Read values from hidden inputs on page load
 var toolId = document.getElementById('hidden_tool_id').value;
 var toolName = document.getElementById('hidden_tool_name').value;
 var toolDesc = document.getElementById('hidden_tool_desc').value;
 var toolParams = document.getElementById('hidden_tool_params').value;
 var paramSchema = null;
 
-// Populate display elements
 document.getElementById('display_tool_name').textContent = toolName;
 document.getElementById('display_tool_desc').textContent = toolDesc;
 
-// Parse parameter schema and build form fields
+function createEl(tag, className, text) {
+    var el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text) el.textContent = text;
+    return el;
+}
+
 function buildParamFields() {
     var container = document.getElementById('param_fields_container');
+    container.innerHTML = '';
     
     if (!toolParams || toolParams.trim() === '') {
-        container.innerHTML = '<div class="test-tool-no-params">This tool has no parameters defined.</div>';
+        container.appendChild(createEl('div', 'test-tool-no-params', 'This tool has no parameters defined.'));
         return;
     }
     
     try {
         paramSchema = JSON.parse(toolParams);
     } catch (e) {
-        container.innerHTML = '<div class="test-tool-error" style="display:block;">Invalid parameter schema JSON: ' + e.message + '</div>';
+        var errDiv = createEl('div', 'test-tool-error');
+        errDiv.style.display = 'block';
+        errDiv.textContent = 'Invalid parameter schema JSON: ' + e.message;
+        container.appendChild(errDiv);
         return;
     }
     
     var properties = paramSchema.properties || {};
     var required = paramSchema.required || [];
-    var propKeys = Object.keys(properties);
+    var propKeys = [];
+    for (var p in properties) {
+        if (properties.hasOwnProperty(p)) {
+            propKeys.push(p);
+        }
+    }
     
     if (propKeys.length === 0) {
-        container.innerHTML = '<div class="test-tool-no-params">This tool has no parameters defined.</div>';
+        container.appendChild(createEl('div', 'test-tool-no-params', 'This tool has no parameters defined.'));
         return;
     }
     
-    var html = '';
-    for (var i = 0; i < propKeys.length; i++) {
+    for (var i = 0; i !== propKeys.length; i++) {
         var key = propKeys[i];
-        var prop = properties[key];
-        var isRequired = required.indexOf(key) > -1;
-        var fieldType = prop.type || 'string';
-        var fieldDesc = prop.description || '';
-        var fieldEnum = prop.enum || null;
+        var propDef = properties[key];
+        var isRequired = required.indexOf(key) !== -1;
+        var fieldType = propDef.type || 'string';
+        var fieldDesc = propDef.description || '';
+        var fieldEnum = propDef['enum'] || null;
         
-        html += '<div class="test-tool-field">';
-        html += '<label class="test-tool-label" for="param_' + key + '">';
-        html += key;
-        html += '<span class="test-tool-field-type">(' + fieldType + ')</span>';
+        var fieldDiv = createEl('div', 'test-tool-field');
+        
+        var label = createEl('label', 'test-tool-label');
+        label.setAttribute('for', 'param_' + key);
+        label.appendChild(document.createTextNode(key));
+        
+        var typeSpan = createEl('span', 'test-tool-field-type', '(' + fieldType + ')');
+        label.appendChild(typeSpan);
+        
         if (isRequired) {
-            html += '<span class="test-tool-field-required">*</span>';
+            var reqSpan = createEl('span', 'test-tool-field-required', '*');
+            label.appendChild(reqSpan);
         }
-        html += '</label>';
+        fieldDiv.appendChild(label);
         
+        var input;
         if (fieldType === 'boolean') {
-            html += '<div class="test-tool-checkbox-wrapper">';
-            html += '<input type="checkbox" class="test-tool-checkbox" id="param_' + key + '" data-type="boolean"/>';
-            html += '<span style="font-size: 13px; color: #666;">Check for true</span>';
-            html += '</div>';
-        } else if (fieldEnum && fieldEnum.length > 0) {
-            html += '<select class="test-tool-select" id="param_' + key + '" data-type="' + fieldType + '">';
-            html += '<option value="">-- Select --</option>';
-            for (var e = 0; e < fieldEnum.length; e++) {
-                html += '<option value="' + fieldEnum[e] + '">' + fieldEnum[e] + '</option>';
+            var wrapper = createEl('div', 'test-tool-checkbox-wrapper');
+            input = document.createElement('input');
+            input.type = 'checkbox';
+            input.className = 'test-tool-checkbox';
+            input.id = 'param_' + key;
+            input.setAttribute('data-type', 'boolean');
+            wrapper.appendChild(input);
+            wrapper.appendChild(createEl('span', '', 'Check for true'));
+            fieldDiv.appendChild(wrapper);
+        } else if (fieldEnum) {
+            input = document.createElement('select');
+            input.className = 'test-tool-select';
+            input.id = 'param_' + key;
+            input.setAttribute('data-type', fieldType);
+            var defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = '-- Select --';
+            input.appendChild(defaultOpt);
+            for (var e = 0; e !== fieldEnum.length; e++) {
+                var opt = document.createElement('option');
+                opt.value = fieldEnum[e];
+                opt.textContent = fieldEnum[e];
+                input.appendChild(opt);
             }
-            html += '</select>';
+            fieldDiv.appendChild(input);
         } else if (fieldType === 'integer' || fieldType === 'number') {
-            html += '<input type="number" class="test-tool-input" id="param_' + key + '" data-type="' + fieldType + '" placeholder="Enter ' + key + '"/>';
+            input = document.createElement('input');
+            input.type = 'number';
+            input.className = 'test-tool-input';
+            input.id = 'param_' + key;
+            input.setAttribute('data-type', fieldType);
+            input.placeholder = 'Enter ' + key;
+            fieldDiv.appendChild(input);
         } else {
-            html += '<input type="text" class="test-tool-input" id="param_' + key + '" data-type="' + fieldType + '" placeholder="Enter ' + key + '"/>';
+            input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'test-tool-input';
+            input.id = 'param_' + key;
+            input.setAttribute('data-type', fieldType);
+            input.placeholder = 'Enter ' + key;
+            fieldDiv.appendChild(input);
         }
         
         if (fieldDesc) {
-            html += '<div class="test-tool-field-desc">' + fieldDesc + '</div>';
+            fieldDiv.appendChild(createEl('div', 'test-tool-field-desc', fieldDesc));
         }
-        html += '</div>';
+        
+        container.appendChild(fieldDiv);
     }
-    
-    container.innerHTML = html;
 }
 
-// Build args object from form fields (only include non-empty values)
 function buildArgsFromFields() {
     var args = {};
-    
-    if (!paramSchema || !paramSchema.properties) {
-        return args;
-    }
+    if (!paramSchema || !paramSchema.properties) return args;
     
     var properties = paramSchema.properties;
-    var propKeys = Object.keys(properties);
+    var propKeys = [];
+    for (var p in properties) {
+        if (properties.hasOwnProperty(p)) propKeys.push(p);
+    }
     
-    for (var i = 0; i < propKeys.length; i++) {
+    for (var i = 0; i !== propKeys.length; i++) {
         var key = propKeys[i];
-        var prop = properties[key];
-        var fieldType = prop.type || 'string';
+        var propDef = properties[key];
+        var fieldType = propDef.type || 'string';
         var el = document.getElementById('param_' + key);
-        
         if (!el) continue;
         
         var value;
         if (fieldType === 'boolean') {
-            // Only include if checked (true), skip if unchecked
-            if (el.checked) {
-                args[key] = true;
-            }
+            if (el.checked) args[key] = true;
         } else if (fieldType === 'integer') {
             value = el.value.trim();
-            if (value !== '') {
-                args[key] = parseInt(value, 10);
-            }
+            if (value !== '') args[key] = parseInt(value, 10);
         } else if (fieldType === 'number') {
             value = el.value.trim();
-            if (value !== '') {
-                args[key] = parseFloat(value);
-            }
+            if (value !== '') args[key] = parseFloat(value);
         } else {
             value = el.value.trim();
-            if (value !== '') {
-                args[key] = value;
-            }
+            if (value !== '') args[key] = value;
         }
     }
-    
     return args;
 }
 
@@ -206,17 +237,13 @@ function runToolTest() {
 
 function runToolTestRaw() {
     var argsText = document.getElementById('test_args').value.trim();
-    if (!argsText) {
-        argsText = '{}';
-    }
-    
+    if (!argsText) argsText = '{}';
     try {
         JSON.parse(argsText);
     } catch (e) {
         showError('Invalid JSON', e.message);
         return;
     }
-    
     executeTest(argsText);
 }
 
@@ -234,7 +261,7 @@ function executeTest(argsJson) {
         return;
     }
     
-    var ga = new GlideAjax('aiabAjax');
+    var ga = new GlideAjax('global.AjaxAIAB');
     ga.addParam('sysparm_name', 'testToolDirect');
     ga.addParam('sysparm_tool_id', toolId);
     ga.addParam('sysparm_args', argsJson);
@@ -242,7 +269,6 @@ function executeTest(argsJson) {
     ga.getXMLAnswer(function(response) {
         spinner.style.display = 'none';
         resultDiv.style.display = 'block';
-        
         try {
             var result = JSON.parse(response);
             if (result.error) {
@@ -258,27 +284,20 @@ function executeTest(argsJson) {
 
 function showError(header, content) {
     var resultDiv = document.getElementById('test_result');
-    var resultHeader = document.getElementById('result_header');
-    var resultContent = document.getElementById('result_content');
-    
     resultDiv.style.display = 'block';
     resultDiv.className = 'test-tool-result test-tool-error';
-    resultHeader.textContent = header;
-    resultContent.textContent = content;
+    document.getElementById('result_header').textContent = header;
+    document.getElementById('result_content').textContent = content;
 }
 
 function showSuccess(header, content) {
     var resultDiv = document.getElementById('test_result');
-    var resultHeader = document.getElementById('result_header');
-    var resultContent = document.getElementById('result_content');
-    
     resultDiv.style.display = 'block';
     resultDiv.className = 'test-tool-result test-tool-success';
-    resultHeader.textContent = header;
-    resultContent.textContent = content;
+    document.getElementById('result_header').textContent = header;
+    document.getElementById('result_content').textContent = content;
 }
 
-// Initialize
 buildParamFields();
 </script>
 </j:jelly>]]></html>
@@ -288,13 +307,13 @@ buildParamFields();
         <sys_created_by>opencode</sys_created_by>
         <sys_created_on>2026-02-12 23:39:05</sys_created_on>
         <sys_id>0156595983cb72504d4fccb6feaad316</sys_id>
-        <sys_mod_count>3</sys_mod_count>
+        <sys_mod_count>4</sys_mod_count>
         <sys_name>aiab_test_tool_dialog</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_ui_page_0156595983cb72504d4fccb6feaad316</sys_update_name>
         <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-02-12 23:51:40</sys_updated_on>
+        <sys_updated_on>2026-02-14 07:20:16</sys_updated_on>
     </sys_ui_page>
 </record_update>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>global.StatusAIAB</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description/>
+        <mobile_callable>false</mobile_callable>
+        <name>StatusAIAB</name>
+        <sandbox_callable>false</sandbox_callable>
+        <script><![CDATA[/**
+ * StatusAIAB - Customer-extensible status checker for AI in a Box
+ * 
+ * This class extends StatusBaseAIAB. Customers can override methods here
+ * to add custom health checks or modify status behavior.
+ * 
+ * DO NOT edit StatusBaseAIAB - your changes will be overwritten on upgrade.
+ * Instead, override methods in this class.
+ * 
+ * Example override:
+ *   status: function() {
+ *       // Call parent method first
+ *       var result = StatusBaseAIAB.prototype.status.call(this);
+ *       // Add custom status check
+ *       result.customCheck = { label: 'Custom', buttonText: 'OK', className: 'btn btn-success' };
+ *       return result;
+ *   }
+ */
+var StatusAIAB = Class.create();
+StatusAIAB.prototype = Object.extendsObject(StatusBaseAIAB, {
+    // Override methods here to customize behavior
+    type: 'StatusAIAB'
+});]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-02-14 06:32:06</sys_created_on>
+        <sys_id>8b6ebb2183cf36504d4fccb6feaad384</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>StatusAIAB</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_script_include_8b6ebb2183cf36504d4fccb6feaad384</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-14 06:56:09</sys_updated_on>
+    </sys_script_include>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>8b6ebb2183cf36504d4fccb6feaad384</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-02-14 06:32:06</sys_created_on>
+        <sys_id>707ebb2183cf36504d4fccb6feaad38c</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-14 06:32:06</sys_updated_on>
+        <table>sys_script_include</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
+</record_update>

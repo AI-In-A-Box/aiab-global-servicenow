@@ -2,30 +2,56 @@
     <sys_script_include action="INSERT_OR_UPDATE">
         <access>public</access>
         <active>true</active>
-        <api_name>global.aiabHtmlToMarkdown</api_name>
+        <api_name>global.UtilBaseAIAB</api_name>
         <caller_access/>
         <client_callable>false</client_callable>
         <description/>
         <mobile_callable>false</mobile_callable>
-        <name>aiabHtmlToMarkdown</name>
+        <name>UtilBaseAIAB</name>
         <sandbox_callable>false</sandbox_callable>
-        <script><![CDATA[var aiabHtmlToMarkdown = Class.create();
-aiabHtmlToMarkdown.prototype = {
+        <script><![CDATA[var UtilBaseAIAB = Class.create();
+UtilBaseAIAB.prototype = {
     initialize: function() {},
-
-    convert: function(html) {
-        var tree = this.parseHTML(html);
-        var markdown = this.processNode(tree).trim().replace(/\n{3,}/g, '\n\n');
+    
+    /**
+     * Chunk text into an array of smaller strings
+     * @param {string} text - The text to chunk
+     * @param {number} chunkSize - Maximum size of each chunk
+     * @returns {Array} Array of text chunks
+     */
+    chunkText: function(text, chunkSize) {
+        if (!text) {
+            throw "No text given";
+        }
+        if (!chunkSize) {
+            throw "No chunkSize given";
+        }
+        var chunkedText = [];
+        var i = 0;
+        var n = text.length;
+        while (i < n) {
+            chunkedText.push(text.slice(i, i += chunkSize));
+        }
+        return chunkedText;
+    },
+    /**
+     * Convert HTML to Markdown
+     * @param {string} html - The HTML to convert
+     * @returns {string} Markdown formatted text
+     */
+    htmlToMarkdown: function(html) {
+        var tree = this._parseHTML(html);
+        var markdown = this._processNode(tree).trim().replace(/\n{3,}/g, '\n\n');
         var emptyLinks = markdown.match(/\[\]\(\)/g);
         if (emptyLinks) {
             for (var i = 0; i < emptyLinks.length; i++) {
                 markdown = markdown.replace(emptyLinks[i], '');
             }
         }
-		return markdown;
+        return markdown;
     },
 
-    parseHTML: function(html) {
+    _parseHTML: function(html) {
         var root = {
             type: 'root',
             children: []
@@ -82,7 +108,7 @@ aiabHtmlToMarkdown.prototype = {
                     var node = {
                         type: 'element',
                         tagName: tagName,
-                        attributes: this.parseAttributes(tagContent),
+                        attributes: this._parseAttributes(tagContent),
                         children: []
                     };
 
@@ -98,8 +124,8 @@ aiabHtmlToMarkdown.prototype = {
                 if (textEnd === -1) textEnd = html.length;
                 var text = html.substring(pos, textEnd)
                     .replace(/&nbsp;/g, ' ')
-                    .replace(/\r?\n/g, '\n') // Preserve newlines
-                    .replace(/[^\S\n]+/g, ' ') // Collapse multiple spaces
+                    .replace(/\r?\n/g, '\n')
+                    .replace(/[^\S\n]+/g, ' ')
                     .trim();
 
                 if (text) {
@@ -114,7 +140,7 @@ aiabHtmlToMarkdown.prototype = {
         return root;
     },
 
-    parseAttributes: function(attrString) {
+    _parseAttributes: function(attrString) {
         var attrs = {};
         var matches = attrString.match(/(\w+)=["']([^"']*)["']/g) || [];
         for (var i = 0; i < matches.length; i++) {
@@ -124,9 +150,9 @@ aiabHtmlToMarkdown.prototype = {
         return attrs;
     },
 
-    processNode: function(node) {
+    _processNode: function(node) {
         if (node.type === 'text') {
-            return node.value.replace(/\n/g, ' ') // Handle newlines in text
+            return node.value.replace(/\n/g, ' ')
                 .replace(/  +/g, ' ');
         }
 
@@ -136,25 +162,25 @@ aiabHtmlToMarkdown.prototype = {
         // Headings
         if (/^h[1-6]$/.test(tag)) {
             var level = parseInt(tag.charAt(1), 10);
-            return '\n' + Array(level + 1).join('#') + ' ' + this.processChildren(children) + '\n';
+            return '\n' + Array(level + 1).join('#') + ' ' + this._processChildren(children) + '\n';
         }
 
-        // Paragraphs (preserve surrounding newlines)
+        // Paragraphs
         if (tag === 'p') {
-            return '\n' + this.processChildren(children).replace(/\n/g, ' ') + '\n\n';
+            return '\n' + this._processChildren(children).replace(/\n/g, ' ') + '\n\n';
         }
 
         // Lists
-        if (tag === 'ul') return this.processList(children, false);
-        if (tag === 'ol') return this.processList(children, true);
+        if (tag === 'ul') return this._processList(children, false);
+        if (tag === 'ol') return this._processList(children, true);
 
         // List items
-        if (tag === 'li') return this.processChildren(children) + '\n';
+        if (tag === 'li') return this._processChildren(children) + '\n';
 
         // Links
         if (tag === 'a') {
             var href = node.attributes.href || '';
-            return '[' + this.processChildren(children) + '](' + href + ')';
+            return '[' + this._processChildren(children) + '](' + href + ')';
         }
 
         // Images
@@ -165,126 +191,79 @@ aiabHtmlToMarkdown.prototype = {
         }
 
         // Text formatting
-        if (tag === 'strong' || tag === 'b') return '**' + this.processChildren(children) + '**';
-        if (tag === 'em' || tag === 'i') return '*' + this.processChildren(children) + '*';
-        if (tag === 'code') return '`' + this.processChildren(children) + '`';
+        if (tag === 'strong' || tag === 'b') return '**' + this._processChildren(children) + '**';
+        if (tag === 'em' || tag === 'i') return '*' + this._processChildren(children) + '*';
+        if (tag === 'code') return '`' + this._processChildren(children) + '`';
 
-        // Code blocks (preserve newlines)
-        if (tag === 'pre') return '\n```\n' + this.processChildren(children) + '\n```\n';
+        // Code blocks
+        if (tag === 'pre') return '\n```\n' + this._processChildren(children) + '\n```\n';
 
         // Blockquotes
         if (tag === 'blockquote') {
-            return '> ' + this.processChildren(children).replace(/\n/g, '\n> ');
+            return '> ' + this._processChildren(children).replace(/\n/g, '\n> ');
         }
 
-        // Line breaks (Markdown requires two spaces)
+        // Line breaks
         if (tag === 'br') return '  \n';
 
-        // Divs/sections (preserve newlines)
-        if (tag === 'div' || tag === 'section') return this.processChildren(children) + '\n';
-
-        if (tag === 'div') return this.processDiv(node);
+        // Divs/sections
+        if (tag === 'div' || tag === 'section') return this._processChildren(children) + '\n';
 
         // Default case
-        return this.processChildren(children);
+        return this._processChildren(children);
     },
 
-    processChildren: function(children) {
+    _processChildren: function(children) {
         var output = '';
         for (var i = 0; i < children.length; i++) {
-            output += this.processNode(children[i]);
+            output += this._processNode(children[i]);
         }
         return output;
     },
 
-    processList: function(items, isOrdered) {
+    _processList: function(items, isOrdered) {
         var output = '';
         var count = 1;
 
         for (var i = 0; i < items.length; i++) {
             var bullet = isOrdered ? count++ + '. ' : '- ';
-            output += bullet + this.processNode(items[i]).trim() + '\n';
+            output += bullet + this._processNode(items[i]).trim() + '\n';
 
             // Process nested lists
             for (var j = 0; j < items[i].children.length; j++) {
                 var child = items[i].children[j];
                 if (child.tagName === 'ul' || child.tagName === 'ol') {
-                    output += this.processList(child.children, child.tagName === 'ol');
+                    output += this._processList(child.children, child.tagName === 'ol');
                 }
             }
         }
         return output;
     },
-    processDiv: function(node) {
-        var style = node.attributes.style || '';
-        var children = node.children || [];
-        var output = '';
 
-        // Calculate indentation from left position
-        var leftMatch = style.match(/left:\s*([\d.]+)pt/);
-        var indentLevel = leftMatch ? Math.floor(parseFloat(leftMatch[1]) / 18) : 0;
-        var indent = Array(indentLevel * 4 + 1).join(' ');
-
-        // Check for bullet characters
-        var hasBullet = false;
-        var contentParts = [];
-
-        for (var i = 0; i < children.length; i++) {
-            var child = children[i];
-            if (child.type === 'element' && child.tagName === 'span') {
-                var spanContent = this.processNode(child).trim();
-
-                // Detect bullet characters
-                if (/[●•▪○]/.test(spanContent)) {
-                    hasBullet = true;
-                    contentParts.push('- '); // Markdown bullet
-                } else {
-                    contentParts.push(spanContent);
-                }
-            } else {
-                contentParts.push(this.processNode(child));
-            }
-        }
-
-        // Build output with proper indentation
-        if (hasBullet) {
-            output = indent + contentParts.join(' ').replace(/- +/g, '- ') + '\n';
-
-            // Maintain list context for nested items
-            if (indentLevel > this.currentIndent) {
-                output = '\n' + output;
-                this.currentIndent = indentLevel;
-            }
-        } else {
-            output = this.processChildren(children) + '\n\n';
-        }
-
-        return output;
-    },
-    type: 'aiabHtmlToMarkdown'
+    type: 'UtilBaseAIAB'
 };]]></script>
         <sys_class_name>sys_script_include</sys_class_name>
         <sys_created_by>admin</sys_created_by>
-        <sys_created_on>2025-03-09 16:39:04</sys_created_on>
-        <sys_id>7389f0fb830c2a107f36c5b5eeaad360</sys_id>
-        <sys_mod_count>2</sys_mod_count>
-        <sys_name>aiabHtmlToMarkdown</sys_name>
+        <sys_created_on>2026-02-14 06:32:55</sys_created_on>
+        <sys_id>939e336183cf36504d4fccb6feaad392</sys_id>
+        <sys_mod_count>4</sys_mod_count>
+        <sys_name>UtilBaseAIAB</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
-        <sys_update_name>sys_script_include_7389f0fb830c2a107f36c5b5eeaad360</sys_update_name>
+        <sys_update_name>sys_script_include_939e336183cf36504d4fccb6feaad392</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2025-03-09 16:44:08</sys_updated_on>
+        <sys_updated_on>2026-02-14 07:39:28</sys_updated_on>
     </sys_script_include>
     <sys_es_latest_script action="INSERT_OR_UPDATE">
-        <id>7389f0fb830c2a107f36c5b5eeaad360</id>
+        <id>939e336183cf36504d4fccb6feaad392</id>
         <sys_created_by>admin</sys_created_by>
-        <sys_created_on>2025-03-09 16:39:03</sys_created_on>
-        <sys_id>19a9b8bb830c2a107f36c5b5eeaad313</sys_id>
+        <sys_created_on>2026-02-14 06:32:54</sys_created_on>
+        <sys_id>20ae736183cf36504d4fccb6feaad355</sys_id>
         <sys_mod_count>0</sys_mod_count>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2025-03-09 16:39:03</sys_updated_on>
+        <sys_updated_on>2026-02-14 06:32:54</sys_updated_on>
         <table>sys_script_include</table>
-        <use_es_latest>false</use_es_latest>
+        <use_es_latest>true</use_es_latest>
     </sys_es_latest_script>
 </record_update>

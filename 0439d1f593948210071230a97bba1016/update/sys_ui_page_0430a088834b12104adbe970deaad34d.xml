@@ -48,7 +48,7 @@
         return watcherChannel;
     };
     var stopSummary = function () {
-        var ga = new GlideAjax('aiabAjax');
+		var ga = new GlideAjax('global.AjaxAIAB');
         ga.addParam('sysparm_name', 'cancelAIInference');
         ga.addParam('sysparm_sys_id', $j("#inference").val());
         ga.getXMLAnswer(function (response) {
@@ -59,7 +59,7 @@
         //disable regenerate button
         $j('#regenerate').prop('disabled', true);
         $j('#stop').prop('disabled', false);
-        var ga = new GlideAjax('aiabAjax');
+		var ga = new GlideAjax('global.AjaxAIAB');
         ga.addParam('sysparm_name', 'createAIInference');
         ga.addParam('sysparm_sys_id', record);
         ga.addParam('sysparm_table', table);
@@ -134,13 +134,13 @@
         <sys_created_by>jacebenson</sys_created_by>
         <sys_created_on>2025-01-07 06:09:20</sys_created_on>
         <sys_id>0430a088834b12104adbe970deaad34d</sys_id>
-        <sys_mod_count>61</sys_mod_count>
+        <sys_mod_count>64</sys_mod_count>
         <sys_name>aiiab.summarize</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_ui_page_0430a088834b12104adbe970deaad34d</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2025-01-15 06:25:08</sys_updated_on>
+        <sys_updated_on>2026-02-14 07:16:59</sys_updated_on>
     </sys_ui_page>
 </record_update>
