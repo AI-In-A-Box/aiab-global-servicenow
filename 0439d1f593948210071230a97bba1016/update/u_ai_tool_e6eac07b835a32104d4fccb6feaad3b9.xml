@@ -4,16 +4,16 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2026-01-14 05:47:46</sys_created_on>
         <sys_id>e6eac07b835a32104d4fccb6feaad3b9</sys_id>
-        <sys_mod_count>35</sys_mod_count>
+        <sys_mod_count>36</sys_mod_count>
         <sys_name>get_incident</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>u_ai_tool_e6eac07b835a32104d4fccb6feaad3b9</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-02-16 06:15:53</sys_updated_on>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-16 07:16:49</sys_updated_on>
         <u_active>true</u_active>
-        <u_description>Search for incidents in ServiceNow. Can search by number, caller, assigned user, state, priority, or find recent incidents. Returns up to 5 matching incidents</u_description>
+        <u_description>Search for incidents in ServiceNow. Can search by number, caller, assigned user, state, priority, or find recent incidents. Returns up to 5 matching incidents. IMPORTANT: The 'link' field in the response contains RELATIVE URLs starting with '/'. You MUST preserve these as relative links - do NOT add domain names or convert to absolute URLs.</u_description>
         <u_execute_in>servicenow</u_execute_in>
         <u_name>get_incident</u_name>
         <u_parameters>{
@@ -73,15 +73,6 @@
   "required": []
 }</u_parameters>
         <u_script><![CDATA[(function(args, userId) {
-    // Impersonation is handled by the Web Service Operation via AIABGlobalHelper
-    // Use GlideRecordSecure to respect ACLs of the impersonated user
-    var debug = {
-        args: args,
-        userId: userId,
-        currentUser: gs.getUserID(),
-        currentUserName: gs.getUserName()
-    };
-    
     var incidentRecord = new GlideRecordSecure("incident");
 
     if (args.number) {
@@ -122,9 +113,6 @@
     incidentRecord.setLimit(Math.min(args.limit || 5, 10));
     incidentRecord.query();
 
-    debug.query = incidentRecord.getEncodedQuery();
-    debug.queryCount = incidentRecord.getRowCount();
-
     var incidents = [];
     while (incidentRecord.next()) {
         var incident = {
@@ -134,7 +122,7 @@
             priority: incidentRecord.getDisplayValue("priority"),
             assigned_to: incidentRecord.getDisplayValue("assigned_to"),
             opened_at: "" + incidentRecord.opened_at,
-			link: gs.getProperty('instance_name') + '.service-now.com' + incidentRecord.getLink()
+            link: "/incident.do?sys_id=" + incidentRecord.getValue("sys_id")
         };
         // Only include caller_id if user can read it
         if (incidentRecord.caller_id.canRead()) {
@@ -142,10 +130,9 @@
         }
         incidents.push(incident);
     }
-    debug.actualRowsProcessed = incidents.length;
 
     if (incidents.length === 0) {
-        return { found: false, count: 0, message: "No incidents found", debug: debug };
+        return { found: false, count: 0, message: "No incidents found" };
     }
     if (args.number && incidents.length === 1) {
         incidentRecord.get("number", args.number);
@@ -157,17 +144,16 @@
             priority: incidentRecord.getDisplayValue("priority"),
             assigned_to: incidentRecord.getDisplayValue("assigned_to"),
             opened_at: "" + incidentRecord.opened_at,
-			link: "/incident.do?sys_id=" + incidentRecord.getValue("sys_id")
+            link: "/incident.do?sys_id=" + incidentRecord.getValue("sys_id")
         };
         // Only include caller_id if user can read it
         if (incidentRecord.caller_id.canRead()) {
             singleIncident.caller_id = incidentRecord.getDisplayValue("caller_id");
         }
-        return { found: true, incident: singleIncident, debug: debug };
+        return { found: true, incident: singleIncident };
     }
-    return { found: true, count: incidents.length, incidents: incidents, debug: debug };
-})(args, userId);
-]]></u_script>
+    return { found: true, count: incidents.length, incidents: incidents };
+})(args, userId);]]></u_script>
     </u_ai_tool>
     <sys_es_latest_script action="INSERT_OR_UPDATE">
         <id>e6eac07b835a32104d4fccb6feaad3b9</id>

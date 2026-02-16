@@ -4,16 +4,16 @@
         <sys_created_by>opencode</sys_created_by>
         <sys_created_on>2026-01-14 06:52:37</sys_created_on>
         <sys_id>8bd9dcf783da32104d4fccb6feaad3e8</sys_id>
-        <sys_mod_count>12</sys_mod_count>
+        <sys_mod_count>13</sys_mod_count>
         <sys_name>search_catalog</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>u_ai_tool_8bd9dcf783da32104d4fccb6feaad3e8</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-02-16 06:20:46</sys_updated_on>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-16 07:16:03</sys_updated_on>
         <u_active>true</u_active>
-        <u_description>Search service catalog items that users can request. Can search by name, description, or category</u_description>
+        <u_description>Search service catalog items that users can request. Can search by name, description, or category. IMPORTANT: The 'link' field in the response contains RELATIVE URLs starting with '/'. You MUST preserve these as relative links - do NOT add domain names or convert to absolute URLs. Present the links to the user exactly as provided in the relative format.</u_description>
         <u_execute_in>servicenow</u_execute_in>
         <u_name>search_catalog</u_name>
         <u_parameters>{

@@ -4,7 +4,7 @@
         <active>true</active>
         <api_name>global.UtilBaseAIAB</api_name>
         <caller_access/>
-        <client_callable>false</client_callable>
+        <client_callable>true</client_callable>
         <description/>
         <mobile_callable>false</mobile_callable>
         <name>UtilBaseAIAB</name>
@@ -12,12 +12,34 @@
         <script><![CDATA[var UtilBaseAIAB = Class.create();
 UtilBaseAIAB.prototype = {
     initialize: function() {},
+    
     getUserName: function(userId) {
         var sys_user = new GlideRecord("sys_user");
         if (sys_user.get(userId)) {
             return sys_user.getValue("user_name");
         }
         return "NO USER FOUND with userId " + userId;
+    },
+
+    /**
+     * Convert Markdown to HTML for display
+     * @param {string} text - The markdown text to convert
+     * @returns {string} HTML formatted text
+     */
+    markdownToHtml: function(text) {
+        if (!text) return '';
+        var html = text;
+        // Bold: **text** or __text__
+        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+        // Italic: *text* or _text_
+        html = html.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
+        html = html.replace(/_([^_]+)_/g, '<em>$1</em>');
+        // Links: [text](url)
+        html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#1565c0;" target="_blank">$1</a>');
+        // Convert newlines to breaks
+        html = html.replace(/\n/g, '<br>');
+        return html;
     },
 
     /**
@@ -70,6 +92,7 @@ UtilBaseAIAB.prototype = {
             }
         }
     },
+    
     /**
      * Chunk text into an array of smaller strings
      * @param {string} text - The text to chunk
@@ -91,6 +114,7 @@ UtilBaseAIAB.prototype = {
         }
         return chunkedText;
     },
+    
     /**
      * Convert HTML to Markdown
      * @param {string} html - The HTML to convert
@@ -140,7 +164,6 @@ UtilBaseAIAB.prototype = {
                 var tagName = (isClosing ? tagContent.substring(1) : tagContent)
                     .toLowerCase().split(/\s+/)[0];
 
-                // Skip content of style/script tags
                 if (!isClosing && skipTags[tagName]) {
                     var closingTag = '</' + tagName + '>';
                     var tagEnd = html.indexOf(closingTag, end);
@@ -216,57 +239,40 @@ UtilBaseAIAB.prototype = {
         var tag = node.tagName;
         var children = node.children || [];
 
-        // Headings
         if (/^h[1-6]$/.test(tag)) {
             var level = parseInt(tag.charAt(1), 10);
             return '\n' + Array(level + 1).join('#') + ' ' + this._processChildren(children) + '\n';
         }
 
-        // Paragraphs
         if (tag === 'p') {
             return '\n' + this._processChildren(children).replace(/\n/g, ' ') + '\n\n';
         }
 
-        // Lists
         if (tag === 'ul') return this._processList(children, false);
         if (tag === 'ol') return this._processList(children, true);
-
-        // List items
         if (tag === 'li') return this._processChildren(children) + '\n';
 
-        // Links
         if (tag === 'a') {
             var href = node.attributes.href || '';
             return '[' + this._processChildren(children) + '](' + href + ')';
         }
 
-        // Images
         if (tag === 'img') {
             var src = node.attributes.src || '';
             var alt = node.attributes.alt || '';
             return '![' + alt + '](' + src + ')';
         }
 
-        // Text formatting
         if (tag === 'strong' || tag === 'b') return '**' + this._processChildren(children) + '**';
         if (tag === 'em' || tag === 'i') return '*' + this._processChildren(children) + '*';
         if (tag === 'code') return '`' + this._processChildren(children) + '`';
-
-        // Code blocks
         if (tag === 'pre') return '\n```\n' + this._processChildren(children) + '\n```\n';
-
-        // Blockquotes
         if (tag === 'blockquote') {
             return '> ' + this._processChildren(children).replace(/\n/g, '\n> ');
         }
-
-        // Line breaks
         if (tag === 'br') return '  \n';
-
-        // Divs/sections
         if (tag === 'div' || tag === 'section') return this._processChildren(children) + '\n';
 
-        // Default case
         return this._processChildren(children);
     },
 
@@ -286,7 +292,6 @@ UtilBaseAIAB.prototype = {
             var bullet = isOrdered ? count++ + '. ' : '- ';
             output += bullet + this._processNode(items[i]).trim() + '\n';
 
-            // Process nested lists
             for (var j = 0; j < items[i].children.length; j++) {
                 var child = items[i].children[j];
                 if (child.tagName === 'ul' || child.tagName === 'ol') {
@@ -303,14 +308,14 @@ UtilBaseAIAB.prototype = {
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2026-02-14 06:32:55</sys_created_on>
         <sys_id>939e336183cf36504d4fccb6feaad392</sys_id>
-        <sys_mod_count>5</sys_mod_count>
+        <sys_mod_count>6</sys_mod_count>
         <sys_name>UtilBaseAIAB</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_script_include_939e336183cf36504d4fccb6feaad392</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-02-16 05:57:14</sys_updated_on>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-16 07:33:11</sys_updated_on>
     </sys_script_include>
     <sys_es_latest_script action="INSERT_OR_UPDATE">
         <id>939e336183cf36504d4fccb6feaad392</id>

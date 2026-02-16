@@ -4,16 +4,16 @@
         <sys_created_by>opencode</sys_created_by>
         <sys_created_on>2026-01-14 06:52:31</sys_created_on>
         <sys_id>69d910f783da32104d4fccb6feaad357</sys_id>
-        <sys_mod_count>7</sys_mod_count>
+        <sys_mod_count>8</sys_mod_count>
         <sys_name>search_knowledge</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>u_ai_tool_69d910f783da32104d4fccb6feaad357</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-02-16 06:22:47</sys_updated_on>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-16 07:16:28</sys_updated_on>
         <u_active>true</u_active>
-        <u_description>Search knowledge base articles. Can search by keywords in title or content, by category, or find recently published articles.</u_description>
+        <u_description>Search knowledge base articles. Can search by keywords in title or content, by category, or find recently published articles. IMPORTANT: The 'link' field in the response contains RELATIVE URLs starting with '/'. You MUST preserve these as relative links - do NOT add domain names or convert to absolute URLs.</u_description>
         <u_execute_in>servicenow</u_execute_in>
         <u_name>search_knowledge</u_name>
         <u_parameters>{
