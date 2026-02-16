@@ -4,16 +4,16 @@
         <sys_created_by>opencode</sys_created_by>
         <sys_created_on>2026-01-14 06:52:31</sys_created_on>
         <sys_id>69d910f783da32104d4fccb6feaad357</sys_id>
-        <sys_mod_count>8</sys_mod_count>
+        <sys_mod_count>23</sys_mod_count>
         <sys_name>search_knowledge</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>u_ai_tool_69d910f783da32104d4fccb6feaad357</sys_update_name>
-        <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-02-16 07:16:28</sys_updated_on>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-16 21:04:48</sys_updated_on>
         <u_active>true</u_active>
-        <u_description>Search knowledge base articles. Can search by keywords in title or content, by category, or find recently published articles. IMPORTANT: The 'link' field in the response contains RELATIVE URLs starting with '/'. You MUST preserve these as relative links - do NOT add domain names or convert to absolute URLs.</u_description>
+        <u_description>Search knowledge base articles. Can search by keywords in title or content, by category, or find recently published articles.</u_description>
         <u_execute_in>servicenow</u_execute_in>
         <u_name>search_knowledge</u_name>
         <u_parameters>{
@@ -36,48 +36,60 @@
       "description": "Max articles to return (default 5, max 10)"
     }
   },
-  "required": []
+  "required": [
+    "query"
+  ]
 }</u_parameters>
         <u_script><![CDATA[(function(args, userId) {
+    var instanceLink = "https://" + gs.getProperty("instance_name") + ".service-now.com";
+    if (typeof args.limit == "undefined") args.limit = 3;
+    if (typeof args.query == "undefined") return {
+        error: "No query included"
+    };
+
     var kbGR = new GlideRecord("kb_knowledge");
     kbGR.addQuery("workflow_state", "published");
+    kbGR.addQuery('IR_AND_OR_QUERY', args.query);
 
-    if (args.query) {
-		var query = "short_descriptionCONTAINS" + args.query;
-		query += "textCONTAINS" + args.query;
-        gr.addEncodedQuery(query);
-    }
     if (args.category) {
         var catGR = new GlideRecord("kb_category");
         catGR.addQuery("label", "CONTAINS", args.category);
         catGR.setLimit(1);
         catGR.query();
         if (catGR.next()) {
-			kbGR.addQuery("kb_category", catGR.getUniqueValue());
-		}
+            kbGR.addQuery("kb_category", catGR.getUniqueValue());
+        }
     }
 
     kbGR.orderByDesc("sys_view_count");
-    kbGR.setLimit(Math.min(args.limit || 5, 10));
+    kbGR.setLimit(parseInt(args.limit, 10));
     kbGR.query();
 
     var articles = [];
     while (kbGR.next()) {
-        var text = "" + kbGR.text;
-		var toMD = new aiabHtmlToMarkdown();
-		var markdown = toMD.convert(text);
+        var text = kbGR.getValue("text");
+        var markdown = new global.UtilAIAB().htmlToMarkdown(text);
+        // let start at the first instance of the text
+        markdown = "**" + args.query + "**" + markdown.split(args.query)[1];
         articles.push({
-            number: "" + gr.number,
-			link: "/kb_view.do?sys_kb_id=" + gr.getValue('sys_id'),
-            title: "" + gr.short_description,
-            category: gr.getDisplayValue("kb_category"),
-            views: "" + gr.sys_view_count,
+            number: kbGR.getValue("number"),
+            link: instanceLink + "/kb_view.do?sys_kb_id=" + kbGR.getValue('sys_id'),
+            title: kbGR.getValue("short_description"),
+            category: kbGR.getDisplayValue("kb_category"),
+            views: kbGR.getValue("sys_view_count"),
             excerpt: markdown.substring(0, 200) + "..."
         });
     }
 
-    if (articles.length === 0) return { found: false, message: "No knowledge articles found" };
-    return { found: true, count: articles.length, articles: articles };
+    if (articles.length === 0) return {
+        found: false,
+        message: "No knowledge articles found " + instanceLink + '/kb_knowledge_list.do?sysparm_query=' + kbGR.getEncodedQuery()
+    };
+    return {
+        found: true,
+        count: articles.length,
+        articles: articles
+    };
 })(args, userId);]]></u_script>
     </u_ai_tool>
 </record_update>
