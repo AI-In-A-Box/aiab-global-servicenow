@@ -10,14 +10,14 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2024-11-11 16:07:53</sys_created_on>
         <sys_id>032641f5c3fdd210594e12f1b4013189</sys_id>
-        <sys_mod_count>51</sys_mod_count>
+        <sys_mod_count>61</sys_mod_count>
         <sys_name>ai-in-a-box-inference-viewer</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_ui_macro_032641f5c3fdd210594e12f1b4013189</sys_update_name>
         <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-15 06:01:10</sys_updated_on>
+        <sys_updated_on>2026-02-16 07:52:43</sys_updated_on>
         <xml><![CDATA[<?xml version="1.0" encoding="utf-8" ?>
 <j:jelly trim="false"
     xmlns:j="jelly:core"
@@ -28,8 +28,20 @@
         <!-- System Message -->
         <div id="system_message" style="display: none; background: #5c6bc0; color: white; padding: 16px 20px; border-radius: 8px; margin-bottom: 20px;">
             <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.85; margin-bottom: 6px;">System Prompt</div>
-            <p id="system_message_content" style="font-size: 14px; line-height: 1.5; margin: 0;"></p>
+            <p id="system_message_content" style="font-size: 14px; line-height: 1.5; margin: 0; white-space: pre-wrap;"></p>
         </div>
+
+        <!-- Tools Available -->
+        <details id="tools_available_section" style="display: none; margin-bottom: 20px;">
+            <summary style="display: flex; align-items: center; padding: 12px 16px; background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; cursor: pointer; list-style: none;">
+                <span style="margin-right: 8px;">&#128295;</span>
+                <span style="font-size: 13px; font-weight: 600; color: #1565c0; text-transform: uppercase;">Tools Available</span>
+                <span id="tools_available_count" style="background: #1976d2; color: white; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; margin-left: 8px;">0</span>
+            </summary>
+            <div style="background: #f5f9ff; border: 1px solid #90caf9; border-top: none; border-radius: 0 0 8px 8px; padding: 12px 16px;">
+                <div id="tools_available_content" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+            </div>
+        </details>
 
         <!-- Chat Container -->
         <div id="chat_container" style="background: #f5f5f5; border-radius: 8px; padding: 20px;">
@@ -38,33 +50,100 @@
                 <span>AI is thinking...</span>
             </div>
         </div>
-
-        <!-- Tool Calls Section -->
-        <div id="tool_calls_section" style="display: none; margin-top: 20px;">
-            <div id="tool_calls_header" style="display: flex; align-items: center; padding: 12px 16px; background: #fff3e0; border: 1px solid #ffcc80; border-radius: 8px 8px 0 0; cursor: pointer;">
-                <span style="margin-right: 8px;">&#9881;</span>
-                <span style="font-size: 13px; font-weight: 600; color: #e65100; text-transform: uppercase;">Tool Calls</span>
-                <span id="tool_calls_count" style="background: #ff9800; color: white; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; margin-left: 8px;">0</span>
-            </div>
-            <div id="tool_calls_body" style="background: #fffaf5; border: 1px solid #ffcc80; border-top: none; border-radius: 0 0 8px 8px; padding: 16px;">
-                <div id="tool_calls_content"></div>
-            </div>
-        </div>
     </div>
 
     <script>
         addLoadEvent(function() {
+            function getToolCalls() {
+                var toolCallsValue = g_form.getValue('u_tool_calls');
+                if (!toolCallsValue) return [];
+                try {
+                    var parsed = JSON.parse(toolCallsValue);
+                    return parsed || [];
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function renderToolsAvailable() {
+                var toolsSection = document.getElementById('tools_available_section');
+                var toolsContent = document.getElementById('tools_available_content');
+                var toolsCount = document.getElementById('tools_available_count');
+                
+                var toolsIncluded = g_form.getValue('u_tools_included');
+                var toolsDisplay = g_form.getDisplayValue('u_tools_included');
+                
+                if (!toolsIncluded) {
+                    toolsSection.style.display = 'none';
+                    return;
+                }
+                
+                var toolIds = toolsIncluded.split(',');
+                var toolNames = toolsDisplay.split(', ');
+                
+                if (toolIds.length === 0) {
+                    toolsSection.style.display = 'none';
+                    return;
+                }
+                
+                toolsSection.style.display = 'block';
+                toolsCount.innerText = toolIds.length;
+                toolsContent.innerHTML = '';
+                
+                var toolCallsValue = g_form.getValue('u_tool_calls');
+                var calledTools = [];
+                if (toolCallsValue) {
+                    try {
+                        var parsed = JSON.parse(toolCallsValue);
+                        var m = 0;
+                        while (m !== parsed.length) {
+                            calledTools.push(parsed[m].name);
+                            m = m + 1;
+                        }
+                    } catch (e) {}
+                }
+                
+                var i = 0;
+                while (i !== toolNames.length) {
+                    var name = toolNames[i].trim();
+                    if (name) {
+                        var tag = document.createElement('span');
+                        var wasCalled = calledTools.indexOf(name) !== -1;
+                        if (wasCalled) {
+                            tag.style.cssText = 'background: #e8f5e9; border: 1px solid #81c784; color: #2e7d32; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500;';
+                        } else {
+                            tag.style.cssText = 'background: #fafafa; border: 1px solid #e0e0e0; color: #616161; padding: 4px 10px; border-radius: 12px; font-size: 12px;';
+                        }
+                        tag.innerText = wasCalled ? name + ' ✓' : name;
+                        toolsContent.appendChild(tag);
+                    }
+                    i = i + 1;
+                }
+            }
+
             function buildMessagesArray(dialogValue) {
                 try {
                     var parsedData = JSON.parse(dialogValue);
+                    var toolCalls = getToolCalls();
                     var response = g_form.getValue('u_response');
+                    
+                    if (toolCalls.length !== 0) {
+                        parsedData.push({ role: 'tool_calls', toolCalls: toolCalls });
+                    }
+                    
                     if (response) {
                         parsedData.push({ role: 'assistant', content: response });
                     }
                     return parsedData;
                 } catch (e) {
                     var response = g_form.getValue('u_response');
+                    var toolCalls = getToolCalls();
                     var messages = [{ role: 'user', content: dialogValue }];
+                    
+                    if (toolCalls.length !== 0) {
+                        messages.push({ role: 'tool_calls', toolCalls: toolCalls });
+                    }
+                    
                     if (response) {
                         messages.push({ role: 'assistant', content: response });
                     }
@@ -72,79 +151,138 @@
                 }
             }
 
-            function renderToolCalls() {
-                var toolCallsValue = g_form.getValue('u_tool_calls');
-                var toolCallsSection = document.getElementById('tool_calls_section');
-                var toolCallsContent = document.getElementById('tool_calls_content');
-                var toolCallsCount = document.getElementById('tool_calls_count');
+            function formatMarkdown(text, container) {
+                var linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+                var parts = [];
+                var lastIndex = 0;
+                var match;
                 
-                if (!toolCallsValue) {
-                    toolCallsSection.style.display = 'none';
-                    return;
+                while ((match = linkRegex.exec(text)) !== null) {
+                    if (match.index !== lastIndex) {
+                        parts.push({ type: 'text', value: text.substring(lastIndex, match.index) });
+                    }
+                    parts.push({ type: 'link', text: match[1], url: match[2] });
+                    lastIndex = linkRegex.lastIndex;
+                }
+                if (lastIndex !== text.length) {
+                    parts.push({ type: 'text', value: text.substring(lastIndex) });
                 }
                 
-                try {
-                    var toolCalls = JSON.parse(toolCallsValue);
-                    if (!toolCalls || toolCalls.length === 0) {
-                        toolCallsSection.style.display = 'none';
-                        return;
+                if (parts.length === 0) {
+                    parts.push({ type: 'text', value: text });
+                }
+                
+                var i = 0;
+                while (i !== parts.length) {
+                    var part = parts[i];
+                    if (part.type === 'link') {
+                        var a = document.createElement('a');
+                        a.href = part.url;
+                        a.innerText = part.text;
+                        a.style.cssText = 'color: #1976d2; text-decoration: underline;';
+                        a.target = '_blank';
+                        container.appendChild(a);
+                    } else {
+                        var lines = part.value.split('\n');
+                        var j = 0;
+                        while (j !== lines.length) {
+                            if (j !== 0) {
+                                container.appendChild(document.createElement('br'));
+                            }
+                            var span = document.createElement('span');
+                            span.innerText = lines[j];
+                            container.appendChild(span);
+                            j = j + 1;
+                        }
+                    }
+                    i = i + 1;
+                }
+            }
+
+            function renderToolCallMessage(toolCalls, chatContentDiv) {
+                var msgDiv = document.createElement('div');
+                msgDiv.style.cssText = 'margin-bottom: 16px; display: flex; flex-direction: column; align-items: flex-start;';
+                
+                var label = document.createElement('div');
+                label.style.cssText = 'font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; color: #f57c00;';
+                label.innerText = 'Tool Calls';
+                msgDiv.appendChild(label);
+                
+                var bubble = document.createElement('div');
+                bubble.style.cssText = 'max-width: 85%; border-radius: 16px; font-size: 14px; line-height: 1.6; word-wrap: break-word; background: #fff3e0; border: 1px solid #ffcc80; border-bottom-left-radius: 4px; overflow: hidden;';
+                
+                var k = 0;
+                while (k !== toolCalls.length) {
+                    var tc = toolCalls[k];
+                    var card = document.createElement('details');
+                    card.style.cssText = 'border-bottom: 1px solid #ffe0b2;';
+                    if (k === toolCalls.length - 1) {
+                        card.style.borderBottom = 'none';
                     }
                     
-                    toolCallsSection.style.display = 'block';
-                    toolCallsCount.innerText = toolCalls.length;
-                    toolCallsContent.innerHTML = '';
+                    var summary = document.createElement('summary');
+                    summary.style.cssText = 'padding: 12px 16px; cursor: pointer; list-style: none; display: flex; align-items: center;';
                     
-                    toolCalls.forEach(function(tc) {
-                        var card = document.createElement('div');
-                        card.style.cssText = 'background: white; border: 1px solid #ffe0b2; border-radius: 6px; margin-bottom: 12px; overflow: hidden;';
+                    var gearSpan = document.createElement('span');
+                    gearSpan.style.cssText = 'margin-right: 8px;';
+                    gearSpan.innerHTML = '&#9881;';
+                    summary.appendChild(gearSpan);
+                    
+                    var nameSpan = document.createElement('span');
+                    nameSpan.style.cssText = 'font-weight: 600; color: #e65100;';
+                    nameSpan.innerText = tc.name;
+                    summary.appendChild(nameSpan);
+                    
+                    card.appendChild(summary);
+                    
+                    var contentDiv = document.createElement('div');
+                    contentDiv.style.cssText = 'padding: 0 16px 12px 16px; background: #fffaf5;';
+                    
+                    var argsLabel = document.createElement('div');
+                    argsLabel.style.cssText = 'font-size: 11px; font-weight: 600; color: #757575; text-transform: uppercase; margin-bottom: 6px;';
+                    argsLabel.innerText = 'Arguments';
+                    contentDiv.appendChild(argsLabel);
+                    
+                    var argsCode = document.createElement('pre');
+                    argsCode.style.cssText = 'background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; padding: 10px; font-size: 12px; margin: 0 0 12px 0; white-space: pre-wrap; word-wrap: break-word;';
+                    try {
+                        var argsObj = typeof tc.arguments === 'string' ? JSON.parse(tc.arguments) : tc.arguments;
+                        argsCode.innerText = JSON.stringify(argsObj, null, 2);
+                    } catch (e) {
+                        argsCode.innerText = tc.arguments;
+                    }
+                    contentDiv.appendChild(argsCode);
+                    
+                    if (tc.result) {
+                        var resultLabel = document.createElement('div');
+                        resultLabel.style.cssText = 'font-size: 11px; font-weight: 600; color: #757575; text-transform: uppercase; margin-bottom: 6px;';
+                        resultLabel.innerText = 'Result';
+                        contentDiv.appendChild(resultLabel);
                         
-                        var nameDiv = document.createElement('div');
-                        nameDiv.style.cssText = 'background: #fff8e1; padding: 10px 14px; font-weight: 600; font-size: 13px; color: #f57c00; border-bottom: 1px solid #ffe0b2;';
-                        nameDiv.innerText = tc.name;
-                        card.appendChild(nameDiv);
-                        
-                        var contentDiv = document.createElement('div');
-                        contentDiv.style.cssText = 'padding: 12px 14px;';
-                        
-                        var argsLabel = document.createElement('div');
-                        argsLabel.style.cssText = 'font-size: 11px; font-weight: 600; color: #757575; text-transform: uppercase; margin-bottom: 6px;';
-                        argsLabel.innerText = 'Arguments';
-                        contentDiv.appendChild(argsLabel);
-                        
-                        var argsCode = document.createElement('pre');
-                        argsCode.style.cssText = 'background: #fafafa; border: 1px solid #e0e0e0; border-radius: 4px; padding: 10px; font-size: 12px; margin: 0 0 12px 0; overflow-x: auto; white-space: pre-wrap;';
-                        argsCode.innerText = JSON.stringify(tc.arguments, null, 2);
-                        contentDiv.appendChild(argsCode);
-                        
-                        if (tc.result) {
-                            var resultLabel = document.createElement('div');
-                            resultLabel.style.cssText = 'font-size: 11px; font-weight: 600; color: #757575; text-transform: uppercase; margin-bottom: 6px;';
-                            resultLabel.innerText = 'Result';
-                            contentDiv.appendChild(resultLabel);
-                            
-                            var resultCode = document.createElement('pre');
-                            resultCode.style.cssText = 'background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 4px; padding: 10px; font-size: 12px; margin: 0; overflow-x: auto; max-height: 150px; overflow-y: auto; white-space: pre-wrap;';
-                            resultCode.innerText = JSON.stringify(tc.result, null, 2);
-                            contentDiv.appendChild(resultCode);
-                        }
-                        
-                        card.appendChild(contentDiv);
-                        toolCallsContent.appendChild(card);
-                    });
-                } catch (e) {
-                    console.log('Error parsing tool calls:', e);
-                    toolCallsSection.style.display = 'none';
+                        var resultCode = document.createElement('pre');
+                        resultCode.style.cssText = 'background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 4px; padding: 10px; font-size: 12px; margin: 0; white-space: pre-wrap; word-wrap: break-word;';
+                        resultCode.innerText = JSON.stringify(tc.result, null, 2);
+                        contentDiv.appendChild(resultCode);
+                    }
+                    
+                    card.appendChild(contentDiv);
+                    bubble.appendChild(card);
+                    k = k + 1;
                 }
+                
+                msgDiv.appendChild(bubble);
+                chatContentDiv.appendChild(msgDiv);
             }
 
             function renderChat(data) {
                 var systemMsg = null;
-                var i;
-                for (i = 0; i ${AMP}lt; data.length; i++) {
+                var i = 0;
+                while (i !== data.length) {
                     if (data[i].role === 'system') {
                         systemMsg = data[i];
                         break;
                     }
+                    i = i + 1;
                 }
                 
                 if (systemMsg) {
@@ -157,32 +295,39 @@
                 var chatContentDiv = document.getElementById('chat_content');
                 chatContentDiv.innerHTML = '';
 
-                var j;
-                for (j = 0; j ${AMP}lt; data.length; j++) {
+                var j = 0;
+                while (j !== data.length) {
                     var entry = data[j];
-                    if (entry.role !== 'system' ${AMP}amp;${AMP}amp; entry.content) {
-                        var msgDiv = document.createElement('div');
-                        msgDiv.style.cssText = 'margin-bottom: 16px; display: flex; flex-direction: column;';
-                        msgDiv.style.alignItems = entry.role === 'user' ? 'flex-end' : 'flex-start';
-                        
-                        var label = document.createElement('div');
-                        label.style.cssText = 'font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;';
-                        label.style.color = entry.role === 'user' ? '#2e7d32' : '#1565c0';
-                        label.innerText = entry.role === 'user' ? 'You' : 'Assistant';
-                        msgDiv.appendChild(label);
-                        
-                        var bubble = document.createElement('div');
-                        bubble.style.cssText = 'max-width: 85%; padding: 14px 18px; border-radius: 16px; font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;';
-                        if (entry.role === 'user') {
-                            bubble.style.cssText += 'background: #43a047; color: white; border-bottom-right-radius: 4px;';
-                        } else {
-                            bubble.style.cssText += 'background: white; color: #333; border: 1px solid #e0e0e0; border-bottom-left-radius: 4px;';
+                    
+                    if (entry.role === 'tool_calls') {
+                        renderToolCallMessage(entry.toolCalls, chatContentDiv);
+                    } else if (entry.role !== 'system') {
+                        if (entry.content) {
+                            var msgDiv = document.createElement('div');
+                            msgDiv.style.cssText = 'margin-bottom: 16px; display: flex; flex-direction: column;';
+                            msgDiv.style.alignItems = entry.role === 'user' ? 'flex-end' : 'flex-start';
+                            
+                            var label = document.createElement('div');
+                            label.style.cssText = 'font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;';
+                            label.style.color = entry.role === 'user' ? '#2e7d32' : '#1565c0';
+                            label.innerText = entry.role === 'user' ? 'You' : 'Assistant';
+                            msgDiv.appendChild(label);
+                            
+                            var bubble = document.createElement('div');
+                            bubble.style.cssText = 'max-width: 85%; padding: 14px 18px; border-radius: 16px; font-size: 14px; line-height: 1.6; word-wrap: break-word;';
+                            if (entry.role === 'user') {
+                                bubble.style.cssText += 'background: #43a047; color: white; border-bottom-right-radius: 4px; white-space: pre-wrap;';
+                                bubble.innerText = entry.content;
+                            } else {
+                                bubble.style.cssText += 'background: white; color: #333; border: 1px solid #e0e0e0; border-bottom-left-radius: 4px;';
+                                formatMarkdown(entry.content, bubble);
+                            }
+                            msgDiv.appendChild(bubble);
+                            
+                            chatContentDiv.appendChild(msgDiv);
                         }
-                        bubble.innerText = entry.content;
-                        msgDiv.appendChild(bubble);
-                        
-                        chatContentDiv.appendChild(msgDiv);
                     }
+                    j = j + 1;
                 }
             }
 
@@ -202,13 +347,14 @@
                     }
                     if (loadingIndicator) loadingIndicator.style.display = 'none';
                     if (finished) {
+                        renderToolsAvailable();
                         renderChat(parsedData);
-                        renderToolCalls();
                     }
                     return;
                 }
                 
                 if (loadingIndicator) loadingIndicator.style.display = 'block';
+                renderToolsAvailable();
                 renderChat(parsedData);
             }
 

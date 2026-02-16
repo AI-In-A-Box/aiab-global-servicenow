@@ -66,11 +66,11 @@
 
     // Impersonate the requesting user to respect ACLs
     // Using global Script Include since gs.impersonate() is global-scope only
-    var impersonator = new global.AIABGlobalHelper();
+    var UtilSI = new global.UtilAIAB();
     var originalUser = null;
 
     if (userId) {
-        originalUser = impersonator.impersonate(userId);
+        originalUser = UtilSI.impersonate(userId);
         if (originalUser) {
             gs.info("AIAB: Impersonating user " + userId);
         } else {
@@ -85,14 +85,14 @@
     toolGR.query();
 
     if (!toolGR.next()) {
-        if (originalUser) impersonator.revert(originalUser);
+        if (originalUser) UtilSI.revert(originalUser);
         response.setStatus(404);
         return { error: "Unknown tool: " + toolName };
     }
 
     var script = toolGR.getValue("u_script");
     if (!script || script.trim() === "") {
-        if (originalUser) impersonator.revert(originalUser);
+        if (originalUser) UtilSI.revert(originalUser);
         response.setStatus(501);
         return { error: "Tool has no script: " + toolName };
     }
@@ -105,14 +105,14 @@
         result = evaluator.evaluateScript(toolGR, "u_script");
     } catch (e) {
         gs.error("AIAB Tool Error (" + toolName + "): " + e);
-        if (originalUser) impersonator.revert(originalUser);
+        if (originalUser) UtilSI.revert(originalUser);
         response.setStatus(500);
         return { error: e.message || String(e) };
     }
 
     // Revert impersonation
     if (originalUser) {
-        impersonator.revert(originalUser);
+        UtilSI.revert(originalUser);
         gs.info("AIAB: Reverted impersonation to " + originalUser);
     }
 
@@ -133,14 +133,14 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2026-01-14 05:11:51</sys_created_on>
         <sys_id>dfb2443b831a32104d4fccb6feaad353</sys_id>
-        <sys_mod_count>29</sys_mod_count>
+        <sys_mod_count>30</sys_mod_count>
         <sys_name>Execute Tool</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_ws_operation_dfb2443b831a32104d4fccb6feaad353</sys_update_name>
-        <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-22 16:23:36</sys_updated_on>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-16 05:58:16</sys_updated_on>
         <web_service_definition display_value="AI in a Box Partials">6f21415793368210d2d070918bba1002</web_service_definition>
         <web_service_version/>
     </sys_ws_operation>

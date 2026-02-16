@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>global.UtilBaseAIAB</api_name>
+        <caller_access/>
+        <client_callable>true</client_callable>
+        <description/>
+        <mobile_callable>false</mobile_callable>
+        <name>UtilBaseAIAB</name>
+        <sandbox_callable>false</sandbox_callable>
+        <script><![CDATA[var UtilBaseAIAB = Class.create();
+UtilBaseAIAB.prototype = {
+    initialize: function() {},
+    
+    getUserName: function(userId) {
+        var sys_user = new GlideRecord("sys_user");
+        if (sys_user.get(userId)) {
+            return sys_user.getValue("user_name");
+        }
+        return "NO USER FOUND with userId " + userId;
+    },
+
+    /**
+     * Convert Markdown to HTML for display
+     * @param {string} text - The markdown text to convert
+     * @returns {string} HTML formatted text
+     */
+    markdownToHtml: function(text) {
+        if (!text) return '';
+        var html = text;
+        // Bold: **text** or __text__
+        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+        // Italic: *text* or _text_
+        html = html.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
+        html = html.replace(/_([^_]+)_/g, '<em>$1</em>');
+        // Links: [text](url)
+        html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:#1565c0;" target="_blank">$1</a>');
+        // Convert newlines to breaks
+        html = html.replace(/\n/g, '<br>');
+        return html;
+    },
+
+    /**
+     * Impersonate a user - callable from scoped apps
+     * @param {string} userId - sys_id of user to impersonate
+     * @returns {string|null} - original user sys_id if successful, null if failed
+     */
+    impersonate: function(userId) {
+        if (!userId) {
+            gs.warn("AIABGlobalHelper.impersonate: No userId provided");
+            return null;
+        }
+        var originalUser = gs.getUserID();
+        var originalUserName = this.getUserName(originalUser);
+        gs.info("AIABGlobalHelper.impersonate: attempting " + userId + " from " + originalUser + "[" + originalUserName + "]");
+
+        try {
+            var impersonator = new GlideImpersonate();
+            impersonator.impersonate(userId);
+
+            var newUser = gs.getUserID();
+            var newUserName = this.getUserName(newUser);
+            gs.info("AIABGlobalHelper.impersonate: now running as " + newUser + "[" + newUserName + "]");
+
+            if (newUser === userId) {
+                gs.info("AIABGlobalHelper.impersonate: SUCCESS");
+                return originalUser;
+            } else {
+                gs.warn("AIABGlobalHelper.impersonate: FAILED - still " + newUser);
+                return null;
+            }
+        } catch (e) {
+            gs.error("AIABGlobalHelper.impersonate: EXCEPTION - " + e);
+            return null;
+        }
+    },
+
+    /**
+     * Revert impersonation to original user
+     * @param {string} originalUserId - sys_id of original user
+     */
+    revert: function(originalUserId) {
+        if (originalUserId) {
+            try {
+                var impersonator = new GlideImpersonate();
+                impersonator.impersonate(originalUserId);
+                gs.info("AIABGlobalHelper.revert: reverted to " + originalUserId);
+            } catch (e) {
+                gs.warn("AIABGlobalHelper.revert failed: " + e);
+            }
+        }
+    },
+    
+    /**
+     * Chunk text into an array of smaller strings
+     * @param {string} text - The text to chunk
+     * @param {number} chunkSize - Maximum size of each chunk
+     * @returns {Array} Array of text chunks
+     */
+    chunkText: function(text, chunkSize) {
+        if (!text) {
+            throw "No text given";
+        }
+        if (!chunkSize) {
+            throw "No chunkSize given";
+        }
+        var chunkedText = [];
+        var i = 0;
+        var n = text.length;
+        while (i < n) {
+            chunkedText.push(text.slice(i, i += chunkSize));
+        }
+        return chunkedText;
+    },
+    
+    /**
+     * Convert HTML to Markdown
+     * @param {string} html - The HTML to convert
+     * @returns {string} Markdown formatted text
+     */
+    htmlToMarkdown: function(html) {
+        var tree = this._parseHTML(html);
+        var markdown = this._processNode(tree).trim().replace(/\n{3,}/g, '\n\n');
+        var emptyLinks = markdown.match(/\[\]\(\)/g);
+        if (emptyLinks) {
+            for (var i = 0; i < emptyLinks.length; i++) {
+                markdown = markdown.replace(emptyLinks[i], '');
+            }
+        }
+        return markdown;
+    },
+
+    _parseHTML: function(html) {
+        var root = {
+            type: 'root',
+            children: []
+        };
+        var stack = [root];
+        var current = root;
+        var pos = 0;
+        var voidElements = {
+            img: 1,
+            br: 1,
+            hr: 1,
+            meta: 1,
+            link: 1,
+            input: 1
+        };
+        var skipTags = {
+            style: 1,
+            script: 1
+        };
+
+        while (pos < html.length) {
+            if (html[pos] === '<') {
+                var end = html.indexOf('>', pos);
+                if (end === -1) break;
+
+                var tagContent = html.substring(pos + 1, end).replace(/\/$/, '');
+                var isClosing = tagContent[0] === '/';
+                var spaceIndex = tagContent.indexOf(' ');
+                var tagName = (isClosing ? tagContent.substring(1) : tagContent)
+                    .toLowerCase().split(/\s+/)[0];
+
+                if (!isClosing && skipTags[tagName]) {
+                    var closingTag = '</' + tagName + '>';
+                    var tagEnd = html.indexOf(closingTag, end);
+                    if (tagEnd === -1) {
+                        pos = html.length;
+                    } else {
+                        pos = tagEnd + closingTag.length;
+                    }
+                    continue;
+                }
+
+                if (isClosing) {
+                    while (stack.length > 1 && current.tagName !== tagName) {
+                        stack.pop();
+                        current = stack[stack.length - 1];
+                    }
+                    if (current.tagName === tagName) {
+                        stack.pop();
+                        current = stack[stack.length - 1];
+                    }
+                } else {
+                    var node = {
+                        type: 'element',
+                        tagName: tagName,
+                        attributes: this._parseAttributes(tagContent),
+                        children: []
+                    };
+
+                    current.children.push(node);
+                    if (!voidElements[tagName] && !tagContent.endsWith('/')) {
+                        stack.push(node);
+                        current = node;
+                    }
+                }
+                pos = end + 1;
+            } else {
+                var textEnd = html.indexOf('<', pos);
+                if (textEnd === -1) textEnd = html.length;
+                var text = html.substring(pos, textEnd)
+                    .replace(/&nbsp;/g, ' ')
+                    .replace(/\r?\n/g, '\n')
+                    .replace(/[^\S\n]+/g, ' ')
+                    .trim();
+
+                if (text) {
+                    current.children.push({
+                        type: 'text',
+                        value: text
+                    });
+                }
+                pos = textEnd;
+            }
+        }
+        return root;
+    },
+
+    _parseAttributes: function(attrString) {
+        var attrs = {};
+        var matches = attrString.match(/(\w+)=["']([^"']*)["']/g) || [];
+        for (var i = 0; i < matches.length; i++) {
+            var pair = matches[i].split('=');
+            attrs[pair[0]] = pair[1].replace(/^["']|["']$/g, '');
+        }
+        return attrs;
+    },
+
+    _processNode: function(node) {
+        if (node.type === 'text') {
+            return node.value.replace(/\n/g, ' ')
+                .replace(/  +/g, ' ');
+        }
+
+        var tag = node.tagName;
+        var children = node.children || [];
+
+        if (/^h[1-6]$/.test(tag)) {
+            var level = parseInt(tag.charAt(1), 10);
+            return '\n' + Array(level + 1).join('#') + ' ' + this._processChildren(children) + '\n';
+        }
+
+        if (tag === 'p') {
+            return '\n' + this._processChildren(children).replace(/\n/g, ' ') + '\n\n';
+        }
+
+        if (tag === 'ul') return this._processList(children, false);
+        if (tag === 'ol') return this._processList(children, true);
+        if (tag === 'li') return this._processChildren(children) + '\n';
+
+        if (tag === 'a') {
+            var href = node.attributes.href || '';
+            return '[' + this._processChildren(children) + '](' + href + ')';
+        }
+
+        if (tag === 'img') {
+            var src = node.attributes.src || '';
+            var alt = node.attributes.alt || '';
+            return '![' + alt + '](' + src + ')';
+        }
+
+        if (tag === 'strong' || tag === 'b') return '**' + this._processChildren(children) + '**';
+        if (tag === 'em' || tag === 'i') return '*' + this._processChildren(children) + '*';
+        if (tag === 'code') return '`' + this._processChildren(children) + '`';
+        if (tag === 'pre') return '\n```\n' + this._processChildren(children) + '\n```\n';
+        if (tag === 'blockquote') {
+            return '> ' + this._processChildren(children).replace(/\n/g, '\n> ');
+        }
+        if (tag === 'br') return '  \n';
+        if (tag === 'div' || tag === 'section') return this._processChildren(children) + '\n';
+
+        return this._processChildren(children);
+    },
+
+    _processChildren: function(children) {
+        var output = '';
+        for (var i = 0; i < children.length; i++) {
+            output += this._processNode(children[i]);
+        }
+        return output;
+    },
+
+    _processList: function(items, isOrdered) {
+        var output = '';
+        var count = 1;
+
+        for (var i = 0; i < items.length; i++) {
+            var bullet = isOrdered ? count++ + '. ' : '- ';
+            output += bullet + this._processNode(items[i]).trim() + '\n';
+
+            for (var j = 0; j < items[i].children.length; j++) {
+                var child = items[i].children[j];
+                if (child.tagName === 'ul' || child.tagName === 'ol') {
+                    output += this._processList(child.children, child.tagName === 'ol');
+                }
+            }
+        }
+        return output;
+    },
+
+    type: 'UtilBaseAIAB'
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-02-14 06:32:55</sys_created_on>
+        <sys_id>939e336183cf36504d4fccb6feaad392</sys_id>
+        <sys_mod_count>6</sys_mod_count>
+        <sys_name>UtilBaseAIAB</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_script_include_939e336183cf36504d4fccb6feaad392</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-16 07:33:11</sys_updated_on>
+    </sys_script_include>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>939e336183cf36504d4fccb6feaad392</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-02-14 06:32:54</sys_created_on>
+        <sys_id>20ae736183cf36504d4fccb6feaad355</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-14 06:32:54</sys_updated_on>
+        <table>sys_script_include</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
+</record_update>

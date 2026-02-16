@@ -1,18 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
     <sys_script_include action="INSERT_OR_UPDATE">
-        <access>package_private</access>
+        <access>public</access>
         <active>true</active>
-        <api_name>global.aiabReqInfra</api_name>
+        <api_name>global.ReqInfraAIAB</api_name>
         <caller_access/>
         <client_callable>false</client_callable>
         <description/>
         <mobile_callable>false</mobile_callable>
-        <name>aiabReqInfra</name>
+        <name>ReqInfraAIAB</name>
         <sandbox_callable>false</sandbox_callable>
-        <script><![CDATA[var aiabReqInfra = Class.create();
-aiabReqInfra.prototype = {
+        <script><![CDATA[/**
+ * ReqInfraAIAB - Demo infrastructure request handler
+ * 
+ * Used to request demo MID server infrastructure from tryaiinabox.com
+ * for customers who want to test with a MID server without setting up their own.
+ * 
+ * This is NOT extensible - no Base class pattern here.
+ */
+var ReqInfraAIAB = Class.create();
+ReqInfraAIAB.prototype = {
     initialize: function() {},
-    CreateMidUser: function(password) {
+    
+    /**
+     * Create a MID server user with the given password
+     * @param {string} password - Password for the MID user
+     * @returns {Object} Result object with status and user_id
+     */
+    createMidUser: function(password) {
         var user_name = 'tryaiinabox-mid-user';
         
         var sys_user = new GlideRecord('sys_user');
@@ -40,9 +54,14 @@ aiabReqInfra.prototype = {
             user_id: userGR
         };
     },
-    GeneratePassword: function() {
+    
+    /**
+     * Generate a secure password meeting ServiceNow requirements
+     * @returns {string} Generated password
+     */
+    generatePassword: function() {
         var password = '',
-            size = 8, // Default minimum length if the policy does not specify one.
+            size = 8,
             chars = [
                 'abcdefghijklmnopqrstuvwxyz',
                 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
@@ -73,11 +92,14 @@ aiabReqInfra.prototype = {
         
         return password;
     },
-    RequestDemoInfra: function(username, password) {
-        // first we're going to check if the server's been requested before
-        // we are storing the history in a unusual place, the preferences table
-        // the response for this will be a return object
-        // containing a status, and message
+    
+    /**
+     * Request demo infrastructure from tryaiinabox.com
+     * @param {string} username - MID user username
+     * @param {string} password - MID user password
+     * @returns {Object} Result object with status and message
+     */
+    requestDemoInfra: function(username, password) {
         // first lets "down" the current midserver
         var eccAgent = GlideRecord('ecc_agent');
         eccAgent.addQuery('name', 'aiinabox-mid');
@@ -97,7 +119,6 @@ aiabReqInfra.prototype = {
             instance: instanceName + '.service-now.com'
         };
         
-        //gs.print(JSON.stringify(body, null, ' '));
         var restMessage = new sn_ws.RESTMessageV2();
         restMessage.setHttpMethod('post');
         restMessage.setEndpoint(url);
@@ -117,7 +138,7 @@ aiabReqInfra.prototype = {
             var errorCode = response.getErrorCode();
             var errorMsg = response.getErrorMessage();
             
-            gs.error("aiabReqInfra: Request failed:");
+            gs.error("ReqInfraAIAB: Request failed:");
             gs.error("  - Error Code: " + errorCode);
             gs.error("  - Error Message: " + errorMsg);
             gs.addErrorMessage(errorMsg);
@@ -127,36 +148,56 @@ aiabReqInfra.prototype = {
                 message: errorMsg
             };
         } else {
-            gs.info("aiabReqInfra: Request successful - Status Code: " + statusCode);
+            gs.info("ReqInfraAIAB: Request successful - Status Code: " + statusCode);
             return {
                 status: statusCode,
-                message: "Request recieved, this will take a 3-5 minutes to process.  Monitor the mid server list for the new mid server."
+                message: "Request recieved, this will take a 3-5 minutes to process. Monitor the mid server list for the new mid server."
             };
         }
     },
-    SetupServerfulProperties: function() {
+    
+    /**
+     * Setup properties for serverful (MID server) deployment
+     */
+    setupServerfulProperties: function() {
         gs.setProperty('ai_in_a_box.config.server.aiab.url', 'http://172.17.0.1:3333');
         gs.setProperty('ai_in_a_box.config.midserver.enabled', 'true');
         gs.setProperty('ai_in_a_box.config.midserver', 'aiinabox-mid');
     },
-    SetupServerlessProperties: function() {
+    
+    /**
+     * Setup properties for serverless (direct HTTPS) deployment
+     */
+    setupServerlessProperties: function() {
         gs.setProperty('ai_in_a_box.config.server.aiab.url', 'https://2025-08-30-azure-aiab.azurewebsites.net');
         gs.setProperty('ai_in_a_box.config.midserver.enabled', 'false');
         gs.setProperty('ai_in_a_box.config.midserver', '');
     },
-    type: 'aiabReqInfra'
+    
+    type: 'ReqInfraAIAB'
 };]]></script>
         <sys_class_name>sys_script_include</sys_class_name>
-        <sys_created_by>jacebenson</sys_created_by>
-        <sys_created_on>2025-09-01 18:05:54</sys_created_on>
-        <sys_id>0a456790c333221052e098bc0501313e</sys_id>
-        <sys_mod_count>7</sys_mod_count>
-        <sys_name>aiabReqInfra</sys_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-02-14 06:33:59</sys_created_on>
+        <sys_id>1adeffed838f36504d4fccb6feaad346</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>ReqInfraAIAB</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
-        <sys_update_name>sys_script_include_0a456790c333221052e098bc0501313e</sys_update_name>
+        <sys_update_name>sys_script_include_1adeffed838f36504d4fccb6feaad346</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-01-14 01:05:41</sys_updated_on>
+        <sys_updated_on>2026-02-14 06:56:08</sys_updated_on>
     </sys_script_include>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>1adeffed838f36504d4fccb6feaad346</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-02-14 06:33:58</sys_created_on>
+        <sys_id>14ee3b6183cf36504d4fccb6feaad361</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-14 06:33:58</sys_updated_on>
+        <table>sys_script_include</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
 </record_update>

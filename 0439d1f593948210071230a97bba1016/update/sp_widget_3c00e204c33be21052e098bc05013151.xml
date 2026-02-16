@@ -1,14 +1,177 @@
 <?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
     <sp_widget action="INSERT_OR_UPDATE">
         <category>custom</category>
-        <client_script><![CDATA[api.controller = function() {
-  /*global api*/
+        <client_script><![CDATA[api.controller = function($scope, spUtil) {
   var c = this;
   
-  // Initialize controller
   c.data.ready = true;
   
-  // Helper function to open settings pages
+  c.setup = {
+    loading: false,
+    checklist: null,
+    runningStep: false,
+    runningAll: false,
+    currentStep: 0,
+    allComplete: false
+  };
+  
+  c.openSetupModal = function() {
+    c.setup.loading = true;
+    c.setup.checklist = null;
+    c.setup.runningStep = false;
+    c.setup.runningAll = false;
+    c.setup.currentStep = 0;
+    c.setup.allComplete = false;
+    
+    $('#setupToolCallingModal').modal('show');
+    
+    // Get initial status
+    c.server.get({
+      action: 'getStatus'
+    }).then(function(response) {
+      var status = response.data.result;
+      c.setup.checklist = {
+        step1: {
+          status: status.userExists ? 'success' : 'pending',
+          error: null
+        },
+        step2: {
+          status: status.userHasAdminRole ? 'success' : (status.userExists ? 'pending' : 'pending'),
+          error: null
+        },
+        step3: {
+          status: status.propertyValid ? 'pending' : 'pending',
+          error: null
+        }
+      };
+      c.checkAllComplete();
+      c.setup.loading = false;
+    });
+  };
+  
+  c.runStep = function(stepNum) {
+    c.setup.runningStep = true;
+    var stepKey = 'step' + stepNum;
+    c.setup.checklist[stepKey].status = 'running';
+    c.setup.checklist[stepKey].error = null;
+    
+    c.server.get({
+      action: 'runStep',
+      step: stepNum
+    }).then(function(response) {
+      var result = response.data.result;
+      if (result.success) {
+        c.setup.checklist[stepKey].status = 'success';
+      } else {
+        c.setup.checklist[stepKey].status = 'error';
+        c.setup.checklist[stepKey].error = result.message || 'Unknown error';
+      }
+      c.setup.runningStep = false;
+      c.checkAllComplete();
+    });
+  };
+  
+  c.verifyStep = function(stepNum) {
+    c.setup.runningStep = true;
+    var stepKey = 'step' + stepNum;
+    c.setup.checklist[stepKey].status = 'running';
+    
+    c.server.get({
+      action: 'verifyStep',
+      step: stepNum
+    }).then(function(response) {
+      var result = response.data.result;
+      if (result.valid) {
+        c.setup.checklist[stepKey].status = 'success';
+        c.setup.checklist[stepKey].error = null;
+      } else {
+        c.setup.checklist[stepKey].status = 'error';
+        c.setup.checklist[stepKey].error = result.message || 'Verification failed';
+      }
+      c.setup.runningStep = false;
+      c.checkAllComplete();
+    });
+  };
+  
+  c.forceStep = function(stepNum) {
+    if (!confirm('Are you sure you want to FORCE this step? This will delete and recreate the configuration.\n\nStep ' + stepNum + ' will be completely reset.')) {
+      return;
+    }
+    
+    c.setup.runningStep = true;
+    var stepKey = 'step' + stepNum;
+    c.setup.checklist[stepKey].status = 'running';
+    c.setup.checklist[stepKey].error = null;
+    
+    c.server.get({
+      action: 'forceStep',
+      step: stepNum
+    }).then(function(response) {
+      var result = response.data.result;
+      if (result.success) {
+        c.setup.checklist[stepKey].status = 'success';
+      } else {
+        c.setup.checklist[stepKey].status = 'error';
+        c.setup.checklist[stepKey].error = result.message || 'Force operation failed';
+      }
+      c.setup.runningStep = false;
+      c.checkAllComplete();
+    });
+  };
+  
+  c.runAllSteps = function() {
+    c.setup.runningAll = true;
+    c.setup.currentStep = 1;
+    c.runNextStep();
+  };
+  
+  c.runNextStep = function() {
+    var stepNum = c.setup.currentStep;
+    if (stepNum > 3) {
+      c.setup.runningAll = false;
+      c.checkAllComplete();
+      return;
+    }
+    
+    var stepKey = 'step' + stepNum;
+    if (c.setup.checklist[stepKey].status === 'success') {
+      c.setup.currentStep++;
+      c.runNextStep();
+      return;
+    }
+    
+    c.setup.checklist[stepKey].status = 'running';
+    
+    c.server.get({
+      action: 'runStep',
+      step: stepNum
+    }).then(function(response) {
+      var result = response.data.result;
+      if (result.success) {
+        c.setup.checklist[stepKey].status = 'success';
+        c.setup.checklist[stepKey].error = null;
+        c.setup.currentStep++;
+        c.runNextStep();
+      } else {
+        c.setup.checklist[stepKey].status = 'error';
+        c.setup.checklist[stepKey].error = result.message || 'Unknown error';
+        c.setup.runningAll = false;
+      }
+      c.checkAllComplete();
+    });
+  };
+  
+  c.checkAllComplete = function() {
+    c.setup.allComplete = 
+      c.setup.checklist.step1.status === 'success' &&
+      c.setup.checklist.step2.status === 'success' &&
+      c.setup.checklist.step3.status === 'success';
+  };
+  
+  c.refreshStatus = function() {
+    location.reload();
+  };
+  
   c.openSettingsPage = function(url) {
     if (url) {
       window.open(url, '_blank');
@@ -142,25 +305,55 @@
         <public>false</public>
         <roles/>
         <script><![CDATA[(function() {
-  /*global gs, data, console*/
+  /*global gs, data, input, console*/
+  
+  // Handle server-side actions from client
+  if (input && input.action) {
+    data.result = {};
+    
+    switch(input.action) {
+      case 'getStatus':
+        data.result = getSetupStatus();
+        break;
+      case 'runStep':
+        data.result = runSetupStep(input.step);
+        break;
+      case 'verifyStep':
+        data.result = verifySetupStep(input.step);
+        break;
+      case 'forceStep':
+        data.result = forceSetupStep(input.step);
+        break;
+    }
+    return;
+  }
+  
+  // Normal widget load
   try {
-    var status = new global.aiabStatus();
+    var status = new global.StatusAIAB();
     data.settingsTitle = 'AI In A Box Settings';
     
-    // Features (streaming, summarize, chat)
-    data.features = status.featuresAndProperties;
+    // Features (streaming, summarize, chat) - filter out MID Server
+    var allFeatures = status.featuresAndProperties;
+    data.features = [];
+    for (var i = 0; i < allFeatures.length; i++) {
+      var feature = allFeatures[i];
+      // Skip MID Server feature - it's now shown in the Server widget
+      if (feature.label && feature.label.toLowerCase().indexOf('mid') >= 0) {
+        continue;
+      }
+      data.features.push(feature);
+    }
     
-    // Tool Calling (callbackAuth + serviceAccount + helperScript)
+    // Tool Calling - only check callbackAuth and serviceAccount (helperScript no longer needed)
     var statusResult = status.status();
-    if (statusResult && statusResult.callbackAuth && statusResult.serviceAccount && statusResult.helperScript) {
+    if (statusResult && statusResult.callbackAuth && statusResult.serviceAccount) {
       var authOk = statusResult.callbackAuth.className.indexOf('btn-success') >= 0;
       var accountOk = statusResult.serviceAccount.className.indexOf('btn-success') >= 0;
-      var scriptOk = statusResult.helperScript.className.indexOf('btn-success') >= 0;
       data.toolCalling = {
-        enabled: authOk && accountOk && scriptOk,
+        enabled: authOk && accountOk,
         callbackAuth: statusResult.callbackAuth,
-        serviceAccount: statusResult.serviceAccount,
-        helperScript: statusResult.helperScript
+        serviceAccount: statusResult.serviceAccount
       };
     }
     
@@ -174,33 +367,440 @@
       {
         label: 'AI Inferences',
         url: '/u_ai_inference_list.do',
-        buttonText: 'View'
+        buttonText: 'Configure'
       },
       {
         label: 'AI Tools',
         url: '/u_ai_tool_list.do',
-        buttonText: 'Manage'
+        buttonText: 'Configure'
       }
     ];
     
   } catch (error) {
     data.error = 'Error loading settings: ' + error.message;
   }
-})();
-]]></script>
+  
+  // Helper functions for setup
+  function getSetupStatus() {
+    var result = {
+      userExists: false,
+      userHasAdminRole: false,
+      propertySet: false,
+      propertyValid: false,
+      canSetup: false
+    };
+    
+    try {
+      var userGR = new GlideRecord('sys_user');
+      userGR.addQuery('user_name', 'aiab_service');
+      userGR.addQuery('active', true);
+      userGR.setLimit(1);
+      userGR.query();
+      
+      if (userGR.next()) {
+        result.userExists = true;
+        
+        var roleGR = new GlideRecord('sys_user_has_role');
+        roleGR.addQuery('user', userGR.sys_id);
+        roleGR.addQuery('role.name', 'admin');
+        roleGR.setLimit(1);
+        roleGR.query();
+        result.userHasAdminRole = roleGR.hasNext();
+      }
+      
+      var propValue = gs.getProperty('ai_in_a_box.config.server.callback.auth', '');
+      result.propertySet = (propValue != '');
+      result.propertyValid = (propValue.indexOf(':') > 0);
+      result.canSetup = (!result.userExists) || (!result.userHasAdminRole || !result.propertyValid);
+      
+    } catch (e) {
+      result.error = e.message;
+    }
+    
+    return result;
+  }
+  
+  function runSetupStep(stepNum) {
+    var result = { success: false, message: '' };
+    
+    try {
+      switch(parseInt(stepNum)) {
+        case 1:
+          result = createServiceAccountAndSetProperty();
+          break;
+        case 2:
+          result = grantAdminRole();
+          break;
+        case 3:
+          result = testConnection();
+          break;
+        default:
+          result.success = false;
+          result.message = 'Invalid step number: ' + stepNum;
+      }
+    } catch (e) {
+      result.success = false;
+      result.message = 'Error in step ' + stepNum + ': ' + e.message;
+      gs.error('Setup step error: ' + e.message);
+    }
+    
+    return result;
+  }
+  
+  function forceSetupStep(stepNum) {
+    var result = { success: false, message: '' };
+    
+    try {
+      switch(parseInt(stepNum)) {
+        case 1:
+          result = forceRecreateServiceAccount();
+          break;
+        case 2:
+          result = forceRecreateAdminRole();
+          break;
+        case 3:
+          result = testConnection();
+          break;
+        default:
+          result.success = false;
+          result.message = 'Invalid step number: ' + stepNum;
+      }
+    } catch (e) {
+      result.success = false;
+      result.message = 'Error in force step ' + stepNum + ': ' + e.message;
+      gs.error('Force setup step error: ' + e.message);
+    }
+    
+    return result;
+  }
+  
+  function verifySetupStep(stepNum) {
+    var result = { valid: false, message: '' };
+    
+    try {
+      switch(parseInt(stepNum)) {
+        case 1:
+          var userGR = new GlideRecord('sys_user');
+          userGR.addQuery('user_name', 'aiab_service');
+          userGR.addQuery('active', true);
+          userGR.setLimit(1);
+          userGR.query();
+          result.valid = userGR.hasNext();
+          result.message = result.valid ? 'Service account exists' : 'Service account not found';
+          break;
+        case 2:
+          var userGR2 = new GlideRecord('sys_user');
+          userGR2.addQuery('user_name', 'aiab_service');
+          userGR2.addQuery('active', true);
+          userGR2.setLimit(1);
+          userGR2.query();
+          if (userGR2.next()) {
+            var roleGR = new GlideRecord('sys_user_has_role');
+            roleGR.addQuery('user', userGR2.sys_id);
+            roleGR.addQuery('role.name', 'admin');
+            roleGR.setLimit(1);
+            roleGR.query();
+            result.valid = roleGR.hasNext();
+            result.message = result.valid ? 'Admin role assigned' : 'Admin role not assigned';
+          } else {
+            result.valid = false;
+            result.message = 'Service account not found';
+          }
+          break;
+        case 3:
+          var testResult = testConnection();
+          result.valid = testResult.success;
+          result.message = testResult.message;
+          break;
+        default:
+          result.valid = false;
+          result.message = 'Invalid step number: ' + stepNum;
+      }
+    } catch (e) {
+      result.valid = false;
+      result.message = 'Error verifying step ' + stepNum + ': ' + e.message;
+    }
+    
+    return result;
+  }
+  
+  function createServiceAccountAndSetProperty() {
+    var result = { success: false, message: '' };
+    try {
+      var password = generatePassword();
+      var userGR = new GlideRecord('sys_user');
+      userGR.addQuery('user_name', 'aiab_service');
+      userGR.query();
+      
+      if (userGR.next()) {
+        // Update existing user
+        userGR.user_password.setDisplayValue(password);
+        if (!userGR.first_name) {
+          userGR.setValue('first_name', 'AIAB');
+        }
+        if (!userGR.last_name) {
+          userGR.setValue('last_name', 'Service');
+        }
+        userGR.update();
+        result.message = 'Updated existing service account';
+      } else {
+        // Create new user
+        userGR = new GlideRecord('sys_user');
+        userGR.newRecord();
+        userGR.setValue('user_name', 'aiab_service');
+        userGR.user_password.setDisplayValue(password);
+        userGR.setValue('active', true);
+        userGR.setValue('first_name', 'AIAB');
+        userGR.setValue('last_name', 'Service');
+        var userId = userGR.insert();
+        
+        if (!userId) {
+          result.success = false;
+          result.message = 'Failed to create service account';
+          return result;
+        }
+        result.message = 'Created service account';
+      }
+      
+      // Set the callback auth property with the SAME password
+      var authValue = 'aiab_service:' + password;
+      gs.setProperty('ai_in_a_box.config.server.callback.auth', authValue);
+      result.message += ' and set callback authentication';
+      result.success = true;
+      
+    } catch (e) {
+      result.success = false;
+      result.message = 'Error: ' + e.message;
+      gs.error('Create service account error: ' + e.message);
+    }
+    return result;
+  }
+  
+  function forceRecreateServiceAccount() {
+    var result = { success: false, message: '' };
+    try {
+      // First, delete existing user if exists
+      var userGR = new GlideRecord('sys_user');
+      userGR.addQuery('user_name', 'aiab_service');
+      userGR.query();
+      
+      if (userGR.next()) {
+        var userId = userGR.sys_id.toString();
+        // Delete all role assignments first
+        var roleGR = new GlideRecord('sys_user_has_role');
+        roleGR.addQuery('user', userId);
+        roleGR.query();
+        while (roleGR.next()) {
+          roleGR.deleteRecord();
+        }
+        // Delete the user
+        userGR.deleteRecord();
+        gs.info('Force recreate: Deleted existing aiab_service user');
+      }
+      
+      // Clear the property
+      gs.setProperty('ai_in_a_box.config.server.callback.auth', '');
+      
+      // Now create fresh
+      return createServiceAccountAndSetProperty();
+      
+    } catch (e) {
+      result.success = false;
+      result.message = 'Error: ' + e.message;
+      gs.error('Force recreate service account error: ' + e.message);
+      return result;
+    }
+  }
+  
+  function grantAdminRole() {
+    var result = { success: false, message: '' };
+    try {
+      var adminRoleGR = new GlideRecord('sys_user_role');
+      adminRoleGR.addQuery('name', 'admin');
+      adminRoleGR.setLimit(1);
+      adminRoleGR.query();
+      
+      if (!adminRoleGR.next()) {
+        result.success = false;
+        result.message = 'Admin role not found in system';
+        return result;
+      }
+      
+      var userGR = new GlideRecord('sys_user');
+      userGR.addQuery('user_name', 'aiab_service');
+      userGR.addQuery('active', true);
+      userGR.setLimit(1);
+      userGR.query();
+      
+      if (!userGR.next()) {
+        result.success = false;
+        result.message = 'Service account not found. Create it first.';
+        return result;
+      }
+      
+      var userId = userGR.sys_id.toString();
+      var adminRoleId = adminRoleGR.sys_id.toString();
+      
+      var existingRoleGR = new GlideRecord('sys_user_has_role');
+      existingRoleGR.addQuery('user', userId);
+      existingRoleGR.addQuery('role', adminRoleId);
+      existingRoleGR.setLimit(1);
+      existingRoleGR.query();
+      
+      if (existingRoleGR.hasNext()) {
+        result.success = true;
+        result.message = 'Admin role already assigned';
+      } else {
+        var roleGR = new GlideRecord('sys_user_has_role');
+        roleGR.newRecord();
+        roleGR.setValue('user', userId);
+        roleGR.setValue('role', adminRoleId);
+        var inserted = roleGR.insert();
+        
+        if (inserted) {
+          result.success = true;
+          result.message = 'Admin role assigned successfully';
+        } else {
+          result.success = false;
+          result.message = 'Failed to assign admin role';
+        }
+      }
+    } catch (e) {
+      result.success = false;
+      result.message = 'Error: ' + e.message;
+      gs.error('Grant admin role error: ' + e.message);
+    }
+    return result;
+  }
+  
+  function forceRecreateAdminRole() {
+    var result = { success: false, message: '' };
+    try {
+      var adminRoleGR = new GlideRecord('sys_user_role');
+      adminRoleGR.addQuery('name', 'admin');
+      adminRoleGR.setLimit(1);
+      adminRoleGR.query();
+      
+      if (!adminRoleGR.next()) {
+        result.success = false;
+        result.message = 'Admin role not found in system';
+        return result;
+      }
+      
+      var userGR = new GlideRecord('sys_user');
+      userGR.addQuery('user_name', 'aiab_service');
+      userGR.addQuery('active', true);
+      userGR.setLimit(1);
+      userGR.query();
+      
+      if (!userGR.next()) {
+        result.success = false;
+        result.message = 'Service account not found. Create it first.';
+        return result;
+      }
+      
+      var userId = userGR.sys_id.toString();
+      var adminRoleId = adminRoleGR.sys_id.toString();
+      
+      // First, remove existing admin role if present
+      var existingRoleGR = new GlideRecord('sys_user_has_role');
+      existingRoleGR.addQuery('user', userId);
+      existingRoleGR.addQuery('role', adminRoleId);
+      existingRoleGR.query();
+      
+      if (existingRoleGR.next()) {
+        existingRoleGR.deleteRecord();
+        gs.info('Force recreate: Removed existing admin role from aiab_service');
+      }
+      
+      // Now add it back
+      var roleGR = new GlideRecord('sys_user_has_role');
+      roleGR.newRecord();
+      roleGR.setValue('user', userId);
+      roleGR.setValue('role', adminRoleId);
+      var inserted = roleGR.insert();
+      
+      if (inserted) {
+        result.success = true;
+        result.message = 'Admin role removed and re-assigned successfully';
+      } else {
+        result.success = false;
+        result.message = 'Failed to re-assign admin role';
+      }
+    } catch (e) {
+      result.success = false;
+      result.message = 'Error: ' + e.message;
+      gs.error('Force recreate admin role error: ' + e.message);
+    }
+    return result;
+  }
+  
+  function testConnection() {
+    var result = { success: false, message: '' };
+    try {
+      var authValue = gs.getProperty('ai_in_a_box.config.server.callback.auth', '');
+      
+      if (!authValue || authValue.indexOf(':') < 0) {
+        result.success = false;
+        result.message = 'Auth property not set or invalid format';
+        return result;
+      }
+      
+      var instanceUrl = gs.getProperty('glide.servlet.uri', '');
+      if (!instanceUrl) {
+        instanceUrl = 'https://' + gs.getProperty('instance_name') + '.service-now.com/';
+      }
+      
+      var testEndpoint = instanceUrl + 'api/now/table/sys_user?sysparm_query=user_name=aiab_service&sysparm_limit=1&sysparm_fields=user_name';
+      var restMessage = new sn_ws.RESTMessageV2();
+      restMessage.setHttpMethod('GET');
+      restMessage.setEndpoint(testEndpoint);
+      restMessage.setRequestHeader('Accept', 'application/json');
+      restMessage.setRequestHeader('Authorization', 'Basic ' + GlideStringUtil.base64Encode(authValue));
+      
+      var response = restMessage.execute();
+      var statusCode = response.getStatusCode();
+      
+      if (statusCode == 200) {
+        result.success = true;
+        result.message = 'Connection test passed';
+      } else if (statusCode == 401) {
+        result.success = false;
+        result.message = 'Authentication failed (HTTP 401). The credentials may have been changed. Try running Step 1 again to reset them.';
+      } else {
+        result.success = false;
+        result.message = 'Connection test failed (HTTP ' + statusCode + ')';
+      }
+    } catch (e) {
+      result.success = false;
+      result.message = 'Connection test error: ' + e.message;
+      gs.error('Test connection error: ' + e.message);
+    }
+    return result;
+  }
+  
+  function generatePassword() {
+    var chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    var password = '';
+    for (var i = 0; i < 20; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  }
+})();]]></script>
         <servicenow>false</servicenow>
         <sys_class_name>sp_widget</sys_class_name>
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2025-08-31 18:24:53</sys_created_on>
         <sys_id>3c00e204c33be21052e098bc05013151</sys_id>
-        <sys_mod_count>49</sys_mod_count>
+        <sys_mod_count>79</sys_mod_count>
         <sys_name>AIAB Settings</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sp_widget_3c00e204c33be21052e098bc05013151</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-02-13 07:26:54</sys_updated_on>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-16 06:34:15</sys_updated_on>
         <template><![CDATA[<div class="aiab-settings-widget">
   <div class="panel panel-default">
     
@@ -248,54 +848,20 @@
               <div class="col-sm-8">
                 <strong>Tool Calling</strong>
                 <span class="{{data.toolCalling.enabled ? 'text-success' : 'text-muted'}}">
-                  {{data.toolCalling.enabled ? 'Ready' : 'Not Configured'}}
+                  {{data.toolCalling.enabled ? 'Enabled' : 'Not Configured'}}
                 </span>
               </div>
-              <div class="col-sm-4" style="display: flex; justify-content: flex-end;">
-                <a ng-href="https://getaiinabox.com/docs/tools" 
-                   class="btn btn-default btn-sm"
-                   target="_blank">
-                  Docs
-                </a>
-              </div>
-            </div>
-            <!-- Callback Auth line -->
-            <div class="row" style="margin-top: 6px;">
-              <div class="col-sm-8">
-                <span class="text-muted" style="padding-left: 10px;">Callback Auth</span>
-              </div>
-              <div class="col-sm-4" style="display: flex; justify-content: flex-end;">
-                <a ng-href="{{data.toolCalling.callbackAuth.url}}" 
-                   class="{{data.toolCalling.callbackAuth.className}} btn-sm"
-                   target="_blank">
-                  {{data.toolCalling.callbackAuth.buttonText}}
-                </a>
-              </div>
-            </div>
-            <!-- Service Account line -->
-            <div class="row" style="margin-top: 4px;">
-              <div class="col-sm-8">
-                <span class="text-muted" style="padding-left: 10px;">Service Account</span>
-              </div>
-              <div class="col-sm-4" style="display: flex; justify-content: flex-end;">
-                <a ng-href="{{data.toolCalling.serviceAccount.url}}" 
-                   class="{{data.toolCalling.serviceAccount.className}} btn-sm"
-                   target="_blank">
-                  {{data.toolCalling.serviceAccount.buttonText}}
-                </a>
-              </div>
-            </div>
-            <!-- Helper Script line -->
-            <div class="row" style="margin-top: 4px;">
-              <div class="col-sm-8">
-                <span class="text-muted" style="padding-left: 10px;">Helper Script</span>
-              </div>
-              <div class="col-sm-4" style="display: flex; justify-content: flex-end;">
-                <a ng-href="{{data.toolCalling.helperScript.url}}" 
-                   class="{{data.toolCalling.helperScript.className}} btn-sm"
-                   target="_blank">
-                  {{data.toolCalling.helperScript.buttonText}}
-                </a>
+              <div class="col-sm-4 text-right">
+                <button ng-if="!data.toolCalling.enabled" 
+                        ng-click="c.openSetupModal()"
+                        class="btn btn-primary btn-sm">
+                  Configure
+                </button>
+                <button ng-if="data.toolCalling.enabled" 
+                        ng-click="c.openSetupModal()"
+                        class="btn btn-default btn-sm">
+                  Configure
+                </button>
               </div>
             </div>
           </div>
@@ -326,8 +892,193 @@
       
     </div>
   </div>
-</div>
-]]></template>
+  
+  <!-- Setup Modal -->
+  <div class="modal fade" id="setupToolCallingModal" tabindex="-1" role="dialog" aria-labelledby="setupModalLabel">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+          <h4 class="modal-title" id="setupModalLabel">
+            <i class="fa fa-magic"></i> Configure Tool Calling
+          </h4>
+        </div>
+        <div class="modal-body">
+          
+          <!-- Initial Loading -->
+          <div ng-if="c.setup.loading && !c.setup.checklist">
+            <div class="text-center" style="padding: 40px;">
+              <i class="fa fa-spinner fa-spin fa-2x"></i>
+              <p style="margin-top: 15px;">Checking current status...</p>
+            </div>
+          </div>
+          
+          <!-- Interactive Checklist -->
+          <div ng-if="!c.setup.loading || c.setup.checklist">
+            <div class="alert alert-info" style="margin-bottom: 20px;">
+              <p style="margin-bottom: 0;"><strong>Configure tool calling step by step:</strong></p>
+            </div>
+            
+            <div class="setup-checklist" style="margin-bottom: 20px;">
+              <!-- Step 1: Service Account + Auth Property -->
+              <div class="checklist-item" style="display: flex; align-items: center; padding: 12px; border: 1px solid #e1e4e8; border-radius: 6px; margin-bottom: 8px; background: #fff;">
+                <div style="width: 40px; text-align: center;">
+                  <span ng-if="c.setup.checklist.step1.status === 'pending'" class="text-muted">&#9711;</span>
+                  <span ng-if="c.setup.checklist.step1.status === 'running'" class="text-primary"><i class="fa fa-spinner fa-spin"></i></span>
+                  <span ng-if="c.setup.checklist.step1.status === 'success'" class="text-success">&#10003;</span>
+                  <span ng-if="c.setup.checklist.step1.status === 'error'" class="text-danger">&#10007;</span>
+                </div>
+                <div style="flex: 1; padding: 0 15px;">
+                  <strong>Create Service Account & Set Auth</strong>
+                  <div ng-if="c.setup.checklist.step1.error" class="text-danger" style="font-size: 12px; margin-top: 4px;">
+                    {{c.setup.checklist.step1.error}}
+                  </div>
+                  <div ng-if="c.setup.checklist.step1.status === 'success'" style="font-size: 12px; margin-top: 4px;">
+                    <a href="/sys_user_list.do?sysparm_query=user_name=aiab_service" target="_blank" style="color: #0969da;">
+                      View Service Account <i class="fa fa-external-link" style="font-size: 10px;"></i>
+                    </a>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                  <button ng-if="c.setup.checklist.step1.status === 'pending' || c.setup.checklist.step1.status === 'error'"
+                          ng-click="c.runStep(1)"
+                          class="btn btn-sm btn-primary"
+                          ng-disabled="c.setup.runningStep">
+                    {{c.setup.checklist.step1.status === 'error' ? 'Retry' : 'Create'}}
+                  </button>
+                  <button ng-if="c.setup.checklist.step1.status === 'success'"
+                          ng-click="c.verifyStep(1)"
+                          class="btn btn-sm btn-default"
+                          ng-disabled="c.setup.runningStep">
+                    Verify
+                  </button>
+                  <button ng-if="c.setup.checklist.step1.status === 'success'"
+                          ng-click="c.forceStep(1)"
+                          class="btn btn-sm btn-warning"
+                          ng-disabled="c.setup.runningStep"
+                          title="Delete and recreate service account">
+                    Force
+                  </button>
+                </div>
+              </div>
+              
+              <!-- Step 2: Admin Role -->
+              <div class="checklist-item" style="display: flex; align-items: center; padding: 12px; border: 1px solid #e1e4e8; border-radius: 6px; margin-bottom: 8px; background: #fff;">
+                <div style="width: 40px; text-align: center;">
+                  <span ng-if="c.setup.checklist.step2.status === 'pending'" class="text-muted">&#9711;</span>
+                  <span ng-if="c.setup.checklist.step2.status === 'running'" class="text-primary"><i class="fa fa-spinner fa-spin"></i></span>
+                  <span ng-if="c.setup.checklist.step2.status === 'success'" class="text-success">&#10003;</span>
+                  <span ng-if="c.setup.checklist.step2.status === 'error'" class="text-danger">&#10007;</span>
+                </div>
+                <div style="flex: 1; padding: 0 15px;">
+                  <strong>Grant Admin Role</strong>
+                  <div ng-if="c.setup.checklist.step2.error" class="text-danger" style="font-size: 12px; margin-top: 4px;">
+                    {{c.setup.checklist.step2.error}}
+                  </div>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                  <button ng-if="c.setup.checklist.step2.status === 'pending' || c.setup.checklist.step2.status === 'error'"
+                          ng-click="c.runStep(2)"
+                          class="btn btn-sm btn-primary"
+                          ng-disabled="c.setup.runningStep || c.setup.checklist.step1.status !== 'success'"
+                          title="{{c.setup.checklist.step1.status !== 'success' ? 'Complete step 1 first' : ''}}">
+                    {{c.setup.checklist.step2.status === 'error' ? 'Retry' : 'Grant'}}
+                  </button>
+                  <button ng-if="c.setup.checklist.step2.status === 'success'"
+                          ng-click="c.verifyStep(2)"
+                          class="btn btn-sm btn-default"
+                          ng-disabled="c.setup.runningStep">
+                    Verify
+                  </button>
+                  <button ng-if="c.setup.checklist.step2.status === 'success'"
+                          ng-click="c.forceStep(2)"
+                          class="btn btn-sm btn-warning"
+                          ng-disabled="c.setup.runningStep"
+                          title="Remove and re-add admin role">
+                    Force
+                  </button>
+                </div>
+              </div>
+              
+              <!-- Step 3: Test Connection -->
+              <div class="checklist-item" style="display: flex; align-items: center; padding: 12px; border: 1px solid #e1e4e8; border-radius: 6px; margin-bottom: 8px; background: #fff;">
+                <div style="width: 40px; text-align: center;">
+                  <span ng-if="c.setup.checklist.step3.status === 'pending'" class="text-muted">&#9711;</span>
+                  <span ng-if="c.setup.checklist.step3.status === 'running'" class="text-primary"><i class="fa fa-spinner fa-spin"></i></span>
+                  <span ng-if="c.setup.checklist.step3.status === 'success'" class="text-success">&#10003;</span>
+                  <span ng-if="c.setup.checklist.step3.status === 'error'" class="text-danger">&#10007;</span>
+                </div>
+                <div style="flex: 1; padding: 0 15px;">
+                  <strong>Test Connection</strong>
+                  <div ng-if="c.setup.checklist.step3.error" class="text-danger" style="font-size: 12px; margin-top: 4px;">
+                    {{c.setup.checklist.step3.error}}
+                  </div>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                  <button ng-if="c.setup.checklist.step3.status === 'pending' || c.setup.checklist.step3.status === 'error'"
+                          ng-click="c.runStep(3)"
+                          class="btn btn-sm btn-primary"
+                          ng-disabled="c.setup.runningStep || c.setup.checklist.step2.status !== 'success'"
+                          title="{{c.setup.checklist.step2.status !== 'success' ? 'Complete step 2 first' : ''}}">
+                    {{c.setup.checklist.step3.status === 'error' ? 'Retry' : 'Test'}}
+                  </button>
+                  <button ng-if="c.setup.checklist.step3.status === 'success'"
+                          ng-click="c.verifyStep(3)"
+                          class="btn btn-sm btn-default"
+                          ng-disabled="c.setup.runningStep">
+                    Verify
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Run All Button -->
+            <div ng-if="!c.setup.allComplete" style="text-align: center; margin-top: 20px; padding: 15px; background: #f6f8fa; border-radius: 6px;">
+              <p style="margin-bottom: 10px; color: #57606a;">Or run all steps automatically:</p>
+              <button ng-click="c.runAllSteps()"
+                      class="btn btn-success"
+                      ng-disabled="c.setup.runningStep || c.setup.runningAll">
+                <span ng-if="!c.setup.runningAll">
+                  <i class="fa fa-play"></i> Run All Steps
+                </span>
+                <span ng-if="c.setup.runningAll">
+                  <i class="fa fa-spinner fa-spin"></i> Running Step {{c.setup.currentStep}} of 3...
+                </span>
+              </button>
+            </div>
+            
+            <!-- All Complete Message -->
+            <div ng-if="c.setup.allComplete" class="alert alert-success" style="text-align: center; margin-top: 20px;">
+              <h4 style="margin: 0 0 10px 0;">
+                <i class="fa fa-check-circle"></i> All Steps Complete!
+              </h4>
+              <p style="margin: 0;">Tool calling is now configured and ready to use.</p>
+            </div>
+          </div>
+          
+        </div>
+        <div class="modal-footer">
+          <a href="https://getaiinabox.com/docs/tools-acl" target="_blank" class="btn btn-default pull-left">
+            <i class="fa fa-book"></i> Documentation
+          </a>
+          <button type="button" class="btn btn-default" data-dismiss="modal">
+            Close
+          </button>
+          <button type="button" 
+                  class="btn btn-primary" 
+                  ng-click="c.refreshStatus()"
+                  ng-if="c.setup.allComplete"
+                  data-dismiss="modal">
+            Refresh Settings Page
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+</div>]]></template>
     </sp_widget>
     <sys_es_latest_script action="INSERT_OR_UPDATE">
         <id>3c00e204c33be21052e098bc05013151</id>

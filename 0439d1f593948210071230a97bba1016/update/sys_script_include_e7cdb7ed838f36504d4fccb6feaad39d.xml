@@ -2,15 +2,15 @@
     <sys_script_include action="INSERT_OR_UPDATE">
         <access>public</access>
         <active>true</active>
-        <api_name>global.aiabAjax</api_name>
-        <caller_access>1</caller_access>
+        <api_name>global.AjaxBaseAIAB</api_name>
+        <caller_access/>
         <client_callable>true</client_callable>
         <description/>
         <mobile_callable>false</mobile_callable>
-        <name>aiabAjax</name>
-        <sandbox_callable>true</sandbox_callable>
-        <script><![CDATA[var aiabAjax = Class.create();
-aiabAjax.prototype = Object.extendsObject(AbstractAjaxProcessor, {
+        <name>AjaxBaseAIAB</name>
+        <sandbox_callable>false</sandbox_callable>
+        <script><![CDATA[var AjaxBaseAIAB = Class.create();
+AjaxBaseAIAB.prototype = Object.extendsObject(AbstractAjaxProcessor, {
     cancelAIInference: function (sys_id, table, inferenceId) {
         try {
             if (!sys_id) sys_id = this.getParameter('sysparm_sys_id') || false;
@@ -74,7 +74,7 @@ aiabAjax.prototype = Object.extendsObject(AbstractAjaxProcessor, {
         try {
             if (!messages) messages = this.getParameter('sysparm_messages') || this.getParameter('sysparm_conversation') || false;
             if (messages == false) {
-                return JSON.stringify({ error: "missing messages" })
+                return JSON.stringify({ error: "missing messages" });
             }
             
             var recordTable = this.getParameter('sysparm_table') || '';
@@ -393,7 +393,7 @@ aiabAjax.prototype = Object.extendsObject(AbstractAjaxProcessor, {
                     role: "user",
                     content: 'I have a question about this code.\n\n"""' + script + '\n""""'
                 }
-            ]
+            ];
             inference.setValue('u_prompt', JSON.stringify(jsonPrompt));
             inference.setValue('u_type', 'generic');
             return inference.insert();
@@ -504,7 +504,7 @@ aiabAjax.prototype = Object.extendsObject(AbstractAjaxProcessor, {
                                 rGR.query();
                                 var rValues = [];
                                 while (rGR.next()) {
-                                    var rFields = []
+                                    var rFields = [];
                                     rField.forEach(function (dField) {
                                         rFields.push(rGR.getElement(dField).getLabel() + ': ' + rGR.getDisplayValue(dField));
                                     });
@@ -512,7 +512,7 @@ aiabAjax.prototype = Object.extendsObject(AbstractAjaxProcessor, {
                                 }
                                 value = rValues.join('\n\n');
                             } catch (e) {
-                                value = "ERROR: " + e
+                                value = "ERROR: " + e;
                             }
                         }
                         taskText = taskText.replace('{{' + field + '}}', value);
@@ -633,19 +633,30 @@ aiabAjax.prototype = Object.extendsObject(AbstractAjaxProcessor, {
         }
     },
 
-    type: 'aiabAjax'
+    type: 'AjaxBaseAIAB'
 });]]></script>
         <sys_class_name>sys_script_include</sys_class_name>
-        <sys_created_by>jacebenson</sys_created_by>
-        <sys_created_on>2024-02-12 07:43:24</sys_created_on>
-        <sys_id>7849113993948210071230a97bba105f</sys_id>
-        <sys_mod_count>276</sys_mod_count>
-        <sys_name>aiabAjax</sys_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-02-14 06:29:30</sys_created_on>
+        <sys_id>e7cdb7ed838f36504d4fccb6feaad39d</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>AjaxBaseAIAB</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
-        <sys_update_name>sys_script_include_7849113993948210071230a97bba105f</sys_update_name>
-        <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-02-13 08:15:18</sys_updated_on>
+        <sys_update_name>sys_script_include_e7cdb7ed838f36504d4fccb6feaad39d</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-14 06:56:09</sys_updated_on>
     </sys_script_include>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>e7cdb7ed838f36504d4fccb6feaad39d</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-02-14 06:29:30</sys_created_on>
+        <sys_id>66ddf7ed838f36504d4fccb6feaad346</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-14 06:29:30</sys_updated_on>
+        <table>sys_script_include</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
 </record_update>

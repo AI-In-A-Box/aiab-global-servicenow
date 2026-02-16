@@ -4,19 +4,40 @@
         <sys_created_by>opencode</sys_created_by>
         <sys_created_on>2026-01-22 18:31:17</sys_created_on>
         <sys_id>237680e28366b2104d4fccb6feaad346</sys_id>
-        <sys_mod_count>0</sys_mod_count>
+        <sys_mod_count>1</sys_mod_count>
         <sys_name>get_cmdb_context</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>u_ai_tool_237680e28366b2104d4fccb6feaad346</sys_update_name>
-        <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-22 18:31:17</sys_updated_on>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-16 06:14:26</sys_updated_on>
         <u_active>true</u_active>
-        <u_description>Get CMDB configuration item details and relationships. Retrieves information about the CI associated with a record (like an incident) including related CIs, CI attributes, and relationship types.</u_description>
+        <u_description>Get CMDB configuration item details and relationships. Retrieves information about the CI associated with a record (like an incident) including related CIs, CI attributes, and relationship types</u_description>
         <u_execute_in>servicenow</u_execute_in>
         <u_name>get_cmdb_context</u_name>
-        <u_parameters>{"type": "object", "properties": {"ci_sys_id": {"type": "string", "description": "sys_id of the configuration item"}, "ci_name": {"type": "string", "description": "Name of the configuration item to search for"}, "include_relationships": {"type": "boolean", "description": "Include related CIs (default true)"}, "relationship_limit": {"type": "integer", "description": "Max related CIs to return (default 5, max 10)"}}, "required": []}</u_parameters>
+        <u_parameters>{
+  "type": "object",
+  "properties": {
+    "ci_sys_id": {
+      "type": "string",
+      "description": "sys_id of the configuration item"
+    },
+    "ci_name": {
+      "type": "string",
+      "description": "Name of the configuration item to search for"
+    },
+    "include_relationships": {
+      "type": "boolean",
+      "description": "Include related CIs (default true)"
+    },
+    "relationship_limit": {
+      "type": "integer",
+      "description": "Max related CIs to return (default 5, max 10)"
+    }
+  },
+  "required": []
+}</u_parameters>
         <u_script><![CDATA[(function(args, userId) {
     var ciGr = new GlideRecordSecure('cmdb_ci');
     

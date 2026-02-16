@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>global.RestAIAB</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description/>
+        <mobile_callable>false</mobile_callable>
+        <name>RestAIAB</name>
+        <sandbox_callable>false</sandbox_callable>
+        <script><![CDATA[/**
+ * RestAIAB - Customer-extensible REST handler for AI in a Box
+ * 
+ * This class extends RestBaseAIAB. Customers can override methods here
+ * to customize behavior (e.g., custom MID server selection, auth handling).
+ * 
+ * DO NOT edit RestBaseAIAB - your changes will be overwritten on upgrade.
+ * Instead, override methods in this class.
+ * 
+ * Example override:
+ *   send: function(restObj) {
+ *       // Custom logic here
+ *       restObj.headers = restObj.headers || {};
+ *       restObj.headers['X-Custom-Header'] = 'value';
+ *       return RestBaseAIAB.prototype.send.call(this, restObj);
+ *   }
+ */
+var RestAIAB = Class.create();
+RestAIAB.prototype = Object.extendsObject(RestBaseAIAB, {
+    // Override methods here to customize behavior
+    type: 'RestAIAB'
+});]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-02-14 06:29:10</sys_created_on>
+        <sys_id>94cd37ed838f36504d4fccb6feaad3ac</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>RestAIAB</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_script_include_94cd37ed838f36504d4fccb6feaad3ac</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-14 06:56:09</sys_updated_on>
+    </sys_script_include>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>94cd37ed838f36504d4fccb6feaad3ac</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-02-14 06:29:10</sys_created_on>
+        <sys_id>b1cd37ed838f36504d4fccb6feaad3fe</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-14 06:29:10</sys_updated_on>
+        <table>sys_script_include</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
+</record_update>

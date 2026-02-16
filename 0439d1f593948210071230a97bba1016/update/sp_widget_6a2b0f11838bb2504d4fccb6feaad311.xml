@@ -35,7 +35,7 @@
     c.unsubscribe();
     
     // Create inference with specific search tools
-    var ga = new GlideAjax('aiabAjax');
+    var ga = new GlideAjax('global.AjaxAIAB');
     ga.addParam('sysparm_name', 'createAIInference');
     ga.addParam('sysparm_type', 'generic');
     ga.addParam('sysparm_prompt', JSON.stringify([{
@@ -123,7 +123,7 @@
   c.pollForResults = function() {
     if (!c.inferenceId || !c.searching) return;
     
-    var ga = new GlideAjax('aiabAjax');
+	var ga = new GlideAjax('global.AjaxAIAB');
     ga.addParam('sysparm_name', 'getAIInference');
     ga.addParam('sysparm_sys_id', c.inferenceId);
     
@@ -440,14 +440,14 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2026-02-13 08:09:58</sys_created_on>
         <sys_id>6a2b0f11838bb2504d4fccb6feaad311</sys_id>
-        <sys_mod_count>4</sys_mod_count>
+        <sys_mod_count>5</sys_mod_count>
         <sys_name>AIAB Portal Search</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sp_widget_6a2b0f11838bb2504d4fccb6feaad311</sys_update_name>
-        <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-02-13 08:20:53</sys_updated_on>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-14 07:10:49</sys_updated_on>
         <template><![CDATA[<div class="aiab-portal-search">
   <div class="search-container">
     <div class="search-box">

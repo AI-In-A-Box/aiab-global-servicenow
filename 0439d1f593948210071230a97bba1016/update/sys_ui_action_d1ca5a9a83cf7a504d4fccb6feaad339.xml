@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_ui_action">
     <sys_ui_action action="INSERT_OR_UPDATE">
-        <action_name>cancel_inference</action_name>
+        <action_name/>
         <active>true</active>
-        <client>true</client>
-        <client_script_v2><![CDATA[function onClick(g_form) {}]]></client_script_v2>
+        <client>false</client>
+        <client_script_v2/>
         <comments/>
-        <condition>current.u_state == 'requested'</condition>
+        <condition>current.u_state != 'new'</condition>
         <form_action>true</form_action>
         <form_button>true</form_button>
         <form_button_v2>false</form_button_v2>
         <form_context_menu>false</form_context_menu>
         <form_link>false</form_link>
         <form_menu_button_v2>false</form_menu_button_v2>
-        <form_style/>
+        <form_style>primary</form_style>
         <format_for_configurable_workspace>false</format_for_configurable_workspace>
         <hint/>
-        <isolate_script>true</isolate_script>
+        <isolate_script>false</isolate_script>
         <list_action>false</list_action>
         <list_banner_button>false</list_banner_button>
         <list_button>false</list_button>
@@ -25,41 +25,56 @@
         <list_save_with_form_button>false</list_save_with_form_button>
         <list_style/>
         <messages/>
-        <name>Cancel Inference</name>
-        <onclick>cancelInference()</onclick>
+        <name>Try Again</name>
+        <onclick/>
         <order>100</order>
-        <script><![CDATA[function cancelInference() {//
-	g_form.clearMessages();
-	try {
-		var ga = new GlideAjax('global.AjaxAIAB');
-		ga.addParam('sysparm_name', 'cancelAIInference');
-		ga.addParam('sysparm_inference_id', g_form.getUniqueValue());
-        ga.getXMLAnswer(function(response) {
-			g_form.addInfoMessage(response);
-        });
-    } catch (error) {
-        //console.error(error);
+        <script><![CDATA[(function() {
+    // Create a new inference record with same settings
+    var newInference = new GlideRecord('u_ai_inference');
+    newInference.newRecord();
+    
+    // Copy key fields
+    newInference.u_type = current.u_type;
+    newInference.u_prompt = current.u_prompt;
+    newInference.u_table = current.u_table;
+    newInference.u_target = current.u_target;
+    newInference.u_requested_by = current.u_requested_by;
+    newInference.u_model = current.u_model;
+    newInference.u_tools_included = current.u_tools_included;
+    
+    // Set state to new so it processes
+    newInference.u_state = 'new';
+    
+    // Insert the record
+    var newId = newInference.insert();
+    
+    if (newId) {
+        // Redirect to the new record
+        action.setRedirectURL(newInference);
+        gs.addInfoMessage('Created new inference ' + newInference.u_number + '. Processing...');
+    } else {
+        gs.addErrorMessage('Failed to create retry inference');
     }
-}]]></script>
+})();]]></script>
         <show_insert>false</show_insert>
         <show_multiple_update>false</show_multiple_update>
         <show_query>false</show_query>
         <show_update>true</show_update>
         <sys_class_name>sys_ui_action</sys_class_name>
-        <sys_created_by>jacebenson</sys_created_by>
-        <sys_created_on>2025-01-05 03:44:53</sys_created_on>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-02-16 07:12:02</sys_created_on>
         <sys_domain>global</sys_domain>
         <sys_domain_path>/</sys_domain_path>
-        <sys_id>ae4ca95bc3fe1210594e12f1b40131ce</sys_id>
-        <sys_mod_count>7</sys_mod_count>
-        <sys_name>Cancel Inference</sys_name>
+        <sys_id>d1ca5a9a83cf7a504d4fccb6feaad339</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Try Again</sys_name>
         <sys_overrides/>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
-        <sys_update_name>sys_ui_action_ae4ca95bc3fe1210594e12f1b40131ce</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-02-14 07:12:00</sys_updated_on>
+        <sys_update_name>sys_ui_action_d1ca5a9a83cf7a504d4fccb6feaad339</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-16 07:12:02</sys_updated_on>
         <table>u_ai_inference</table>
         <ui11_compatible>true</ui11_compatible>
         <ui16_compatible>false</ui16_compatible>
