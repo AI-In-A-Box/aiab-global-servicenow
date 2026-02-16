@@ -4,14 +4,14 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2026-02-14 03:31:45</sys_created_on>
         <sys_id>59251fad834b36504d4fccb6feaad33a</sys_id>
-        <sys_mod_count>9</sys_mod_count>
+        <sys_mod_count>10</sys_mod_count>
         <sys_name>build_report</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>u_ai_tool_59251fad834b36504d4fccb6feaad33a</sys_update_name>
-        <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-02-14 04:15:03</sys_updated_on>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-16 06:09:43</sys_updated_on>
         <u_active>true</u_active>
         <u_description>Creates a bar chart report in ServiceNow. Groups records by a specified field and optionally filters them. Use this when users ask for reports, charts, or breakdowns of data.</u_description>
         <u_execute_in>servicenow</u_execute_in>
@@ -165,8 +165,7 @@
     }
 
     // Build the direct report link
-    var instanceName = gs.getProperty('instance_name');
-	var reportURL = 'https://' + instanceName + '.service-now.com/sys_report_template.do?jvar_report_id=' + reportSysId;
+	var reportURL = '/sys_report_template.do?jvar_report_id=' + reportSysId;
 
     returnObj.report_name = reportName;
     returnObj.report_sys_id = reportSysId;

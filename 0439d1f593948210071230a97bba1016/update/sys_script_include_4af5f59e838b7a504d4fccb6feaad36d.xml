@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>global.SetupToolCallingAIAB</api_name>
+        <caller_access>1</caller_access>
+        <client_callable>true</client_callable>
+        <description>One-click setup for AI In A Box tool calling authentication</description>
+        <mobile_callable>false</mobile_callable>
+        <name>SetupToolCallingAIAB</name>
+        <sandbox_callable>false</sandbox_callable>
+        <script><![CDATA[var SetupToolCallingAIAB = Class.create();
+SetupToolCallingAIAB.prototype = Object.extendsObject(AbstractAjaxProcessor, {
+    initialize: function() {},
+    
+    // Simple test method to verify connectivity
+    testConnection: function() {
+        return JSON.stringify({ success: true, message: 'Connection OK' });
+    },
+    
+    getStatus: function() {
+        var result = {
+            userExists: false,
+            userHasAdminRole: false,
+            propertySet: false,
+            propertyValid: false,
+            canSetup: false
+        };
+        
+        try {
+            var userGR = new GlideRecord('sys_user');
+            userGR.addQuery('user_name', 'aiab_service');
+            userGR.addQuery('active', true);
+            userGR.setLimit(1);
+            userGR.query();
+            
+            if (userGR.next()) {
+                result.userExists = true;
+                result.userSysId = userGR.sys_id.toString();
+                
+                var roleGR = new GlideRecord('sys_user_has_role');
+                roleGR.addQuery('user', userGR.sys_id);
+                roleGR.addQuery('role.name', 'admin');
+                roleGR.setLimit(1);
+                roleGR.query();
+                result.userHasAdminRole = roleGR.hasNext();
+            }
+            
+            var propValue = gs.getProperty('ai_in_a_box.config.server.callback.auth', '');
+            result.propertySet = (propValue != '');
+            result.propertyValid = (propValue.indexOf(':') > 0);
+            result.canSetup = (!result.userExists) || (!result.userHasAdminRole || !result.propertyValid);
+            
+        } catch (e) {
+            result.error = e.message;
+        }
+        
+        return JSON.stringify(result);
+    },
+    
+    runStep: function() {
+        var stepNum = this.getParameter('sysparm_step');
+        var result = { success: false, message: '' };
+        
+        gs.info('SetupToolCallingAIAB.runStep called with step: ' + stepNum);
+        
+        // Convert to number
+        stepNum = parseInt(String(stepNum), 10);
+        
+        if (isNaN(stepNum)) {
+            result.success = false;
+            result.message = 'Invalid step parameter: ' + this.getParameter('sysparm_step');
+            gs.error('SetupToolCallingAIAB: Invalid step parameter');
+            return JSON.stringify(result);
+        }
+        
+        try {
+            switch(stepNum) {
+                case 1:
+                    result = this._createServiceAccount();
+                    break;
+                case 2:
+                    result = this._grantAdminRole();
+                    break;
+                case 3:
+                    result = this._setAuthProperty();
+                    break;
+                case 4:
+                    result = this._testConnectionStep();
+                    break;
+                default:
+                    result.success = false;
+                    result.message = 'Invalid step number: ' + stepNum;
+            }
+        } catch (e) {
+            result.success = false;
+            result.message = 'Error in step ' + stepNum + ': ' + e.message;
+            gs.error('SetupToolCallingAIAB.runStep error: ' + e.message);
+        }
+        
+        gs.info('SetupToolCallingAIAB.runStep returning: ' + JSON.stringify(result));
+        return JSON.stringify(result);
+    },
+    
+    verifyStep: function() {
+        var stepNum = this.getParameter('sysparm_step');
+        var result = { valid: false, message: '' };
+        
+        // Convert to number
+        stepNum = parseInt(String(stepNum), 10);
+        
+        if (isNaN(stepNum)) {
+            result.valid = false;
+            result.message = 'Invalid step parameter: ' + this.getParameter('sysparm_step');
+            return JSON.stringify(result);
+        }
+        
+        try {
+            switch(stepNum) {
+                case 1:
+                    var userGR = new GlideRecord('sys_user');
+                    userGR.addQuery('user_name', 'aiab_service');
+                    userGR.addQuery('active', true);
+                    userGR.setLimit(1);
+                    userGR.query();
+                    result.valid = userGR.hasNext();
+                    result.message = result.valid ? 'Service account exists' : 'Service account not found';
+                    break;
+                case 2:
+                    var userGR2 = new GlideRecord('sys_user');
+                    userGR2.addQuery('user_name', 'aiab_service');
+                    userGR2.addQuery('active', true);
+                    userGR2.setLimit(1);
+                    userGR2.query();
+                    if (userGR2.next()) {
+                        var roleGR = new GlideRecord('sys_user_has_role');
+                        roleGR.addQuery('user', userGR2.sys_id);
+                        roleGR.addQuery('role.name', 'admin');
+                        roleGR.setLimit(1);
+                        roleGR.query();
+                        result.valid = roleGR.hasNext();
+                        result.message = result.valid ? 'Admin role assigned' : 'Admin role not assigned';
+                    } else {
+                        result.valid = false;
+                        result.message = 'Service account not found';
+                    }
+                    break;
+                case 3:
+                    var propValue = gs.getProperty('ai_in_a_box.config.server.callback.auth', '');
+                    result.valid = (propValue.indexOf(':') > 0);
+                    result.message = result.valid ? 'Property is set correctly' : 'Property not set or invalid format';
+                    break;
+                case 4:
+                    var testResult = this._testConnectionStep();
+                    result.valid = testResult.success;
+                    result.message = testResult.message;
+                    break;
+                default:
+                    result.valid = false;
+                    result.message = 'Invalid step number: ' + stepNum;
+            }
+        } catch (e) {
+            result.valid = false;
+            result.message = 'Error verifying step ' + stepNum + ': ' + e.message;
+            gs.error('SetupToolCallingAIAB.verifyStep error: ' + e.message);
+        }
+        
+        return JSON.stringify(result);
+    },
+    
+    _createServiceAccount: function() {
+        var result = { success: false, message: '' };
+        try {
+            var password = this._generatePassword();
+            
+            var userGR = new GlideRecord('sys_user');
+            userGR.addQuery('user_name', 'aiab_service');
+            userGR.query();
+            
+            if (userGR.next()) {
+                // Update existing user
+                userGR.user_password.setDisplayValue(password);
+                // Ensure first and last name are set
+                if (!userGR.first_name) {
+                    userGR.setValue('first_name', 'AIAB');
+                }
+                if (!userGR.last_name) {
+                    userGR.setValue('last_name', 'Service');
+                }
+                userGR.update();
+                result.success = true;
+                result.message = 'Updated existing service account with new password';
+            } else {
+                // Create new user
+                userGR = new GlideRecord('sys_user');
+                userGR.newRecord();
+                userGR.setValue('user_name', 'aiab_service');
+                userGR.user_password.setDisplayValue(password);
+                userGR.setValue('active', true);
+                // Set first and last name
+                userGR.setValue('first_name', 'AIAB');
+                userGR.setValue('last_name', 'Service');
+                var userId = userGR.insert();
+                
+                if (userId) {
+                    result.success = true;
+                    result.message = 'Created service account successfully';
+                } else {
+                    result.success = false;
+                    result.message = 'Failed to create service account';
+                }
+            }
+        } catch (e) {
+            result.success = false;
+            result.message = 'Error: ' + e.message;
+            gs.error('SetupToolCallingAIAB._createServiceAccount error: ' + e.message);
+        }
+        return result;
+    },
+    
+    _grantAdminRole: function() {
+        var result = { success: false, message: '' };
+        try {
+            var adminRoleGR = new GlideRecord('sys_user_role');
+            adminRoleGR.addQuery('name', 'admin');
+            adminRoleGR.setLimit(1);
+            adminRoleGR.query();
+            
+            if (!adminRoleGR.next()) {
+                result.success = false;
+                result.message = 'Admin role not found in system';
+                return result;
+            }
+            
+            var userGR = new GlideRecord('sys_user');
+            userGR.addQuery('user_name', 'aiab_service');
+            userGR.addQuery('active', true);
+            userGR.setLimit(1);
+            userGR.query();
+            
+            if (!userGR.next()) {
+                result.success = false;
+                result.message = 'Service account not found. Create it first.';
+                return result;
+            }
+            
+            var userId = userGR.sys_id.toString();
+            var adminRoleId = adminRoleGR.sys_id.toString();
+            
+            var existingRoleGR = new GlideRecord('sys_user_has_role');
+            existingRoleGR.addQuery('user', userId);
+            existingRoleGR.addQuery('role', adminRoleId);
+            existingRoleGR.setLimit(1);
+            existingRoleGR.query();
+            
+            if (existingRoleGR.hasNext()) {
+                result.success = true;
+                result.message = 'Admin role already assigned';
+            } else {
+                var roleGR = new GlideRecord('sys_user_has_role');
+                roleGR.newRecord();
+                roleGR.setValue('user', userId);
+                roleGR.setValue('role', adminRoleId);
+                var inserted = roleGR.insert();
+                
+                if (inserted) {
+                    result.success = true;
+                    result.message = 'Admin role assigned successfully';
+                } else {
+                    result.success = false;
+                    result.message = 'Failed to assign admin role';
+                }
+            }
+        } catch (e) {
+            result.success = false;
+            result.message = 'Error: ' + e.message;
+            gs.error('SetupToolCallingAIAB._grantAdminRole error: ' + e.message);
+        }
+        return result;
+    },
+    
+    _setAuthProperty: function() {
+        var result = { success: false, message: '' };
+        try {
+            var userGR = new GlideRecord('sys_user');
+            userGR.addQuery('user_name', 'aiab_service');
+            userGR.addQuery('active', true);
+            userGR.setLimit(1);
+            userGR.query();
+            
+            if (!userGR.next()) {
+                result.success = false;
+                result.message = 'Service account not found. Create it first.';
+                return result;
+            }
+            
+            var password = this._generatePassword();
+            userGR.user_password.setDisplayValue(password);
+            userGR.update();
+            
+            gs.setProperty('ai_in_a_box.config.server.callback.auth', 'aiab_service:' + password);
+            result.success = true;
+            result.message = 'Authentication property set successfully';
+        } catch (e) {
+            result.success = false;
+            result.message = 'Error: ' + e.message;
+            gs.error('SetupToolCallingAIAB._setAuthProperty error: ' + e.message);
+        }
+        return result;
+    },
+    
+    _testConnectionStep: function() {
+        var result = { success: false, message: '' };
+        try {
+            var authValue = gs.getProperty('ai_in_a_box.config.server.callback.auth', '');
+            if (!authValue || authValue.indexOf(':') < 0) {
+                result.success = false;
+                result.message = 'Auth property not set or invalid format';
+                return result;
+            }
+            
+            var instanceUrl = gs.getProperty('glide.servlet.uri', '');
+            if (!instanceUrl) {
+                instanceUrl = 'https://' + gs.getProperty('instance_name') + '.service-now.com/';
+            }
+            
+            var testEndpoint = instanceUrl + 'api/now/table/sys_user?sysparm_query=user_name=aiab_service&sysparm_limit=1&sysparm_fields=user_name';
+            var restMessage = new sn_ws.RESTMessageV2();
+            restMessage.setHttpMethod('GET');
+            restMessage.setEndpoint(testEndpoint);
+            restMessage.setRequestHeader('Accept', 'application/json');
+            restMessage.setRequestHeader('Authorization', 'Basic ' + GlideStringUtil.base64Encode(authValue));
+            var response = restMessage.execute();
+            var statusCode = response.getStatusCode();
+            
+            if (statusCode == 200) {
+                result.success = true;
+                result.message = 'Connection test passed';
+            } else if (statusCode == 401) {
+                result.success = false;
+                result.message = 'Authentication failed - check username/password';
+            } else {
+                result.success = false;
+                result.message = 'Connection test failed (HTTP ' + statusCode + ')';
+            }
+        } catch (e) {
+            result.success = false;
+            result.message = 'Connection test error: ' + e.message;
+            gs.error('SetupToolCallingAIAB._testConnectionStep error: ' + e.message);
+        }
+        return result;
+    },
+    
+    _generatePassword: function() {
+        var chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+        var password = '';
+        for (var i = 0; i < 20; i++) {
+            password += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return password;
+    },
+    
+    type: 'SetupToolCallingAIAB'
+});]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-02-16 04:31:16</sys_created_on>
+        <sys_id>4af5f59e838b7a504d4fccb6feaad36d</sys_id>
+        <sys_mod_count>7</sys_mod_count>
+        <sys_name>SetupToolCallingAIAB</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_script_include_4af5f59e838b7a504d4fccb6feaad36d</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-16 05:23:45</sys_updated_on>
+    </sys_script_include>
+</record_update>

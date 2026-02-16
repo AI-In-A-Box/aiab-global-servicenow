@@ -70,114 +70,48 @@
     margin-bottom: 20px;&#13;
   }&#13;
 &#13;
-  .server-status {&#13;
-    background-color: #f8f9fa;&#13;
-    border: 1px solid #e9ecef;&#13;
+  // Server status lines matching AIAB Settings style&#13;
+  .server-status-section {&#13;
+    margin-bottom: 20px;&#13;
+  }&#13;
+&#13;
+  .server-status-line {&#13;
+    border: 1px solid #e0e0e0;&#13;
     border-radius: 6px;&#13;
-    padding: 20px;&#13;
+    margin-bottom: 8px;&#13;
+    padding: 12px 15px;&#13;
     transition: all 0.2s ease;&#13;
-    height: 120px; // Ensure consistent height&#13;
-    margin-bottom: 15px; // Add bottom margin for mobile stacking&#13;
+    background: #fff;&#13;
 &#13;
     &amp;:hover {&#13;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);&#13;
+      background-color: #f8f9fa;&#13;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);&#13;
+    }&#13;
+&#13;
+    .row {&#13;
+      display: flex;&#13;
+      align-items: center;&#13;
+    }&#13;
+&#13;
+    strong {&#13;
+      margin-right: 10px;&#13;
+    }&#13;
+&#13;
+    .text-success,&#13;
+    .text-danger,&#13;
+    .text-warning,&#13;
+    .text-info,&#13;
+    .text-muted {&#13;
+      font-weight: 500;&#13;
     }&#13;
   }&#13;
 &#13;
-  // New compact server status styles&#13;
-  .server-status-stack {&#13;
-    display: flex;&#13;
-    flex-direction: column;&#13;
-    gap: 10px;&#13;
-  }&#13;
-&#13;
-  .server-status-compact {&#13;
-    background-color: #f8f9fa;&#13;
-    border: 1px solid #e9ecef;&#13;
-    border-radius: 6px;&#13;
-    padding: 12px;&#13;
+  .btn {&#13;
     transition: all 0.2s ease;&#13;
 &#13;
     &amp;:hover {&#13;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);&#13;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);&#13;
     }&#13;
-  }&#13;
-&#13;
-  .server-header {&#13;
-    display: flex;&#13;
-    align-items: center;&#13;
-    justify-content: space-between;&#13;
-    margin-bottom: 5px;&#13;
-&#13;
-    i {&#13;
-      color: #007bff;&#13;
-      margin-right: 8px;&#13;
-      min-width: 16px;&#13;
-    }&#13;
-&#13;
-    .server-name {&#13;
-      font-weight: bold;&#13;
-      color: #333;&#13;
-      flex-grow: 1;&#13;
-      font-size: 14px;&#13;
-    }&#13;
-&#13;
-    .server-status-badge {&#13;
-      font-weight: bold;&#13;
-      font-size: 12px;&#13;
-      padding: 2px 6px;&#13;
-      border-radius: 3px;&#13;
-      background-color: rgba(255,255,255,0.8);&#13;
-    }&#13;
-  }&#13;
-&#13;
-  .server-message-compact {&#13;
-    font-size: 11px;&#13;
-    color: #666;&#13;
-    line-height: 1.3;&#13;
-    margin-left: 24px; // Align with server name&#13;
-  }&#13;
-&#13;
-  .server-info {&#13;
-    display: flex;&#13;
-    justify-content: space-between;&#13;
-    align-items: center;&#13;
-  }&#13;
-&#13;
-  .server-details {&#13;
-    flex-grow: 1;&#13;
-  }&#13;
-&#13;
-  .server-icon-wrapper {&#13;
-    display: flex;&#13;
-    align-items: center;&#13;
-  }&#13;
-&#13;
-  .server-icon {&#13;
-    margin-right: 15px;&#13;
-    font-size: 2em;&#13;
-    color: #007bff;&#13;
-  }&#13;
-&#13;
-  .server-name {&#13;
-    margin: 0;&#13;
-    color: #333;&#13;
-    font-size: 1.4em;&#13;
-  }&#13;
-&#13;
-  .server-status-text {&#13;
-    margin-top: 8px;&#13;
-    font-size: 1.2em;&#13;
-    font-weight: bold;&#13;
-  }&#13;
-&#13;
-  .server-message {&#13;
-    margin-top: 5px;&#13;
-  }&#13;
-&#13;
-  .midserver-config {&#13;
-    margin-top: 20px;&#13;
-    border-left: 4px solid #007bff;&#13;
   }&#13;
 &#13;
   // Communication Flow Animation Styles&#13;
@@ -223,26 +157,6 @@
       .flow-title {&#13;
         color: #6c757d; // Gray for disabled/direct&#13;
       }&#13;
-    }&#13;
-  }&#13;
-&#13;
-  .config-content {&#13;
-    display: flex;&#13;
-    justify-content: space-between;&#13;
-    align-items: center;&#13;
-  }&#13;
-&#13;
-  .config-info {&#13;
-    .config-title {&#13;
-      font-weight: bold;&#13;
-      &#13;
-      i {&#13;
-        margin-right: 8px;&#13;
-      }&#13;
-    }&#13;
-&#13;
-    .config-description {&#13;
-      margin-top: 5px;&#13;
     }&#13;
   }&#13;
 &#13;
@@ -385,14 +299,14 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2025-08-31 18:31:34</sys_created_on>
         <sys_id>1191ae04c33be21052e098bc0501315c</sys_id>
-        <sys_mod_count>37</sys_mod_count>
+        <sys_mod_count>38</sys_mod_count>
         <sys_name>AIAB Server</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sp_widget_1191ae04c33be21052e098bc0501315c</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-02-14 06:45:33</sys_updated_on>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-16 06:30:33</sys_updated_on>
         <template><![CDATA[<div class="aiab-server-widget">
   <div class="panel panel-default">
     
@@ -410,52 +324,47 @@
       <!-- Description -->
       <p class="text-muted description">{{data.description}}</p>
       
-      <!-- Server Status Stack -->
-      <div class="server-status-stack">
+      <!-- Server Status Lines -->
+      <div class="server-status-section">
         
         <!-- AIAB Server Status -->
-        <div class="server-status-compact">
-          <div class="server-header">
-            <i class="fa fa-server"></i>
-            <span class="server-name">{{data.aiabServer.name}}</span>
-            <span class="server-status-badge" ng-class="c.getStatusClass(data.aiabServer.status)">{{data.aiabServer.status}}</span>
+        <div class="server-status-line">
+          <div class="row">
+            <div class="col-sm-8">
+              <strong>AIAB Server</strong>
+              <span class="{{c.getStatusClass(data.aiabServer.status)}}">
+                {{c.getCleanStatus(data.aiabServer.status)}}
+              </span>
+            </div>
+            <div class="col-sm-4 text-right">
+              <a href="/nav_to.do?uri=sys_properties.do?sys_id=e08cdf21c3561e10594e12f1b401317c" 
+                 class="btn btn-default btn-sm"
+                 target="_blank">
+                Configure
+              </a>
+            </div>
           </div>
-          <div class="server-message-compact">{{data.aiabServer.message}}</div>
         </div>
         
         <!-- MID Server Status -->
-        <div class="server-status-compact">
-          <div class="server-header">
-            <i class="fa fa-exchange"></i>
-            <span class="server-name"><a target="_blank" href="/ecc_agent_list.do?sysparm_query=name={{data.midserver.name}}">{{data.midserver.name}}</a></span>
-            <span class="server-status-badge" ng-class="c.getStatusClass(data.midserver.status)">{{data.midserver.status}}</span>
+        <div class="server-status-line">
+          <div class="row">
+            <div class="col-sm-8">
+              <strong>MID Server</strong>
+              <span class="{{c.getStatusClass(data.midserver.status)}}">
+                {{c.getCleanStatus(data.midserver.status)}}
+              </span>
+            </div>
+            <div class="col-sm-4 text-right">
+              <a href="/sys_properties_list.do?sysparm_query=nameSTARTSWITHai_in_a_box.config.midserver" 
+                 class="btn btn-default btn-sm"
+                 target="_blank">
+                Configure
+              </a>
+            </div>
           </div>
-          <div class="server-message-compact">{{data.midserver.message}}</div>
         </div>
         
-      </div>
-      
-      <!-- Midserver Configuration -->
-      <div class="alert alert-info midserver-config">
-        <div class="config-content">
-          <div class="config-info">
-            <div class="config-title">
-              <i class="fa fa-server"></i>Midserver Configuration
-            </div>
-            <div class="text-muted config-description">
-              <span ng-if="data.midserverEnabled">Midserver is currently <strong>enabled</strong> and required for AI operations</span>
-              <span ng-if="!data.midserverEnabled">Midserver is currently <strong>disabled</strong> - AI operations run directly</span>
-            </div>
-          </div>
-          <div>
-            <a href="/sys_properties.do?sys_id=ai_in_a_box.config.midserver.enabled" 
-               class="btn btn-sm btn-outline-primary"
-               target="_blank"
-               title="Toggle midserver requirement">
-              <i class="fa fa-cog"></i> Configure
-            </a>
-          </div>
-        </div>
       </div>
       
       <!-- Communication Flow Animation -->
@@ -491,7 +400,6 @@
         </div>
       </div>
       
-      <span ng-if="data.midserverEnabled">Midserver is currently <strong>enabled</strong> and required for AI operations</span>
       <!-- Footer Note -->
       <div class="footer-note">
         <small class="text-muted">

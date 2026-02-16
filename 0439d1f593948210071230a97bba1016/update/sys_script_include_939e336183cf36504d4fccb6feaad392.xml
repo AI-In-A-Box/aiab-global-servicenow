@@ -12,7 +12,64 @@
         <script><![CDATA[var UtilBaseAIAB = Class.create();
 UtilBaseAIAB.prototype = {
     initialize: function() {},
-    
+    getUserName: function(userId) {
+        var sys_user = new GlideRecord("sys_user");
+        if (sys_user.get(userId)) {
+            return sys_user.getValue("user_name");
+        }
+        return "NO USER FOUND with userId " + userId;
+    },
+
+    /**
+     * Impersonate a user - callable from scoped apps
+     * @param {string} userId - sys_id of user to impersonate
+     * @returns {string|null} - original user sys_id if successful, null if failed
+     */
+    impersonate: function(userId) {
+        if (!userId) {
+            gs.warn("AIABGlobalHelper.impersonate: No userId provided");
+            return null;
+        }
+        var originalUser = gs.getUserID();
+        var originalUserName = this.getUserName(originalUser);
+        gs.info("AIABGlobalHelper.impersonate: attempting " + userId + " from " + originalUser + "[" + originalUserName + "]");
+
+        try {
+            var impersonator = new GlideImpersonate();
+            impersonator.impersonate(userId);
+
+            var newUser = gs.getUserID();
+            var newUserName = this.getUserName(newUser);
+            gs.info("AIABGlobalHelper.impersonate: now running as " + newUser + "[" + newUserName + "]");
+
+            if (newUser === userId) {
+                gs.info("AIABGlobalHelper.impersonate: SUCCESS");
+                return originalUser;
+            } else {
+                gs.warn("AIABGlobalHelper.impersonate: FAILED - still " + newUser);
+                return null;
+            }
+        } catch (e) {
+            gs.error("AIABGlobalHelper.impersonate: EXCEPTION - " + e);
+            return null;
+        }
+    },
+
+    /**
+     * Revert impersonation to original user
+     * @param {string} originalUserId - sys_id of original user
+     */
+    revert: function(originalUserId) {
+        if (originalUserId) {
+            try {
+                var impersonator = new GlideImpersonate();
+                impersonator.impersonate(originalUserId);
+                gs.info("AIABGlobalHelper.revert: reverted to " + originalUserId);
+            } catch (e) {
+                gs.warn("AIABGlobalHelper.revert failed: " + e);
+            }
+        }
+    },
     /**
      * Chunk text into an array of smaller strings
      * @param {string} text - The text to chunk
@@ -246,14 +303,14 @@ UtilBaseAIAB.prototype = {
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2026-02-14 06:32:55</sys_created_on>
         <sys_id>939e336183cf36504d4fccb6feaad392</sys_id>
-        <sys_mod_count>4</sys_mod_count>
+        <sys_mod_count>5</sys_mod_count>
         <sys_name>UtilBaseAIAB</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_script_include_939e336183cf36504d4fccb6feaad392</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-02-14 07:39:28</sys_updated_on>
+        <sys_updated_on>2026-02-16 05:57:14</sys_updated_on>
     </sys_script_include>
     <sys_es_latest_script action="INSERT_OR_UPDATE">
         <id>939e336183cf36504d4fccb6feaad392</id>

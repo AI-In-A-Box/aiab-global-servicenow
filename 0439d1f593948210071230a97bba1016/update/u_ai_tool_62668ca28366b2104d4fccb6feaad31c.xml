@@ -4,49 +4,78 @@
         <sys_created_by>opencode</sys_created_by>
         <sys_created_on>2026-01-22 18:30:57</sys_created_on>
         <sys_id>62668ca28366b2104d4fccb6feaad31c</sys_id>
-        <sys_mod_count>0</sys_mod_count>
+        <sys_mod_count>2</sys_mod_count>
         <sys_name>get_work_notes</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>u_ai_tool_62668ca28366b2104d4fccb6feaad31c</sys_update_name>
-        <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-22 18:30:57</sys_updated_on>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-16 06:17:17</sys_updated_on>
         <u_active>true</u_active>
-        <u_description>Get work notes and comments from a record. Retrieves the activity stream entries (work notes, additional comments) to understand the history of actions taken on this record.</u_description>
+        <u_description>Get work notes and comments from a record. Retrieves the activity stream entries (work notes, additional comments) to understand the history of actions taken on this record</u_description>
         <u_execute_in>servicenow</u_execute_in>
         <u_name>get_work_notes</u_name>
-        <u_parameters>{"type": "object", "properties": {"table": {"type": "string", "description": "Table name (e.g., incident, sc_req_item, change_request)"}, "sys_id": {"type": "string", "description": "sys_id of the record"}, "element": {"type": "string", "enum": ["work_notes", "comments", "all"], "description": "Type of entries to retrieve: work_notes (internal), comments (customer-visible), or all"}, "limit": {"type": "integer", "description": "Max entries to return (default 10, max 25)"}}, "required": ["table", "sys_id"]}</u_parameters>
+        <u_parameters>{
+  "type": "object",
+  "properties": {
+    "table": {
+      "type": "string",
+      "description": "Table name (e.g., incident, sc_req_item, change_request)"
+    },
+    "sys_id": {
+      "type": "string",
+      "description": "sys_id of the record"
+    },
+    "element": {
+      "type": "string",
+      "enum": [
+        "work_notes",
+        "comments",
+        "all"
+      ],
+      "description": "Type of entries to retrieve: work_notes (internal), comments (customer-visible), or all"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Max entries to return (default 10, max 25)"
+    }
+  },
+  "required": [
+    "table",
+    "sys_id"
+  ]
+}</u_parameters>
         <u_script><![CDATA[(function(args, userId) {
     if (!args.table || !args.sys_id) {
         return { found: false, message: 'Both table and sys_id are required' };
     }
     
-    var gr = new GlideRecordSecure('sys_journal_field');
-    gr.addQuery('name', args.table);
-    gr.addQuery('element_id', args.sys_id);
+    var journalGR = new GlideRecordSecure('sys_journal_field');
+    journalGR.addQuery('name', args.table);
+    journalGR.addQuery('element_id', args.sys_id);
     
     // Filter by element type
     var element = (args.element || 'all').toLowerCase();
     if (element === 'work_notes') {
-        gr.addQuery('element', 'work_notes');
+        journalGR.addQuery('element', 'work_notes');
     } else if (element === 'comments') {
-        gr.addQuery('element', 'comments');
+        journalGR.addQuery('element', 'comments');
     } else {
-        gr.addQuery('element', 'IN', 'work_notes,comments');
+        journalGR.addQuery('element', 'IN', 'work_notes,comments');
     }
     
-    gr.orderByDesc('sys_created_on');
-    gr.setLimit(Math.min(args.limit || 10, 25));
-    gr.query();
+    journalGR.orderByDesc('sys_created_on');
+    journalGR.setLimit(Math.min(args.limit || 10, 25));
+    journalGR.query();
     
     var entries = [];
-    while (gr.next()) {
+    while (journalGR.next()) {
         entries.push({
-            type: '' + gr.element,
-            value: '' + gr.value,
-            created_by: gr.getDisplayValue('sys_created_by'),
-            created_on: '' + gr.sys_created_on
+            type: '' + journalGR.element,
+            value: '' + journalGR.value,
+            created_by: journalGR.getDisplayValue('sys_created_by'),
+            created_on: '' + journalGR.sys_created_on
         });
     }
     

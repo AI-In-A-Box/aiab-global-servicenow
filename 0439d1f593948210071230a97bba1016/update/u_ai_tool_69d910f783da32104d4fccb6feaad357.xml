@@ -4,47 +4,71 @@
         <sys_created_by>opencode</sys_created_by>
         <sys_created_on>2026-01-14 06:52:31</sys_created_on>
         <sys_id>69d910f783da32104d4fccb6feaad357</sys_id>
-        <sys_mod_count>6</sys_mod_count>
+        <sys_mod_count>7</sys_mod_count>
         <sys_name>search_knowledge</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>u_ai_tool_69d910f783da32104d4fccb6feaad357</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-01-23 18:49:44</sys_updated_on>
+        <sys_updated_on>2026-02-16 06:22:47</sys_updated_on>
         <u_active>true</u_active>
         <u_description>Search knowledge base articles. Can search by keywords in title or content, by category, or find recently published articles.</u_description>
         <u_execute_in>servicenow</u_execute_in>
         <u_name>search_knowledge</u_name>
-        <u_parameters>{"type": "object", "properties": {"query": {"type": "string", "description": "Search text to find in article title or content"}, "category": {"type": "string", "description": "Knowledge category name to filter by"}, "published_recently": {"type": "boolean", "description": "If true, only return articles published in the last 30 days"}, "limit": {"type": "integer", "description": "Max articles to return (default 5, max 10)"}}, "required": []}</u_parameters>
+        <u_parameters>{
+  "type": "object",
+  "properties": {
+    "query": {
+      "type": "string",
+      "description": "Search text to find in article title or content"
+    },
+    "category": {
+      "type": "string",
+      "description": "Knowledge category name to filter by"
+    },
+    "published_recently": {
+      "type": "boolean",
+      "description": "If true, only return articles published in the last 30 days"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Max articles to return (default 5, max 10)"
+    }
+  },
+  "required": []
+}</u_parameters>
         <u_script><![CDATA[(function(args, userId) {
-    var gr = new GlideRecord("kb_knowledge");
-    gr.addQuery("workflow_state", "published");
+    var kbGR = new GlideRecord("kb_knowledge");
+    kbGR.addQuery("workflow_state", "published");
 
     if (args.query) {
-        var qc = gr.addQuery("short_description", "CONTAINS", args.query);
-        qc.addOrCondition("text", "CONTAINS", args.query);
+		var query = "short_descriptionCONTAINS" + args.query;
+		query += "textCONTAINS" + args.query;
+        gr.addEncodedQuery(query);
     }
     if (args.category) {
         var catGR = new GlideRecord("kb_category");
         catGR.addQuery("label", "CONTAINS", args.category);
         catGR.setLimit(1);
         catGR.query();
-        if (catGR.next()) gr.addQuery("kb_category", catGR.getUniqueValue());
+        if (catGR.next()) {
+			kbGR.addQuery("kb_category", catGR.getUniqueValue());
+		}
     }
 
-    gr.orderByDesc("sys_view_count");
-    gr.setLimit(Math.min(args.limit || 5, 10));
-    gr.query();
+    kbGR.orderByDesc("sys_view_count");
+    kbGR.setLimit(Math.min(args.limit || 5, 10));
+    kbGR.query();
 
     var articles = [];
-    while (gr.next()) {
-        var text = "" + gr.text;
+    while (kbGR.next()) {
+        var text = "" + kbGR.text;
 		var toMD = new aiabHtmlToMarkdown();
 		var markdown = toMD.convert(text);
         articles.push({
             number: "" + gr.number,
-			link: gs.getProperty('instance_name') + '.service-now.com/kb_view.do?sys_kb_id=' + gr.getValue('sys_id'),
+			link: "/kb_view.do?sys_kb_id=" + gr.getValue('sys_id'),
             title: "" + gr.short_description,
             category: gr.getDisplayValue("kb_category"),
             views: "" + gr.sys_view_count,
