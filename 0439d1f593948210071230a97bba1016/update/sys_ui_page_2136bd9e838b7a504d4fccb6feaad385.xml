@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_page">
+    <sys_ui_page action="INSERT_OR_UPDATE">
+        <category>general</category>
+        <client_script/>
+        <description>Setup wizard for AI In A Box tool calling authentication</description>
+        <direct>true</direct>
+        <endpoint/>
+        <html><![CDATA[<?xml version="1.0" encoding="utf-8" ?>
+<j:jelly trim="false" xmlns:j="jelly:core" xmlns:g="glide" xmlns:j2="null" xmlns:g2="null">
+<style>
+.setup-container { max-width: 600px; margin: 40px auto; padding: 30px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+.setup-header { text-align: center; margin-bottom: 30px; }
+.setup-header h2 { margin: 0 0 10px 0; color: #24292f; font-size: 24px; }
+.setup-header p { margin: 0; color: #57606a; font-size: 14px; }
+.status-card { background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+.status-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e1e4e8; }
+.status-item:last-child { border-bottom: none; }
+.status-label { display: flex; align-items: center; gap: 10px; font-size: 14px; color: #24292f; }
+.status-icon { font-size: 18px; width: 24px; text-align: center; }
+.status-icon.success { color: #1a7f37; }
+.status-icon.warning { color: #9a6700; }
+.status-icon.error { color: #cf222e; }
+.status-badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+.status-badge.success { background: #dafbe1; color: #1a7f37; }
+.status-badge.warning { background: #fff8c5; color: #9a6700; }
+.status-badge.error { background: #ffebe9; color: #cf222e; }
+.action-area { text-align: center; margin-top: 30px; }
+.btn { padding: 12px 24px; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s; }
+.btn-primary { background: #1f6feb; color: white; }
+.btn-primary:hover { background: #1558d6; }
+.btn-secondary { background: #f6f8fa; color: #24292f; border: 1px solid #d0d7de; margin-left: 10px; }
+.btn-secondary:hover { background: #f3f4f6; }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.loading { display: none; margin-top: 20px; text-align: center; }
+.spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #e1e4e8; border-top-color: #1f6feb; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.result { display: none; margin-top: 20px; padding: 15px; border-radius: 6px; text-align: center; }
+.result.success { background: #dafbe1; color: #1a7f37; border: 1px solid #a7e9b3; }
+.result.error { background: #ffebe9; color: #cf222e; border: 1px solid #ffdcd7; }
+.result.warning { background: #fff8c5; color: #9a6700; border: 1px solid #f1e05a; }
+.docs-link { display: block; text-align: center; margin-top: 20px; color: #57606a; font-size: 13px; }
+.docs-link a { color: #0969da; text-decoration: none; }
+.docs-link a:hover { text-decoration: underline; }
+</style>
+
+<div class="setup-container">
+<div class="setup-header">
+<h2>Configure Tool Calling</h2>
+<p>Set up authentication for AI tool execution</p>
+</div>
+
+<div class="status-card" id="status-card">
+<div class="status-item">
+<div class="status-label">
+<span class="status-icon" id="user-icon">&#9203;</span>
+<span>Service Account (aiab_service)</span>
+</div>
+<span class="status-badge" id="user-badge">Checking...</span>
+</div>
+<div class="status-item">
+<div class="status-label">
+<span class="status-icon" id="role-icon">&#9203;</span>
+<span>Admin Role</span>
+</div>
+<span class="status-badge" id="role-badge">Checking...</span>
+</div>
+<div class="status-item">
+<div class="status-label">
+<span class="status-icon" id="prop-icon">&#9203;</span>
+<span>Callback Authentication</span>
+</div>
+<span class="status-badge" id="prop-badge">Checking...</span>
+</div>
+</div>
+
+<div class="action-area" id="action-area">
+<button class="btn btn-primary" id="setup-btn" onclick="runSetup()" style="display:none;">
+Configure Tool Calling
+</button>
+<button class="btn btn-secondary" id="recreate-btn" onclick="confirmRecreate()" style="display:none;">
+Recreate Account
+</button>
+</div>
+
+<div class="loading" id="loading">
+<div class="spinner"></div>
+<p style="margin-top: 10px; color: #57606a; font-size: 13px;">Configuring...</p>
+</div>
+
+<div class="result" id="result"></div>
+
+<div class="docs-link">
+<a href="#" target="_blank">View Documentation</a>
+</div>
+</div>
+
+<script>
+var currentStatus = {};
+
+function checkStatus() {
+var ga = new GlideAjax('global.SetupToolCallingAIAB');
+ga.addParam('sysparm_name', 'getStatus');
+ga.getXMLAnswer(function(response) {
+try {
+currentStatus = JSON.parse(response);
+updateUI(currentStatus);
+} catch(e) {
+console.error('Error parsing status', e);
+}
+});
+}
+
+function updateUI(status) {
+// User status
+if (status.userExists) {
+document.getElementById('user-icon').innerHTML = '&#9989;';
+document.getElementById('user-icon').className = 'status-icon success';
+document.getElementById('user-badge').innerHTML = 'Exists';
+document.getElementById('user-badge').className = 'status-badge success';
+} else {
+document.getElementById('user-icon').innerHTML = '&#10060;';
+document.getElementById('user-icon').className = 'status-icon error';
+document.getElementById('user-badge').innerHTML = 'Not Found';
+document.getElementById('user-badge').className = 'status-badge error';
+}
+
+// Role status
+if (status.userHasAdminRole) {
+document.getElementById('role-icon').innerHTML = '&#9989;';
+document.getElementById('role-icon').className = 'status-icon success';
+document.getElementById('role-badge').innerHTML = 'Granted';
+document.getElementById('role-badge').className = 'status-badge success';
+} else if (status.userExists) {
+document.getElementById('role-icon').innerHTML = '&#9888;';
+document.getElementById('role-icon').className = 'status-icon warning';
+document.getElementById('role-badge').innerHTML = 'Missing';
+document.getElementById('role-badge').className = 'status-badge warning';
+} else {
+document.getElementById('role-icon').innerHTML = '&#9203;';
+document.getElementById('role-badge').innerHTML = 'Pending';
+document.getElementById('role-badge').className = 'status-badge warning';
+}
+
+// Property status
+if (status.propertyValid) {
+document.getElementById('prop-icon').innerHTML = '&#9989;';
+document.getElementById('prop-icon').className = 'status-icon success';
+document.getElementById('prop-badge').innerHTML = 'Configured';
+document.getElementById('prop-badge').className = 'status-badge success';
+} else if (status.propertySet) {
+document.getElementById('prop-icon').innerHTML = '&#9888;';
+document.getElementById('prop-icon').className = 'status-icon warning';
+document.getElementById('prop-badge').innerHTML = 'Invalid Format';
+document.getElementById('prop-badge').className = 'status-badge warning';
+} else {
+document.getElementById('prop-icon').innerHTML = '&#10060;';
+document.getElementById('prop-icon').className = 'status-icon error';
+document.getElementById('prop-badge').innerHTML = 'Not Set';
+document.getElementById('prop-badge').className = 'status-badge error';
+}
+
+// Show appropriate buttons
+if (status.canSetup) {
+if (status.userExists && (!status.userHasAdminRole || !status.propertyValid)) {
+document.getElementById('setup-btn').style.display = 'inline-block';
+document.getElementById('setup-btn').innerHTML = 'Fix Configuration';
+document.getElementById('recreate-btn').style.display = 'inline-block';
+} else {
+document.getElementById('setup-btn').style.display = 'inline-block';
+document.getElementById('setup-btn').innerHTML = 'Configure Tool Calling';
+document.getElementById('recreate-btn').style.display = 'none';
+}
+} else {
+document.getElementById('setup-btn').style.display = 'none';
+document.getElementById('recreate-btn').style.display = 'inline-block';
+document.getElementById('recreate-btn').innerHTML = 'Recreate Account';
+}
+}
+
+function runSetup() {
+document.getElementById('loading').style.display = 'block';
+document.getElementById('result').style.display = 'none';
+document.getElementById('setup-btn').disabled = true;
+document.getElementById('recreate-btn').disabled = true;
+
+var ga = new GlideAjax('global.SetupToolCallingAIAB');
+ga.addParam('sysparm_name', 'setup');
+ga.getXMLAnswer(function(response) {
+document.getElementById('loading').style.display = 'none';
+document.getElementById('setup-btn').disabled = false;
+document.getElementById('recreate-btn').disabled = false;
+
+try {
+var result = JSON.parse(response);
+var resultDiv = document.getElementById('result');
+resultDiv.style.display = 'block';
+
+if (result.success) {
+var html = '<strong>&#9989; ' + result.message + '</strong><br><br>';
+html += 'Service account: <b>' + (result.action === 'created' ? 'Created' : 'Updated') + '</b><br>';
+html += 'Callback auth: <b>Configured</b><br>';
+if (result.testPassed) {
+html += 'Connection test: <b>Passed</b>';
+resultDiv.className = 'result success';
+} else {
+html += 'Connection test: <b>Failed - ' + (result.testMessage || 'Unknown error') + '</b>';
+resultDiv.className = 'result warning';
+}
+resultDiv.innerHTML = html;
+} else {
+resultDiv.className = 'result error';
+resultDiv.innerHTML = '<strong>&#10060; Setup Failed</strong><br>' + result.message;
+}
+
+// Refresh status after a delay
+setTimeout(checkStatus, 2000);
+} catch(e) {
+console.error('Error parsing result', e);
+}
+});
+}
+
+function confirmRecreate() {
+if (confirm('The service account "aiab_service" already exists.\n\nRecreating will delete the existing user and create a new one with a new password. This may break any existing integrations using this account.\n\nDo you want to proceed?')) {
+document.getElementById('loading').style.display = 'block';
+document.getElementById('result').style.display = 'none';
+document.getElementById('setup-btn').disabled = true;
+document.getElementById('recreate-btn').disabled = true;
+
+var ga = new GlideAjax('global.SetupToolCallingAIAB');
+ga.addParam('sysparm_name', 'recreate');
+ga.getXMLAnswer(function(response) {
+document.getElementById('loading').style.display = 'none';
+document.getElementById('setup-btn').disabled = false;
+document.getElementById('recreate-btn').disabled = false;
+
+try {
+var result = JSON.parse(response);
+var resultDiv = document.getElementById('result');
+resultDiv.style.display = 'block';
+
+if (result.success) {
+resultDiv.className = 'result success';
+resultDiv.innerHTML = '<strong>&#9989; Account Recreated Successfully</strong><br><br>Service account has been deleted and recreated with new credentials.';
+} else {
+resultDiv.className = 'result error';
+resultDiv.innerHTML = '<strong>&#10060; Recreate Failed</strong><br>' + result.message;
+}
+
+setTimeout(checkStatus, 2000);
+} catch(e) {
+console.error('Error parsing result', e);
+}
+});
+}
+}
+
+// Initial status check
+checkStatus();
+</script>
+</j:jelly>]]></html>
+        <name>aiab_setup_tool_calling</name>
+        <processing_script/>
+        <sys_class_name>sys_ui_page</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-02-16 04:32:19</sys_created_on>
+        <sys_id>2136bd9e838b7a504d4fccb6feaad385</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>aiab_setup_tool_calling</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_ui_page_2136bd9e838b7a504d4fccb6feaad385</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-16 04:32:19</sys_updated_on>
+    </sys_ui_page>
+</record_update>

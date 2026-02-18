@@ -1,41 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?><record_update>
-    <sys_dictionary action="INSERT_OR_UPDATE" element="u_target" table="u_ai_inference">
+    <sys_dictionary action="INSERT_OR_UPDATE" element="sequence" table="u_ai_inferenceu_tools_included">
         <active>true</active>
         <array>false</array>
-        <attributes>edge_encryption_enabled=true</attributes>
+        <attributes/>
         <audit>false</audit>
-        <calculation><![CDATA[(function calculatedFieldValue(current) {
-
-	// Add your code here
-	return '';  // return the calculated value
-
-})(current);]]></calculation>
-        <choice/>
+        <calculation/>
+        <choice>0</choice>
         <choice_field/>
         <choice_table/>
-        <column_label>Target</column_label>
+        <column_label>Sequence</column_label>
         <comments/>
         <create_roles/>
         <default_value/>
         <defaultsort/>
         <delete_roles/>
-        <dependent>u_table</dependent>
-        <dependent_on_field>u_table</dependent_on_field>
+        <dependent/>
+        <dependent_on_field/>
         <display>false</display>
         <dynamic_creation>false</dynamic_creation>
         <dynamic_creation_script/>
         <dynamic_default_value/>
         <dynamic_ref_qual/>
-        <element>u_target</element>
+        <element>sequence</element>
         <element_reference>false</element_reference>
         <foreign_database/>
         <formula/>
         <function_definition/>
         <function_field>false</function_field>
-        <internal_type display_value="">document_id</internal_type>
+        <internal_type display_value="Integer">integer</internal_type>
         <mandatory>false</mandatory>
-        <max_length>32</max_length>
-        <name>u_ai_inference</name>
+        <max_length>0</max_length>
+        <name>u_ai_inferenceu_tools_included</name>
         <next_element/>
         <primary>false</primary>
         <read_only>false</read_only>
@@ -51,25 +46,39 @@
         <staged>false</staged>
         <sys_class_name>sys_dictionary</sys_class_name>
         <sys_created_by>admin</sys_created_by>
-        <sys_created_on>2024-06-22 02:47:48</sys_created_on>
-        <sys_id>63f2ecb293fa2210e1bd7fbcebba10fc</sys_id>
-        <sys_name>Target</sys_name>
+        <sys_created_on>2026-02-13 07:09:48</sys_created_on>
+        <sys_id>177d3a51830bb2504d4fccb6feaad301</sys_id>
+        <sys_name>Sequence</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
-        <sys_update_name>sys_dictionary_u_ai_inference_u_target</sys_update_name>
-        <sys_updated_by>aiinaboxadmin</sys_updated_by>
-        <sys_updated_on>2024-12-23 22:40:27</sys_updated_on>
+        <sys_update_name>sys_dictionary_u_ai_inferenceu_tools_included_sequence</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-13 07:09:48</sys_updated_on>
         <table_reference>false</table_reference>
         <text_index>false</text_index>
         <unique>false</unique>
-        <use_dependent_field>true</use_dependent_field>
+        <use_dependent_field>false</use_dependent_field>
         <use_dynamic_default>false</use_dynamic_default>
         <use_reference_qualifier>simple</use_reference_qualifier>
         <virtual>false</virtual>
-        <virtual_type>script</virtual_type>
+        <virtual_type/>
         <widget/>
         <write_roles/>
         <xml_view>false</xml_view>
     </sys_dictionary>
+    <sys_claim action="INSERT_OR_UPDATE">
+        <claim_owner_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</claim_owner_scope>
+        <claim_timestamp>19c5619c1b00000001</claim_timestamp>
+        <metadata_update_name>sys_dictionary_u_ai_inferenceu_tools_included_sequence</metadata_update_name>
+        <previous_claim_app_version>3.1.2</previous_claim_app_version>
+        <previous_claim_name>AI in a Box</previous_claim_name>
+        <previous_claim_scope>0439d1f593948210071230a97bba1016</previous_claim_scope>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-02-13 08:24:14</sys_created_on>
+        <sys_id>e58e4359838bb2504d4fccb6feaad3e7</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-02-13 08:24:14</sys_updated_on>
+    </sys_claim>
 </record_update>

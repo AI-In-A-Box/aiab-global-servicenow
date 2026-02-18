@@ -11,14 +11,14 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2025-01-11 08:42:03</sys_created_on>
         <sys_id>c0d9211dc383121062e43cec050131f8</sys_id>
-        <sys_mod_count>6</sys_mod_count>
+        <sys_mod_count>8</sys_mod_count>
         <sys_name>ai_in_a_box.feature.chat.enabled</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_properties_c0d9211dc383121062e43cec050131f8</sys_update_name>
-        <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-22 17:07:47</sys_updated_on>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-01-22 23:48:05</sys_updated_on>
         <type>boolean</type>
         <value>true</value>
         <write_roles/>
