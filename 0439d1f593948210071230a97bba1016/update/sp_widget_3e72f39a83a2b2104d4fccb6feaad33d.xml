@@ -14,8 +14,20 @@
   c.currentInferenceId = null;
   c.watcherChannel = null;
   c.showHistoryMenu = false;
+  c.showToolsPanel = false;
   c.isViewingHistory = false;
   c.previousChats = c.data.previousChats || [];
+  
+  // Tools
+  c.availableTools = c.data.availableTools || [];
+  c.allToolsEnabled = true;
+  
+  // Initialize tools with enabled state
+  c.availableTools.forEach(function(tool) {
+    if (tool.enabled === undefined) {
+      tool.enabled = true;
+    }
+  });
   
   // Get URL params
   var urlParams = $location.search();
@@ -35,6 +47,7 @@
   c.toggleChat = function() {
     c.isOpen = !c.isOpen;
     c.showHistoryMenu = false;
+    c.showToolsPanel = false;
     c.notifyParent();
   };
   
@@ -55,6 +68,33 @@
   c.unsnooze = function() {
     c.isSnoozed = false;
     c.notifyParent();
+  };
+  
+  // Get enabled tools
+  c.getEnabledTools = function() {
+    return c.availableTools.filter(function(tool) {
+      return tool.enabled;
+    });
+  };
+  
+  // Toggle all tools
+  c.toggleAllTools = function() {
+    c.availableTools.forEach(function(tool) {
+      tool.enabled = c.allToolsEnabled;
+    });
+  };
+  
+  // Format JSON for display
+  c.formatJson = function(data) {
+    if (!data) return '';
+    try {
+      if (typeof data === 'string') {
+        return JSON.stringify(JSON.parse(data), null, 2);
+      }
+      return JSON.stringify(data, null, 2);
+    } catch (e) {
+      return String(data);
+    }
   };
   
   // Notify parent frame about state changes (for iframe resizing)
@@ -178,12 +218,14 @@
     c.scrollToBottom();
     
     var conversationHistory = c.getConversationHistory();
+    var enabledTools = c.getEnabledTools();
     
     c.server.get({
       action: 'createChat',
       conversation: JSON.stringify(conversationHistory),
       recordTable: c.recordTable,
-      recordSysId: c.recordSysId
+      recordSysId: c.recordSysId,
+      tools: enabledTools.length > 0 ? JSON.stringify(enabledTools) : null
     }).then(function(response) {
       if (response.data.success) {
         c.currentInferenceId = response.data.inferenceId;
@@ -230,10 +272,23 @@
         var record = message.data && message.data.record ? message.data.record : null;
         if (!record) return;
         
+        // Update response content
         if (record.u_response) {
           var responseValue = record.u_response.value !== undefined ? record.u_response.value : record.u_response;
           c.messages[c.messages.length - 1].content = responseValue;
           c.scrollToBottom();
+        }
+        
+        // Handle tool calls
+        if (record.u_tool_calls) {
+          try {
+            var toolCalls = typeof record.u_tool_calls === 'string' ? JSON.parse(record.u_tool_calls) : record.u_tool_calls;
+            if (toolCalls && toolCalls.length > 0) {
+              c.messages[c.messages.length - 1].tool_calls = toolCalls;
+            }
+          } catch (e) {
+            console.error('Failed to parse tool calls:', e);
+          }
         }
         
         var stateValue = record.u_state ? (record.u_state.value !== undefined ? record.u_state.value : record.u_state) : null;
@@ -259,6 +314,17 @@
       c.server.get({ action: 'getInference', inferenceId: inferenceId }).then(function(response) {
         if (response.data.success) {
           c.messages[c.messages.length - 1].content = response.data.response || '';
+          
+          // Handle tool calls in polling
+          if (response.data.tool_calls) {
+            try {
+              var toolCalls = typeof response.data.tool_calls === 'string' ? JSON.parse(response.data.tool_calls) : response.data.tool_calls;
+              if (toolCalls && toolCalls.length > 0) {
+                c.messages[c.messages.length - 1].tool_calls = toolCalls;
+              }
+            } catch (e) {}
+          }
+          
           c.scrollToBottom();
           if (response.data.state === 'finished' || response.data.state === 'cancelled') {
             c.isLoading = false;
@@ -302,7 +368,7 @@
   $scope.$on('$destroy', function() { c.unsubscribe(); });
 };]]></client_script>
         <controller_as>c</controller_as>
-        <css>/* AIAB Chat Widget */
+        <css>/* AIAB Chat Widget - Enhanced with Tools Support */
 .aiab-chat-container {
   --aiab-primary: #1f6feb;
   --aiab-primary-hover: #1558d6;
@@ -435,9 +501,231 @@
   color: var(--aiab-text);
 }
 
+.aiab-tools-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.aiab-tools-count {
+  font-size: 10px;
+  background: var(--aiab-primary);
+  color: white;
+  padding: 2px 5px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
 .aiab-chat-close {
   font-size: 24px;
   font-weight: 300;
+}
+
+/* Tools Panel */
+.aiab-tools-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 280px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--aiab-bg);
+  border: 1px solid var(--aiab-border);
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  z-index: 100;
+}
+
+.aiab-tools-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--aiab-assistant-bg);
+  border-bottom: 1px solid var(--aiab-border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--aiab-muted);
+  text-transform: uppercase;
+}
+
+.aiab-tools-toggle-all {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.aiab-tools-list {
+  padding: 4px;
+}
+
+.aiab-tool-item {
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.aiab-tool-item:hover {
+  background: var(--aiab-assistant-bg);
+}
+
+.aiab-tool-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.aiab-tool-checkbox {
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.aiab-tool-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.aiab-tool-summary {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
+  font-size: 13px;
+  padding: 4px 0;
+}
+
+.aiab-tool-summary::-webkit-details-marker {
+  display: none;
+}
+
+.aiab-tool-summary::before {
+  content: '▶';
+  font-size: 8px;
+  color: var(--aiab-muted);
+  margin-right: 6px;
+  transition: transform 0.2s ease;
+}
+
+.aiab-tool-details[open] .aiab-tool-summary::before {
+  transform: rotate(90deg);
+}
+
+.aiab-tool-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--aiab-text);
+}
+
+.aiab-tool-description {
+  font-size: 11px;
+  color: var(--aiab-muted);
+  line-height: 1.4;
+  padding: 4px 0 4px 14px;
+  margin-left: 2px;
+  border-left: 2px solid var(--aiab-border);
+}
+
+/* Tool Calls in Messages */
+.aiab-tool-calls {
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+.aiab-tool-calls-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #e65100;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.aiab-tool-call-card {
+  background: #fff3e0;
+  border: 1px solid #ffcc80;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.aiab-tool-call-card summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 13px;
+}
+
+.aiab-tool-call-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.aiab-tool-call-icon {
+  font-size: 14px;
+}
+
+.aiab-tool-call-name {
+  font-weight: 600;
+  color: #e65100;
+  flex: 1;
+}
+
+.aiab-tool-call-status {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.aiab-tool-call-success {
+  color: #2e7d32;
+}
+
+.aiab-tool-call-pending {
+  color: var(--aiab-muted);
+}
+
+.aiab-tool-call-details {
+  padding: 0 12px 12px 12px;
+  background: #fffaf5;
+  border-top: 1px solid #ffcc80;
+}
+
+.aiab-tool-call-section {
+  margin-top: 10px;
+}
+
+.aiab-tool-call-section-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--aiab-muted);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.aiab-tool-call-code {
+  background: #fafafa;
+  border: 1px solid var(--aiab-border);
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 11px;
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.aiab-tool-call-result {
+  background: #e8f5e9;
+  border-color: #c8e6c9;
 }
 
 /* History Menu */
@@ -528,6 +816,7 @@
 .aiab-chat-message {
   display: flex;
   max-width: 85%;
+  flex-direction: column;
 }
 
 .aiab-chat-message--user {
@@ -627,7 +916,41 @@
   border-color: var(--aiab-primary);
 }
 
-.aiab-chat-send,
+/* Send button - blue */
+.aiab-chat-send {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--aiab-primary);
+  color: white;
+  transition: background 0.2s ease;
+}
+
+.aiab-chat-send:hover {
+  background: var(--aiab-primary-hover);
+}
+
+/* Close button (red) - when input is empty */
+.aiab-chat-close-text {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--aiab-danger);
+  color: white;
+  transition: background 0.2s ease;
+}
+
+.aiab-chat-close-text:hover {
+  background: #c82333;
+}
+
+/* Stop button (yellow) - when loading */
 .aiab-chat-stop {
   padding: 10px 16px;
   border: none;
@@ -635,25 +958,13 @@
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+  background: #ffc107;
+  color: #212529;
+  transition: background 0.2s ease;
 }
 
-.aiab-chat-send {
-  background: var(--aiab-primary);
-  color: white;
-}
-
-.aiab-chat-send:hover:not(:disabled) {
-  background: var(--aiab-primary-hover);
-}
-
-.aiab-chat-send:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.aiab-chat-stop {
-  background: var(--aiab-danger);
-  color: white;
+.aiab-chat-stop:hover {
+  background: #e0a800;
 }</css>
         <data_table>sp_instance</data_table>
         <demo_data>false</demo_data>
@@ -700,6 +1011,27 @@
       } else {
         data.recordDisplay = gr.getDisplayValue();
       }
+    }
+  }
+  
+  // Load available tools
+  data.availableTools = [];
+  var toolGR = new GlideRecord('u_ai_tool');
+  toolGR.addQuery('u_active', 'true');
+  toolGR.orderBy('u_name');
+  toolGR.query();
+  while (toolGR.next()) {
+    try {
+      var params = toolGR.getValue('u_parameters');
+      data.availableTools.push({
+        sys_id: toolGR.getValue('sys_id'),
+        name: toolGR.getValue('u_name'),
+        description: toolGR.getValue('u_description'),
+        parameters: params ? JSON.parse(params) : {},
+        enabled: true
+      });
+    } catch (e) {
+      gs.error('AIAB Chat: Failed to load tool ' + toolGR.getValue('u_name') + ': ' + e.message);
     }
   }
   
@@ -776,6 +1108,18 @@
             // Store record reference on inference
             inference.setValue('u_table', recordTable);
             inference.setValue('u_target', recordSysId);
+          }
+          
+          // Store tools if provided
+          if (input.tools) {
+            try {
+              var tools = JSON.parse(input.tools);
+              if (tools && tools.length > 0) {
+                inference.setValue('u_tools_included', tools.map(function(t) { return t.sys_id; }).join(','));
+              }
+            } catch (e) {
+              gs.error('AIAB Chat: Failed to parse tools: ' + e.message);
+            }
           }
           
           // Single system message with all context
@@ -889,6 +1233,7 @@
             data.success = true;
             data.response = getGR.getValue('u_response');
             data.state = getGR.getValue('u_state');
+            data.tool_calls = getGR.getValue('u_tool_calls');
           } else {
             data.success = false;
             data.error = 'Inference not found';
@@ -1082,14 +1427,14 @@
         <sys_created_by>opencode</sys_created_by>
         <sys_created_on>2026-01-22 17:03:51</sys_created_on>
         <sys_id>3e72f39a83a2b2104d4fccb6feaad33d</sys_id>
-        <sys_mod_count>35</sys_mod_count>
+        <sys_mod_count>48</sys_mod_count>
         <sys_name>AIAB Chat</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sp_widget_3e72f39a83a2b2104d4fccb6feaad33d</sys_update_name>
         <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-01-22 23:37:36</sys_updated_on>
+        <sys_updated_on>2026-02-20 08:20:51</sys_updated_on>
         <template><![CDATA[<div class="aiab-chat-container" ng-if="data.chatEnabled" ng-class="{'aiab-chat-wide': c.isWide, 'aiab-chat-snoozed': c.isSnoozed}">
   <!-- Floating Chat Button -->
   <button class="aiab-chat-button" ng-click="c.toggleChat()" ng-hide="c.isOpen || c.isSnoozed" title="Chat with AI Assistant">
@@ -1108,6 +1453,11 @@
     <div class="aiab-chat-header">
       <h5 class="aiab-chat-title">{{c.options.title || 'AI Assistant'}}</h5>
       <div class="aiab-chat-header-buttons">
+        <!-- Tools button with count -->
+        <button class="aiab-chat-btn aiab-tools-btn" ng-if="c.availableTools.length > 0" ng-click="c.showToolsPanel = !c.showToolsPanel" title="Tools available - click to configure">
+          <span>]]>🔧<![CDATA[</span>
+          <span class="aiab-tools-count">({{c.getEnabledTools().length}}/{{c.availableTools.length}})</span>
+        </button>
         <!-- History button -->
         <button class="aiab-chat-btn" ng-if="c.previousChats.length > 0" ng-click="c.showHistoryMenu = !c.showHistoryMenu" title="Previous conversations">
           <span>]]>📜<![CDATA[</span>
@@ -1125,13 +1475,34 @@
         <button class="aiab-chat-btn" ng-click="c.snooze()" title="Hide for now">
           <span>]]>🔕<![CDATA[</span>
         </button>
-        <!-- Close button -->
-        <button class="aiab-chat-btn aiab-chat-close" ng-click="c.toggleChat()" title="Close">
-          <span>×</span>
-        </button>
+      </div>
+      <!-- Tools panel dropdown -->
+      <div class="aiab-tools-panel" ng-show="c.showToolsPanel" click-outside="c.showToolsPanel = false">
+        <div class="aiab-tools-header">
+          <span>Available Tools</span>
+          <label class="aiab-tools-toggle-all">
+            <input type="checkbox" ng-model="c.allToolsEnabled" ng-change="c.toggleAllTools()">
+            <span>All</span>
+          </label>
+        </div>
+        <div class="aiab-tools-list">
+          <div ng-repeat="tool in c.availableTools" class="aiab-tool-item">
+            <div class="aiab-tool-header">
+              <input type="checkbox" ng-model="tool.enabled" class="aiab-tool-checkbox">
+              <details class="aiab-tool-details">
+                <summary class="aiab-tool-summary">
+                  <span class="aiab-tool-name">{{tool.name}}</span>
+                </summary>
+                <div class="aiab-tool-description" ng-if="tool.description">
+                  {{tool.description}}
+                </div>
+              </details>
+            </div>
+          </div>
+        </div>
       </div>
       <!-- History dropdown menu -->
-      <div class="aiab-history-menu" ng-show="c.showHistoryMenu">
+      <div class="aiab-history-menu" ng-show="c.showHistoryMenu" click-outside="c.showHistoryMenu = false">
         <div class="aiab-history-header">Previous Conversations</div>
         <button ng-repeat="chat in c.previousChats" ng-click="c.loadConversation(chat.sys_id)" title="{{chat.created}}">
           <span class="aiab-history-preview">{{chat.preview}}</span>
@@ -1152,7 +1523,34 @@
       <div ng-repeat="msg in c.messages track by $index" 
            class="aiab-chat-message" 
            ng-class="{'aiab-chat-message--user': msg.role === 'user', 'aiab-chat-message--assistant': msg.role === 'assistant'}">
-        <div class="aiab-chat-bubble" ng-bind-html="c.renderMessage(msg.content)"></div>
+        <!-- Tool calls display -->
+        <div ng-if="msg.tool_calls" class="aiab-tool-calls">
+          <div class="aiab-tool-calls-label">
+            <span>]]>🔧<![CDATA[</span>
+            <span>Tool Calls ({{msg.tool_calls.length}})</span>
+          </div>
+          <details ng-repeat="tc in msg.tool_calls" class="aiab-tool-call-card">
+            <summary>
+              <span class="aiab-tool-call-icon">⚙️</span>
+              <span class="aiab-tool-call-name">{{tc.name}}</span>
+              <span class="aiab-tool-call-status" ng-class="{'aiab-tool-call-success': tc.result, 'aiab-tool-call-pending': !tc.result}">
+                {{tc.result ? '✓' : '...'}}
+              </span>
+            </summary>
+            <div class="aiab-tool-call-details">
+              <div class="aiab-tool-call-section">
+                <div class="aiab-tool-call-section-title">Arguments</div>
+                <pre class="aiab-tool-call-code">{{c.formatJson(tc.arguments)}}</pre>
+              </div>
+              <div class="aiab-tool-call-section" ng-if="tc.result">
+                <div class="aiab-tool-call-section-title">Result</div>
+                <pre class="aiab-tool-call-code aiab-tool-call-result">{{c.formatJson(tc.result)}}</pre>
+              </div>
+            </div>
+          </details>
+        </div>
+        <!-- Regular message content -->
+        <div class="aiab-chat-bubble" ng-if="msg.content" ng-bind-html="c.renderMessage(msg.content)"></div>
       </div>
       <div ng-if="c.isLoading" class="aiab-chat-message aiab-chat-message--assistant">
         <div class="aiab-chat-bubble aiab-chat-loading">
@@ -1171,12 +1569,19 @@
              ng-keypress="c.handleKeypress($event)"
              placeholder="{{c.isViewingHistory ? 'Continue this conversation...' : (c.options.placeholder || 'Type a message...')}}"
              ng-disabled="c.isLoading" />
+      <!-- Show Send button when there's text and not loading -->
       <button class="aiab-chat-send" 
               ng-click="c.sendMessage()" 
-              ng-hide="c.isLoading"
-              ng-disabled="!c.userInput">
+              ng-show="!c.isLoading && c.userInput && c.userInput.trim() !== ''">
         Send
       </button>
+      <!-- Show Close button (red) when empty and not loading -->
+      <button class="aiab-chat-close-text" 
+              ng-click="c.toggleChat()" 
+              ng-show="!c.isLoading && (!c.userInput || c.userInput.trim() === '')">
+        Close
+      </button>
+      <!-- Show Stop button (yellow) when loading -->
       <button class="aiab-chat-stop" 
               ng-click="c.stopGeneration()" 
               ng-show="c.isLoading">

@@ -28,7 +28,7 @@
     
     // Size constants
     var BUTTON_WIDTH = '140px';
-    var BUTTON_HEIGHT = '60px';
+    var BUTTON_HEIGHT = '80px'; /* Fixed: was 60px, now 80px */
     var NORMAL_WIDTH = '420px';
     var NORMAL_HEIGHT = '560px';
     var WIDE_WIDTH = '640px';
@@ -40,9 +40,23 @@
     var iframe = top.document.createElement('iframe');
     iframe.id = 'aiab-chat-iframe';
     iframe.src = src;
-    // Key fix: Start with button size, position at bottom-right, use pointer-events:auto only when needed
-    iframe.style.cssText = 'position:fixed;bottom:20px;right:20px;width:' + BUTTON_WIDTH + ';height:' + BUTTON_HEIGHT + ';border:none;z-index:10000;background:transparent;pointer-events:auto;transition:width 0.2s,height 0.2s;';
+    
+    // FIXED CSS - ensure proper sizing and visibility
+    iframe.style.cssText = 
+      'position:fixed;' +
+      'bottom:20px;' +
+      'right:20px;' +
+      'width:' + BUTTON_WIDTH + ';' +
+      'height:' + BUTTON_HEIGHT + ';' +
+      'border:none;' +
+      'z-index:2147483647;' +
+      'background:transparent;' +
+      'pointer-events:auto;' +
+      'transition:all 0.3s ease;' +
+      'overflow:hidden;';
+    
     iframe.setAttribute('allowtransparency', 'true');
+    iframe.setAttribute('scrolling', 'no');
     
     top.document.body.appendChild(iframe);
     console.log('AIAB Chat Injector: Iframe injected');
@@ -66,7 +80,7 @@
         // Open - full dialog, positioned from bottom-right corner
         if (event.data.isWide) {
           chatIframe.style.width = WIDE_WIDTH;
-          chatIframe.style.height = WIDE_HEIGHT;
+        chatIframe.style.height = WIDE_HEIGHT;
         } else {
           chatIframe.style.width = NORMAL_WIDTH;
           chatIframe.style.height = NORMAL_HEIGHT;
@@ -92,7 +106,7 @@
         <sys_domain>global</sys_domain>
         <sys_domain_path>/</sys_domain_path>
         <sys_id>775a45e283aeb2104d4fccb6feaad3cb</sys_id>
-        <sys_mod_count>9</sys_mod_count>
+        <sys_mod_count>13</sys_mod_count>
         <sys_name>AIAB Chat Injector</sys_name>
         <sys_overrides/>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
@@ -100,7 +114,7 @@
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_script_client_775a45e283aeb2104d4fccb6feaad3cb</sys_update_name>
         <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-02-13 07:34:46</sys_updated_on>
+        <sys_updated_on>2026-02-20 07:37:18</sys_updated_on>
         <table>task</table>
         <type>onLoad</type>
         <ui_type>0</ui_type>
