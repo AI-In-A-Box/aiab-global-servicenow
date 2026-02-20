@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="9d586a7f93b28210d2d070918bba1030" label="AI Inference" max_length="40" name="u_ai_inference" type="collection">
+        <element attributes="array=denormalized,edge_encryption_enabled=true,no_sort=true,slushbucket_ref_no_expand=true" label="Tools Included" max_length="1024" name="u_tools_included" reference="u_ai_tool" type="glide_list"/>
+        <element attributes="edge_encryption_enabled=true" choice="1" default="new" label="State" max_length="40" name="u_state" type="string">
+            <choice>
+                <element inactive_on_update="false" label="Cancelled" sequence="20" value="cancelled"/>
+                <element inactive_on_update="false" label="Requested" sequence="1" value="requested"/>
+                <element inactive_on_update="false" label="New" sequence="0" value="new"/>
+                <element inactive_on_update="false" label="Finished" sequence="10" value="finished"/>
+            </choice>
+        </element>
+        <element comments="JSON array of tool calls and their results" label="Tool Calls" max_length="65536" name="u_tool_calls" type="string"/>
+        <element attributes="edge_encryption_enabled=true" dependent="u_table" dependent_on_field="u_table" label="Target" max_length="32" name="u_target" type="document_id" use_dependent_field="true"/>
+        <element attributes="edge_encryption_enabled=true,encode_utf8=false" default="javascript:gs.getUserID()" dynamic_default_value="90d1921e5f510100a9ad2572f2b477fe" label="Requested By" max_length="32" name="u_requested_by" reference="sys_user" type="reference" use_dynamic_default="true"/>
+        <element label="Response" max_length="4000" name="u_response" type="string"/>
+        <element label="Prompt" max_length="4000" name="u_prompt" type="string"/>
+        <element attributes="edge_encryption_enabled=true" choice="1" default="generic" label="Type" max_length="40" name="u_type" type="string">
+            <choice>
+                <element inactive_on_update="false" label="Generic" sequence="100" value="generic"/>
+                <element inactive_on_update="false" label="Chat" sequence="400" value="chat"/>
+                <element inactive_on_update="false" label="Summarize" sequence="200" value="summarize-simple"/>
+            </choice>
+        </element>
+        <element label="Table" max_length="100" name="u_table" type="string"/>
+        <element attributes="ignore_filter_on_new=true" default="javascript:global.getNextObjNumberPadded();" label="Number" max_length="40" name="u_number" type="string"/>
+        <element attributes="edge_encryption_enabled=true" default="javascript:gs.getProperty('ai_in_a_box.config.server.llm.model');" label="Model" max_length="100" name="u_model" type="string"/>
+        <element attributes="edge_encryption_enabled=true" label="Metadata" max_length="4000" name="u_metadata" type="simple_name_values"/>
+        <index name="index">
+            <element name="u_requested_by"/>
+        </index>
+        <index name="index2">
+            <element name="u_target"/>
+        </index>
+    </element>
+</database>

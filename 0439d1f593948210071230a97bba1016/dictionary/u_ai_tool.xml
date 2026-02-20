@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element attributes="update_synch=true" db_object_id="c3dd9073831e32104d4fccb6feaad3c2" extends="sys_metadata" label="AI Tool Definition" max_length="40" name="u_ai_tool" type="collection">
+        <element attributes="edge_encryption_enabled=true" default="(function(args, userId) {&#13;&#10;    var returnObj = {};&#13;&#10;    if (!args.query) return { error: &quot;query is required&quot; };&#13;&#10;    returnObj.example = true;&#13;&#10;    returnObj.args.query = &quot;Query provided was '&quot; + query + &quot;' please update script to use this tool&quot;;&#13;&#10;    return returnObj;&#13;&#10;})(args, userId);" label="Script" mandatory="true" max_length="4000" name="u_script" type="script"/>
+        <element attributes="edge_encryption_enabled=true" choice="3" default="servicenow" label="Execute In" max_length="40" name="u_execute_in" type="choice">
+            <choice>
+                <element inactive="true" inactive_on_update="true" label="Built-in" sequence="0" value="built-in"/>
+                <element inactive_on_update="false" label="ServiceNow" sequence="0" value="servicenow"/>
+            </choice>
+        </element>
+        <element label="Description" max_length="4000" name="u_description" type="string"/>
+        <element attributes="client_script=false" default="{&#13;&#10;  &quot;type&quot;: &quot;object&quot;,&#13;&#10;  &quot;properties&quot;: {&#13;&#10;    &quot;query&quot;: {&#13;&#10;      &quot;type&quot;: &quot;string&quot;,&#13;&#10;      &quot;description&quot;: &quot;Search text to find in catalog item name or description&quot;&#13;&#10;    },&#13;&#10;    &quot;category&quot;: {&#13;&#10;      &quot;type&quot;: &quot;string&quot;,&#13;&#10;      &quot;description&quot;: &quot;Catalog category name to filter by&quot;&#13;&#10;    },&#13;&#10;    &quot;limit&quot;: {&#13;&#10;      &quot;type&quot;: &quot;integer&quot;,&#13;&#10;      &quot;description&quot;: &quot;Max items to return (default 5, max 10)&quot;&#13;&#10;    }&#13;&#10;  },&#13;&#10;  &quot;required&quot;: []&#13;&#10;}" label="Parameters" mandatory="true" max_length="4000" name="u_parameters" type="string"/>
+        <element display="true" label="Name" max_length="40" name="u_name" type="string"/>
+        <element attributes="edge_encryption_enabled=true" default="true" label="Active" max_length="255" name="u_active" type="boolean"/>
+    </element>
+</database>
