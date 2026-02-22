@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="u_ai_tool">
+    <u_ai_tool action="INSERT_OR_UPDATE">
+        <sys_class_name>u_ai_tool</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-02-22 04:32:40</sys_created_on>
+        <sys_id>dddf6c1883d332106873b7a6feaad30a</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>get_category_metrics</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>u_ai_tool_dddf6c1883d332106873b7a6feaad30a</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-22 04:32:40</sys_updated_on>
+        <u_active>true</u_active>
+        <u_description>Get incident metrics broken down by category to identify high-volume areas and trends</u_description>
+        <u_execute_in>servicenow</u_execute_in>
+        <u_name>get_category_metrics</u_name>
+        <u_parameters>{
+  "type": "object",
+  "properties": {
+    "time_period": {
+      "type": "string",
+      "enum": [
+        "last_7_days",
+        "last_30_days",
+        "last_90_days",
+        "this_month",
+        "last_month"
+      ],
+      "description": "Time period to analyze"
+    },
+    "category": {
+      "type": "string",
+      "description": "Specific category to analyze (optional, if not provided returns all categories)"
+    },
+    "include_subcategories": {
+      "type": "boolean",
+      "description": "Whether to break down by subcategory"
+    },
+    "min_incidents": {
+      "type": "integer",
+      "description": "Minimum number of incidents to include in results (default 1)"
+    }
+  },
+  "required": [
+    "time_period"
+  ]
+}</u_parameters>
+        <u_script><![CDATA[(function(args, userId) {
+    // Validate required fields
+    if (!args.time_period) {
+        return {
+            success: false,
+            error: 'Missing required field: time_period'
+        };
+    }
+    
+    // Calculate date range
+    var now = new GlideDateTime();
+    var startDate = new GlideDateTime();
+    
+    switch(args.time_period) {
+        case 'last_7_days':
+            startDate.addDays(-7);
+            break;
+        case 'last_30_days':
+            startDate.addDays(-30);
+            break;
+        case 'last_90_days':
+            startDate.addDays(-90);
+            break;
+        case 'this_month':
+            startDate.setDayOfMonthLocalTime(1);
+            break;
+        case 'last_month':
+            startDate.addMonths(-1);
+            startDate.setDayOfMonthLocalTime(1);
+            var endOfLastMonth = new GlideDateTime(startDate);
+            endOfLastMonth.addMonths(1);
+            endOfLastMonth.addDays(-1);
+            break;
+        default:
+            startDate.addDays(-30);
+    }
+    
+    // Build query
+    var incGR = new GlideAggregate('incident');
+    incGR.addQuery('sys_created_on', '>=', startDate);
+    if (args.time_period === 'last_month') {
+        incGR.addQuery('sys_created_on', '<=', endOfLastMonth);
+    }
+    
+    if (args.category) {
+        incGR.addQuery('category', args.category);
+    }
+    
+    // Group by category
+    incGR.groupBy('category');
+    if (args.include_subcategories) {
+        incGR.groupBy('subcategory');
+    }
+    
+    incGR.addAggregate('COUNT');
+    incGR.addAggregate('AVG', 'calendar_duration');
+    
+    // Additional aggregates
+    var metrics = {
+        categories: [],
+        total_incidents: 0,
+        time_period: args.time_period,
+        start_date: startDate.getDisplayValue(),
+        end_date: now.getDisplayValue()
+    };
+    
+    incGR.query();
+    
+    while (incGR.next()) {
+        var count = parseInt(incGR.getAggregate('COUNT'));
+        var minCount = args.min_incidents || 1;
+        
+        if (count >= minCount) {
+            var category = incGR.getValue('category') || 'Uncategorized';
+            var subcategory = args.include_subcategories ? (incGR.getValue('subcategory') || 'None') : null;
+            
+            var catData = {
+                category: category,
+                incident_count: count,
+                percentage: 0, // Will calculate after total
+                avg_resolution_time: incGR.getAggregate('AVG', 'calendar_duration')
+            };
+            
+            if (args.include_subcategories) {
+                catData.subcategory = subcategory;
+            }
+            
+            // Get priority breakdown for this category
+            var priorityGR = new GlideAggregate('incident');
+            priorityGR.addQuery('sys_created_on', '>=', startDate);
+            priorityGR.addQuery('category', category);
+            if (args.include_subcategories && subcategory !== 'None') {
+                priorityGR.addQuery('subcategory', subcategory);
+            }
+            priorityGR.groupBy('priority');
+            priorityGR.addAggregate('COUNT');
+            priorityGR.query();
+            
+            var priorityBreakdown = {};
+            while (priorityGR.next()) {
+                var priority = priorityGR.getValue('priority') || 'Unknown';
+                var priorityCount = parseInt(priorityGR.getAggregate('COUNT'));
+                priorityBreakdown[priority] = priorityCount;
+            }
+            catData.priority_breakdown = priorityBreakdown;
+            
+            // Get state breakdown
+            var stateGR = new GlideAggregate('incident');
+            stateGR.addQuery('sys_created_on', '>=', startDate);
+            stateGR.addQuery('category', category);
+            if (args.include_subcategories && subcategory !== 'None') {
+                stateGR.addQuery('subcategory', subcategory);
+            }
+            stateGR.groupBy('state');
+            stateGR.addAggregate('COUNT');
+            stateGR.query();
+            
+            var stateBreakdown = {};
+            while (stateGR.next()) {
+                var state = stateGR.getDisplayValue('state') || 'Unknown';
+                var stateCount = parseInt(stateGR.getAggregate('COUNT'));
+                stateBreakdown[state] = stateCount;
+            }
+            catData.state_breakdown = stateBreakdown;
+            
+            metrics.categories.push(catData);
+            metrics.total_incidents += count;
+        }
+    }
+    
+    // Calculate percentages
+    for (var i = 0; i < metrics.categories.length; i++) {
+        metrics.categories[i].percentage = Math.round((metrics.categories[i].incident_count / metrics.total_incidents) * 100);
+    }
+    
+    // Sort by incident count descending
+    metrics.categories.sort(function(a, b) {
+        return b.incident_count - a.incident_count;
+    });
+    
+    // Add summary insights
+    if (metrics.categories.length > 0) {
+        var topCategory = metrics.categories[0];
+        metrics.insights = {
+            top_category: topCategory.category,
+            top_category_count: topCategory.incident_count,
+            top_category_percentage: topCategory.percentage,
+            category_count: metrics.categories.length,
+            recommendation: topCategory.percentage > 30 ? 
+                'Top category accounts for ' + topCategory.percentage + '% of incidents - consider focused improvement' :
+                'Incident distribution is relatively balanced across categories'
+        };
+    }
+    
+    return {
+        success: true,
+        metrics: metrics
+    };
+})(args, userId);]]></u_script>
+    </u_ai_tool>
+</record_update>

@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="u_ai_tool">
+    <u_ai_tool action="INSERT_OR_UPDATE">
+        <sys_class_name>u_ai_tool</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-02-22 04:32:12</sys_created_on>
+        <sys_id>5ebf681883d332106873b7a6feaad340</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>create_problem</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>u_ai_tool_5ebf681883d332106873b7a6feaad340</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-22 04:32:12</sys_updated_on>
+        <u_active>true</u_active>
+        <u_description>Create a problem record from incident patterns for root cause analysis</u_description>
+        <u_execute_in>servicenow</u_execute_in>
+        <u_name>create_problem</u_name>
+        <u_parameters>{
+  "type": "object",
+  "properties": {
+    "short_description": {
+      "type": "string",
+      "description": "Brief description of the problem"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed problem description including symptoms and impact"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "description": "Problem priority (1=Critical, 2=High, 3=Moderate, 4=Low)"
+    },
+    "category": {
+      "type": "string",
+      "description": "Problem category (e.g., Hardware, Software, Network)"
+    },
+    "cmdb_ci": {
+      "type": "string",
+      "description": "Affected Configuration Item name or sys_id (optional)"
+    },
+    "related_incidents": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of incident numbers related to this problem"
+    },
+    "assigned_to": {
+      "type": "string",
+      "description": "User to assign problem to (optional)"
+    },
+    "impact_analysis": {
+      "type": "string",
+      "description": "Business impact description"
+    }
+  },
+  "required": [
+    "short_description",
+    "description",
+    "priority",
+    "category"
+  ]
+}</u_parameters>
+        <u_script><![CDATA[(function(args, userId) {
+    // Validate required fields
+    if (!args.short_description || !args.description || !args.priority || !args.category) {
+        return {
+            success: false,
+            error: 'Missing required fields: short_description, description, priority, category'
+        };
+    }
+    
+    // Create the problem record
+    var prbGR = new GlideRecord('problem');
+    prbGR.initialize();
+    
+    // Set basic fields
+    prbGR.short_description = args.short_description;
+    prbGR.description = args.description;
+    prbGR.priority = args.priority;
+    prbGR.category = args.category;
+    prbGR.state = '1'; // Open state
+    
+    // Set impact analysis if provided
+    if (args.impact_analysis) {
+        prbGR.impact = args.impact_analysis;
+    }
+    
+    // Set CI if provided
+    if (args.cmdb_ci) {
+        var ciGR = new GlideRecord('cmdb_ci');
+        if (ciGR.get(args.cmdb_ci)) {
+            prbGR.cmdb_ci = args.cmdb_ci;
+        } else {
+            ciGR.addQuery('name', args.cmdb_ci);
+            ciGR.setLimit(1);
+            ciGR.query();
+            if (ciGR.next()) {
+                prbGR.cmdb_ci = ciGR.getUniqueValue();
+            }
+        }
+    }
+    
+    // Set assigned_to if provided
+    if (args.assigned_to) {
+        var userGR = new GlideRecord('sys_user');
+        if (userGR.get(args.assigned_to)) {
+            prbGR.assigned_to = args.assigned_to;
+        } else {
+            userGR.addQuery('user_name', args.assigned_to);
+            userGR.setLimit(1);
+            userGR.query();
+            if (userGR.next()) {
+                prbGR.assigned_to = userGR.getUniqueValue();
+            }
+        }
+    }
+    
+    // Set opened_by to requesting user
+    prbGR.opened_by = userId;
+    
+    // Insert the problem
+    var prbSysId = prbGR.insert();
+    
+    if (!prbSysId) {
+        return {
+            success: false,
+            error: 'Failed to create problem record'
+        };
+    }
+    
+    // Link related incidents
+    if (args.related_incidents && args.related_incidents.length > 0) {
+        for (var i = 0; i < args.related_incidents.length; i++) {
+            var incNum = args.related_incidents[i];
+            var incGR = new GlideRecord('incident');
+            incGR.addQuery('number', incNum);
+            incGR.setLimit(1);
+            incGR.query();
+            if (incGR.next()) {
+                incGR.problem_id = prbSysId;
+                incGR.work_notes = 'Linked to Problem ' + prbGR.number;
+                incGR.update();
+            }
+        }
+    }
+    
+    return {
+        success: true,
+        problem_number: prbGR.number.toString(),
+        problem_sys_id: prbSysId,
+        short_description: args.short_description,
+        state: 'Open',
+        related_incidents_count: args.related_incidents ? args.related_incidents.length : 0,
+        message: 'Problem ' + prbGR.number + ' created successfully and linked to ' + (args.related_incidents ? args.related_incidents.length : 0) + ' incident(s)'
+    };
+})(args, userId);]]></u_script>
+    </u_ai_tool>
+</record_update>

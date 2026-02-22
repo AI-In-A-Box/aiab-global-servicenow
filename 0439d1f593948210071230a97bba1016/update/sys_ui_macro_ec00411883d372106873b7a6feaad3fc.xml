@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_macro">
+    <sys_ui_macro action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <category>general</category>
+        <description>Displays pending PulseBox AI suggestions for the current record</description>
+        <media_type/>
+        <name>pulsebox_suggestions</name>
+        <scoped_name/>
+        <sys_class_name>sys_ui_macro</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-02-22 05:43:21</sys_created_on>
+        <sys_id>ec00411883d372106873b7a6feaad3fc</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>pulsebox_suggestions</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_ui_macro_ec00411883d372106873b7a6feaad3fc</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-22 05:43:21</sys_updated_on>
+        <xml><![CDATA[<?xml version="1.0" encoding="utf-8" ?>
+<j:jelly trim="false" xmlns:j="jelly:core" xmlns:g="glide" xmlns:j2="null" xmlns:g2="null">
+<g:evaluate var="jvar_suggestions" object="true">
+var suggestions = [];
+var targetTable = current.getTableName();
+var targetSysId = current.getUniqueValue();
+
+if (targetSysId) {
+    var gr = new GlideRecord('u_ai_file');
+    gr.addQuery('u_target_table', targetTable);
+    gr.addQuery('u_target_sys_id', targetSysId);
+    gr.addQuery('u_status', 'pending');
+    gr.orderByDesc('sys_created_on');
+    gr.query();
+    while (gr.next()) {
+        suggestions.push({
+            sys_id: gr.getUniqueValue(),
+            field_name: gr.getValue('u_field_name'),
+            explanation: gr.getValue('u_explanation'),
+            suggested_content: gr.getValue('u_suggested_content'),
+            agent_name: gr.u_agent.getDisplayValue()
+        });
+    }
+}
+suggestions;
+</g:evaluate>
+<j:if test="${jvar_suggestions.length > 0}">
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 16px; margin-bottom: 16px; color: white;">
+    <div style="display: flex; align-items: center; margin-bottom: 12px;">
+        <span style="font-size: 20px; margin-right: 8px;">]]>🤖<![CDATA[</span>
+        <strong style="font-size: 16px;">PulseBox AI Suggestions (${jvar_suggestions.length})</strong>
+    </div>
+    <j:forEach var="jvar_suggestion" items="${jvar_suggestions}">
+    <div style="background: rgba(255,255,255,0.15); border-radius: 6px; padding: 12px; margin-bottom: 8px;">
+        <div style="margin-bottom: 8px;">
+            <strong>Field:</strong> ${jvar_suggestion.field_name} 
+            <span style="opacity: 0.8; font-size: 12px;">(from ${jvar_suggestion.agent_name})</span>
+        </div>
+        <div style="margin-bottom: 8px;">
+            <strong>Suggestion:</strong> ${jvar_suggestion.explanation}
+        </div>
+        <div style="margin-top: 10px;">
+            <button onclick="pulseboxAccept('${jvar_suggestion.sys_id}')" style="background: #48bb78; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 8px;">✓ Accept</button>
+            <button onclick="pulseboxReject('${jvar_suggestion.sys_id}')" style="background: #fc8181; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-right: 8px;">✗ Reject</button>
+            <button onclick="pulseboxViewDiff('${jvar_suggestion.sys_id}')" style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">View Diff</button>
+        </div>
+    </div>
+    </j:forEach>
+</div>
+<script>
+function pulseboxAccept(sysId) {
+    var ga = new GlideAjax('PulseBoxAIAB');
+    ga.addParam('sysparm_name', 'acceptSuggestion');
+    ga.addParam('sysparm_suggestion_id', sysId);
+    ga.getXMLAnswer(function(answer) {
+        if (answer === 'success') {
+            gsftSubmit(null, g_form.getFormElement(), 'sysverb_update');
+        } else {
+            alert('Error accepting suggestion: ' + answer);
+        }
+    });
+}
+function pulseboxReject(sysId) {
+    var ga = new GlideAjax('PulseBoxAIAB');
+    ga.addParam('sysparm_name', 'rejectSuggestion');
+    ga.addParam('sysparm_suggestion_id', sysId);
+    ga.getXMLAnswer(function(answer) {
+        if (answer === 'success') {
+            window.location.reload();
+        } else {
+            alert('Error rejecting suggestion: ' + answer);
+        }
+    });
+}
+function pulseboxViewDiff(sysId) {
+    var url = '/u_ai_file.do?sys_id=' + sysId;
+    window.open(url, '_blank');
+}
+</script>
+</j:if>
+</j:jelly>]]></xml>
+    </sys_ui_macro>
+</record_update>

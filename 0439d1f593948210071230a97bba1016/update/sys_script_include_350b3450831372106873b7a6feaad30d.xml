@@ -1,0 +1,457 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>global.PulseBoxAIAB</api_name>
+        <caller_access/>
+        <client_callable>true</client_callable>
+        <description>PulseBox heartbeat engine - processes agents and creates file suggestions</description>
+        <mobile_callable>false</mobile_callable>
+        <name>PulseBoxAIAB</name>
+        <sandbox_callable>false</sandbox_callable>
+        <script><![CDATA[var PulseBoxAIAB = Class.create();
+PulseBoxAIAB.prototype = Object.extendsObject(AbstractAjaxProcessor, {
+
+    /**
+     * Get pending suggestions for a record (called from client script)
+     * @returns {string} JSON array of suggestions
+     */
+    getPendingSuggestions: function() {
+        var targetTable = this.getParameter('sysparm_target_table');
+        var targetSysId = this.getParameter('sysparm_target_sys_id');
+        
+        if (!targetTable || !targetSysId) {
+            return JSON.stringify([]);
+        }
+
+        var suggestions = [];
+        var gr = new GlideRecord('u_ai_file');
+        gr.addQuery('u_target_table', targetTable);
+        gr.addQuery('u_target_sys_id', targetSysId);
+        gr.addQuery('u_status', 'pending');
+        gr.orderByDesc('sys_created_on');
+        gr.query();
+        
+        while (gr.next()) {
+            suggestions.push({
+                sys_id: gr.getUniqueValue(),
+                field_name: '' + gr.getValue('u_field_name'),
+                explanation: '' + gr.getValue('u_explanation'),
+                suggested_content: '' + gr.getValue('u_suggested_content'),
+                agent_name: gr.u_agent.getDisplayValue()
+            });
+        }
+        
+        return JSON.stringify(suggestions);
+    },
+
+    /**
+     * Get full details for a single suggestion including current field content
+     * @returns {string} JSON object with suggestion and current content
+     */
+    getSuggestionDetails: function() {
+        var suggestionId = this.getParameter('sysparm_suggestion_id');
+        if (!suggestionId) {
+            return JSON.stringify({ error: 'No suggestion ID provided' });
+        }
+
+        var fileGR = new GlideRecord('u_ai_file');
+        if (!fileGR.get(suggestionId)) {
+            return JSON.stringify({ error: 'Suggestion not found' });
+        }
+
+        var targetTable = '' + fileGR.u_target_table;
+        var targetSysId = '' + fileGR.u_target_sys_id;
+        var fieldName = '' + fileGR.u_field_name;
+        var currentContent = '';
+
+        if (targetTable && targetSysId && fieldName) {
+            var targetGR = new GlideRecord(targetTable);
+            if (targetGR.get(targetSysId)) {
+                currentContent = '' + targetGR.getValue(fieldName);
+            }
+        }
+
+        return JSON.stringify({
+            sys_id: fileGR.getUniqueValue(),
+            field_name: fieldName,
+            explanation: '' + fileGR.getValue('u_explanation'),
+            suggested_content: '' + fileGR.getValue('u_suggested_content'),
+            current_content: currentContent,
+            agent_name: fileGR.u_agent.getDisplayValue(),
+            target_table: targetTable,
+            target_sys_id: targetSysId
+        });
+    },
+
+    /**
+     * Create a merge inference to apply suggestion to current content
+     * @returns {string} JSON with inference_id or error
+     */
+    createMergeInference: function() {
+        var suggestionId = this.getParameter('sysparm_suggestion_id');
+        if (!suggestionId) {
+            return JSON.stringify({ error: 'No suggestion ID provided' });
+        }
+
+        var fileGR = new GlideRecord('u_ai_file');
+        if (!fileGR.get(suggestionId)) {
+            return JSON.stringify({ error: 'Suggestion not found' });
+        }
+
+        var targetTable = '' + fileGR.u_target_table;
+        var targetSysId = '' + fileGR.u_target_sys_id;
+        var fieldName = '' + fileGR.u_field_name;
+        var explanation = '' + fileGR.u_explanation;
+        var suggestedContent = '' + fileGR.u_suggested_content;
+
+        // Get current content
+        var targetGR = new GlideRecord(targetTable);
+        if (!targetGR.get(targetSysId)) {
+            return JSON.stringify({ error: 'Target record not found' });
+        }
+        var currentContent = '' + targetGR.getValue(fieldName);
+
+        // Build merge prompt
+        var systemPrompt = 'You are a code editor. Your task is to apply a suggested change to existing code. ' +
+            'Return ONLY the complete updated code with the suggestion applied. ' +
+            'Do not include any explanation, markdown formatting, or code fences. ' +
+            'Just return the raw updated code.';
+
+        var userPrompt = 'CURRENT CODE:\n' + currentContent + '\n\n' +
+            'SUGGESTION TO APPLY:\n' + explanation;
+        
+        if (suggestedContent) {
+            userPrompt += '\n\nSUGGESTED CONTENT:\n' + suggestedContent;
+        }
+        
+        userPrompt += '\n\nApply this suggestion to the current code and return the complete updated code.';
+
+        var messages = [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+        ];
+
+        // Create inference
+        var inferenceGR = new GlideRecord('u_ai_inference');
+        inferenceGR.initialize();
+        inferenceGR.u_prompt = JSON.stringify(messages);
+        inferenceGR.u_type = 'pulsebox-merge';
+        inferenceGR.u_state = 'new';
+        inferenceGR.u_model = 'gpt-4o-mini';
+        inferenceGR.u_table = targetTable;
+        inferenceGR.u_target = targetSysId;
+        inferenceGR.u_requested_by = gs.getUserID();
+        inferenceGR.u_metadata = 'suggestion_id=' + suggestionId + '&field_name=' + fieldName;
+        var inferenceId = inferenceGR.insert();
+
+        gs.info('PulseBox: Created merge inference ' + inferenceId + ' for suggestion ' + suggestionId);
+        return JSON.stringify({ inference_id: inferenceId });
+    },
+
+    /**
+     * Check merge inference status and get result
+     * @returns {string} JSON with status and result
+     */
+    checkMergeStatus: function() {
+        var inferenceId = this.getParameter('sysparm_inference_id');
+        if (!inferenceId) {
+            return JSON.stringify({ error: 'No inference ID provided' });
+        }
+
+        var inferenceGR = new GlideRecord('u_ai_inference');
+        if (!inferenceGR.get(inferenceId)) {
+            return JSON.stringify({ error: 'Inference not found' });
+        }
+
+        var state = '' + inferenceGR.u_state;
+        var response = '' + inferenceGR.u_response;
+
+        return JSON.stringify({
+            state: state,
+            result: (state === 'finished') ? response : null
+        });
+    },
+
+    /**
+     * Apply merged content to target record and mark suggestion accepted
+     * @returns {string} 'success' or error message
+     */
+    applyMergedContent: function() {
+        var suggestionId = this.getParameter('sysparm_suggestion_id');
+        var mergedContent = this.getParameter('sysparm_merged_content');
+
+        if (!suggestionId) {
+            return JSON.stringify({ error: 'No suggestion ID provided' });
+        }
+        if (!mergedContent) {
+            return JSON.stringify({ error: 'No merged content provided' });
+        }
+
+        var fileGR = new GlideRecord('u_ai_file');
+        if (!fileGR.get(suggestionId)) {
+            return JSON.stringify({ error: 'Suggestion not found' });
+        }
+
+        var targetTable = '' + fileGR.u_target_table;
+        var targetSysId = '' + fileGR.u_target_sys_id;
+        var fieldName = '' + fileGR.u_field_name;
+
+        // Get target record
+        var targetGR = new GlideRecord(targetTable);
+        if (!targetGR.get(targetSysId)) {
+            return JSON.stringify({ error: 'Target record not found' });
+        }
+
+        // Save original content
+        fileGR.u_original_content = '' + targetGR.getValue(fieldName);
+
+        // Apply merged content
+        targetGR.setValue(fieldName, mergedContent);
+        targetGR.update();
+
+        // Mark suggestion as accepted
+        fileGR.u_status = 'accepted';
+        fileGR.update();
+
+        gs.info('PulseBox: Applied merged content for suggestion ' + suggestionId);
+        return JSON.stringify({ success: true });
+    },
+
+    /**
+     * Mark suggestion as accepted (without applying - used when client applies via g_form.setValue)
+     * @returns {string} JSON success or error
+     */
+    acceptSuggestion: function() {
+        var suggestionId = this.getParameter('sysparm_suggestion_id');
+        if (!suggestionId) {
+            return JSON.stringify({ error: 'No suggestion ID provided' });
+        }
+
+        var fileGR = new GlideRecord('u_ai_file');
+        if (!fileGR.get(suggestionId)) {
+            return JSON.stringify({ error: 'Suggestion not found' });
+        }
+
+        fileGR.u_status = 'accepted';
+        fileGR.update();
+
+        gs.info('PulseBox: Accepted suggestion ' + suggestionId);
+        return JSON.stringify({ success: true });
+    },
+
+    /**
+     * Reject a suggestion
+     * @returns {string} 'success' or error message
+     */
+    rejectSuggestion: function() {
+        var suggestionId = this.getParameter('sysparm_suggestion_id');
+        if (!suggestionId) {
+            return JSON.stringify({ error: 'No suggestion ID provided' });
+        }
+
+        var fileGR = new GlideRecord('u_ai_file');
+        if (!fileGR.get(suggestionId)) {
+            return JSON.stringify({ error: 'Suggestion not found' });
+        }
+
+        fileGR.u_status = 'rejected';
+        fileGR.update();
+
+        gs.info('PulseBox: Rejected suggestion ' + suggestionId);
+        return JSON.stringify({ success: true });
+    },
+
+    /**
+     * Run heartbeat for all active agents
+     */
+    runHeartbeat: function() {
+        var summary = { processed: 0, skipped: 0, errors: 0, agents: [] };
+        var agentGR = new GlideRecord('u_ai_agent');
+        agentGR.addQuery('u_active', true);
+        agentGR.query();
+
+        while (agentGR.next()) {
+            var agentName = '' + agentGR.u_name;
+            var heartbeatMinutes = parseInt(agentGR.u_heartbeat_minutes) || 60;
+            var lastHeartbeat = agentGR.u_last_heartbeat ? new GlideDateTime(agentGR.u_last_heartbeat) : null;
+            var now = new GlideDateTime();
+
+            if (lastHeartbeat) {
+                var diff = gs.dateDiff(lastHeartbeat.getValue(), now.getValue(), true);
+                var minutesSince = Math.floor(parseInt(diff) / 60);
+                if (minutesSince < heartbeatMinutes) {
+                    summary.skipped++;
+                    continue;
+                }
+            }
+
+            try {
+                var result = this.processAgent(agentGR);
+                summary.agents.push({ name: agentName, recordsFound: result.recordsFound, inferencesCreated: result.inferencesCreated });
+                summary.processed++;
+                agentGR.u_last_heartbeat = now;
+                agentGR.update();
+            } catch (e) {
+                gs.error('PulseBox: Error processing agent ' + agentName + ': ' + e);
+                summary.errors++;
+            }
+        }
+        return summary;
+    },
+
+    /**
+     * Process a single agent - creates at most 1 inference per heartbeat
+     */
+    processAgent: function(agentGR) {
+        var result = { recordsFound: 0, inferencesCreated: 0 };
+        var targetTable = '' + agentGR.u_target_table;
+        var filter = '' + agentGR.u_filter;
+        if (!targetTable) return result;
+
+        var targetGR = new GlideRecord(targetTable);
+        if (filter) targetGR.addEncodedQuery(filter);
+        targetGR.query();
+
+        while (targetGR.next()) {
+            result.recordsFound++;
+            
+            // Check if already has pending suggestion
+            var existingFile = new GlideRecord('u_ai_file');
+            existingFile.addQuery('u_agent', agentGR.getUniqueValue());
+            existingFile.addQuery('u_target_table', targetTable);
+            existingFile.addQuery('u_target_sys_id', targetGR.getUniqueValue());
+            existingFile.addQuery('u_status', 'pending');
+            existingFile.setLimit(1);
+            existingFile.query();
+            if (existingFile.hasNext()) continue;
+
+            // Check if inference already in progress
+            var existingInf = new GlideRecord('u_ai_inference');
+            existingInf.addQuery('u_type', 'pulsebox');
+            existingInf.addQuery('u_table', targetTable);
+            existingInf.addQuery('u_target', targetGR.getUniqueValue());
+            existingInf.addQuery('u_state', 'IN', 'new,requested');
+            existingInf.setLimit(1);
+            existingInf.query();
+            if (existingInf.hasNext()) continue;
+
+            // Create inference for this record and STOP (only 1 per heartbeat)
+            var inferenceId = this.createInference(agentGR, targetGR);
+            if (inferenceId) {
+                result.inferencesCreated++;
+                gs.info('PulseBox: Created 1 inference for agent ' + agentGR.u_name + ', stopping heartbeat');
+                break; // Only create 1 inference per heartbeat
+            }
+        }
+        return result;
+    },
+
+    createInference: function(agentGR, targetGR) {
+        var agentId = agentGR.getUniqueValue();
+        var systemPrompt = '' + agentGR.u_system_prompt;
+        var model = '' + agentGR.u_model || 'gpt-4o-mini';
+        var targetTable = '' + agentGR.u_target_table;
+        var recordContext = this.buildRecordContext(targetGR, targetTable);
+
+        var messages = [
+            { role: 'system', content: systemPrompt + '\n\nRespond with JSON: {"hasSuggestion": boolean, "fieldName": "field", "suggestedContent": "content", "explanation": "why"}' },
+            { role: 'user', content: 'Analyze this record:\n\n' + recordContext }
+        ];
+
+        var inferenceGR = new GlideRecord('u_ai_inference');
+        inferenceGR.initialize();
+        inferenceGR.u_prompt = JSON.stringify(messages);
+        inferenceGR.u_type = 'pulsebox';
+        inferenceGR.u_state = 'new';
+        inferenceGR.u_model = model;
+        inferenceGR.u_table = targetTable;
+        inferenceGR.u_target = targetGR.getUniqueValue();
+        inferenceGR.u_requested_by = gs.getUserID();
+        inferenceGR.u_metadata = 'agent_id=' + agentId;
+        return inferenceGR.insert();
+    },
+
+    processCompletedInference: function(inferenceGR) {
+        var response = '' + inferenceGR.u_response;
+        var targetTable = '' + inferenceGR.u_table;
+        var targetSysId = '' + inferenceGR.u_target;
+        var metadata = '' + inferenceGR.u_metadata;
+
+        var agentId = '';
+        if (metadata) {
+            var parts = metadata.split('&');
+            for (var i = 0; i < parts.length; i++) {
+                var pair = parts[i].split('=');
+                if (pair[0] === 'agent_id') { agentId = pair[1]; break; }
+            }
+        }
+        if (!agentId) {
+            var agentGR = new GlideRecord('u_ai_agent');
+            agentGR.addQuery('u_target_table', targetTable);
+            agentGR.addQuery('u_active', true);
+            agentGR.setLimit(1);
+            agentGR.query();
+            if (agentGR.next()) agentId = agentGR.getUniqueValue();
+        }
+        if (!agentId) return;
+
+        try {
+            var cleanResponse = response.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+            
+            // Handle ECC error prefix - find the JSON start
+            var jsonStart = cleanResponse.indexOf('{');
+            if (jsonStart > 0) {
+                cleanResponse = cleanResponse.substring(jsonStart);
+            }
+            
+            var parsed = JSON.parse(cleanResponse);
+            if (!parsed.hasSuggestion) return;
+
+            var fileGR = new GlideRecord('u_ai_file');
+            fileGR.initialize();
+            fileGR.u_agent = agentId;
+            fileGR.u_target_table = targetTable;
+            fileGR.u_target_sys_id = targetSysId;
+            fileGR.u_field_name = parsed.fieldName || '';
+            fileGR.u_suggested_content = parsed.suggestedContent || '';
+            fileGR.u_explanation = parsed.explanation || '';
+            fileGR.u_status = 'pending';
+            fileGR.insert();
+        } catch (e) {
+            gs.error('PulseBox: Error parsing response: ' + e);
+        }
+    },
+
+    buildRecordContext: function(gr, tableName) {
+        var context = 'Table: ' + tableName + '\nSys ID: ' + gr.getUniqueValue() + '\n\n';
+        var fields = this.getRelevantFields(gr, tableName);
+        for (var i = 0; i < fields.length; i++) {
+            var value = '' + gr.getValue(fields[i]);
+            if (value && value !== 'null') context += fields[i] + ': ' + value + '\n';
+        }
+        return context;
+    },
+
+    getRelevantFields: function(gr, tableName) {
+        if (tableName === 'sys_script_include' || tableName === 'sys_script') return ['name', 'api_name', 'description', 'script', 'active'];
+        if (tableName === 'kb_knowledge') return ['short_description', 'text', 'workflow_state'];
+        return ['name', 'short_description', 'description'];
+    },
+
+    type: 'PulseBoxAIAB'
+});]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-02-22 05:21:36</sys_created_on>
+        <sys_id>350b3450831372106873b7a6feaad30d</sys_id>
+        <sys_mod_count>10</sys_mod_count>
+        <sys_name>PulseBoxAIAB</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_script_include_350b3450831372106873b7a6feaad30d</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-22 06:35:22</sys_updated_on>
+    </sys_script_include>
+</record_update>

@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_script">
+    <sys_ui_script action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <description>Global script to show PulseBox AI suggestions on any form</description>
+        <global>true</global>
+        <ignore_in_now_experience>false</ignore_in_now_experience>
+        <name>PulseBox</name>
+        <script><![CDATA[// PulseBox - Global UI Script for AI Suggestions
+// Runs on form load to check for pending suggestions
+
+(function() {
+    'use strict';
+    
+    // Wait for form to be ready
+    function initPulseBox() {
+        if (typeof g_form === 'undefined') return;
+        if (g_form.isNewRecord && g_form.isNewRecord()) return;
+        
+        var tableName = g_form.getTableName ? g_form.getTableName() : null;
+        var sysId = g_form.getUniqueValue ? g_form.getUniqueValue() : null;
+        if (!tableName || !sysId) return;
+        
+        // Check for pending suggestions
+        var ga = new GlideAjax('PulseBoxAIAB');
+        ga.addParam('sysparm_name', 'getPendingSuggestions');
+        ga.addParam('sysparm_target_table', tableName);
+        ga.addParam('sysparm_target_sys_id', sysId);
+        ga.getXMLAnswer(function(answer) {
+            try {
+                var suggestions = JSON.parse(answer);
+                if (suggestions && suggestions.length > 0) {
+                    window.g_pulseboxSuggestions = suggestions;
+                    window.g_pulseboxIndex = 0;
+                    showPulseBoxBadge(suggestions);
+                }
+            } catch (e) {
+                console.log('PulseBox: Parse error', e);
+            }
+        });
+    }
+    
+    // Delay to ensure g_form is ready
+    if (document.readyState === 'complete') {
+        setTimeout(initPulseBox, 500);
+    } else {
+        window.addEventListener('load', function() {
+            setTimeout(initPulseBox, 500);
+        });
+    }
+})();
+
+function showPulseBoxBadge(suggestions) {
+    // Remove existing badge if any
+    var existing = document.getElementById('pulsebox-badge');
+    if (existing) existing.remove();
+    
+    var count = suggestions.length;
+    var badge = document.createElement('div');
+    badge.id = 'pulsebox-badge';
+    badge.innerHTML = '<span style="font-size:16px;">&#129302;</span> ' + count + ' AI suggestion' + (count > 1 ? 's' : '');
+    badge.style.cssText = 'position:fixed;bottom:20px;left:20px;background:#007bff;color:white;' +
+        'padding:8px 16px;border-radius:20px;font-size:14px;z-index:9999;cursor:pointer;' +
+        'box-shadow:0 2px 8px rgba(0,0,0,0.2);transition:all 0.2s;font-family:sans-serif;';
+    
+    badge.onmouseover = function() { this.style.transform = 'scale(1.05)'; };
+    badge.onmouseout = function() { this.style.transform = 'scale(1)'; };
+    badge.onclick = function() { showPulseBoxModal(); };
+    
+    document.body.appendChild(badge);
+}
+
+function showPulseBoxModal() {
+    var suggestions = window.g_pulseboxSuggestions;
+    var idx = window.g_pulseboxIndex || 0;
+    if (!suggestions || suggestions.length === 0) return;
+    
+    var s = suggestions[idx];
+    var total = suggestions.length;
+    
+    // Remove existing modal
+    var existing = document.getElementById('pulsebox-modal-overlay');
+    if (existing) existing.remove();
+    
+    var overlay = document.createElement('div');
+    overlay.id = 'pulsebox-modal-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;';
+    
+    var modal = document.createElement('div');
+    modal.style.cssText = 'background:white;border-radius:8px;width:600px;max-width:90%;max-height:80%;overflow:auto;box-shadow:0 4px 20px rgba(0,0,0,0.3);font-family:sans-serif;';
+    
+    var header = '<div style="padding:16px;border-bottom:1px solid #ddd;display:flex;justify-content:space-between;align-items:center;">' +
+        '<strong>&#129302; PulseBox Suggestion ' + (idx + 1) + ' of ' + total + '</strong>' +
+        '<span style="cursor:pointer;font-size:20px;" onclick="closePulseBoxModal()">&times;</span></div>';
+    
+    var body = '<div style="padding:16px;">' +
+        '<p><strong>Agent:</strong> ' + escapeHtml(s.agent_name) + '</p>' +
+        '<p><strong>Field:</strong> ' + escapeHtml(s.field_name) + '</p>' +
+        '<p><strong>Suggestion:</strong></p>' +
+        '<div style="background:#f5f5f5;padding:12px;border-radius:4px;margin-bottom:16px;white-space:pre-wrap;font-family:monospace;font-size:12px;max-height:200px;overflow:auto;">' + 
+        escapeHtml(s.explanation) + '</div>';
+    
+    if (s.suggested_content) {
+        var preview = s.suggested_content.length > 500 ? s.suggested_content.substring(0, 500) + '...' : s.suggested_content;
+        body += '<p><strong>Suggested Content:</strong></p>' +
+            '<div style="background:#e8f5e9;padding:12px;border-radius:4px;margin-bottom:16px;white-space:pre-wrap;font-family:monospace;font-size:12px;max-height:200px;overflow:auto;border-left:3px solid #4caf50;">' + 
+            escapeHtml(preview) + '</div>';
+    }
+    
+    body += '</div>';
+    
+    var nav = '';
+    if (total > 1) {
+        nav = '<div style="padding:8px 16px;border-top:1px solid #ddd;display:flex;justify-content:center;gap:8px;">' +
+            '<button onclick="pulseboxPrev()" style="padding:4px 12px;cursor:pointer;"' + (idx === 0 ? ' disabled' : '') + '>&larr; Prev</button>' +
+            '<button onclick="pulseboxNext()" style="padding:4px 12px;cursor:pointer;"' + (idx === total - 1 ? ' disabled' : '') + '>Next &rarr;</button>' +
+            '</div>';
+    }
+    
+    var footer = '<div style="padding:16px;border-top:1px solid #ddd;display:flex;justify-content:flex-end;gap:8px;">' +
+        '<button onclick="pulseboxReject(\'' + s.sys_id + '\')" style="padding:8px 16px;background:#dc3545;color:white;border:none;border-radius:4px;cursor:pointer;">Reject</button>' +
+        '<button id="pulsebox-accept-btn" onclick="pulseboxAccept(\'' + s.sys_id + '\')" style="padding:8px 16px;background:#28a745;color:white;border:none;border-radius:4px;cursor:pointer;">Accept &amp; Apply</button>' +
+        '</div>';
+    
+    modal.innerHTML = header + body + nav + footer;
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    
+    overlay.onclick = function(e) { if (e.target === overlay) closePulseBoxModal(); };
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function closePulseBoxModal() {
+    var overlay = document.getElementById('pulsebox-modal-overlay');
+    if (overlay) overlay.remove();
+}
+
+function pulseboxPrev() {
+    if (window.g_pulseboxIndex > 0) {
+        window.g_pulseboxIndex--;
+        showPulseBoxModal();
+    }
+}
+
+function pulseboxNext() {
+    if (window.g_pulseboxIndex < window.g_pulseboxSuggestions.length - 1) {
+        window.g_pulseboxIndex++;
+        showPulseBoxModal();
+    }
+}
+
+function pulseboxAccept(sysId) {
+    var suggestions = window.g_pulseboxSuggestions;
+    var s = null;
+    for (var i = 0; i < suggestions.length; i++) {
+        if (suggestions[i].sys_id === sysId) {
+            s = suggestions[i];
+            break;
+        }
+    }
+    if (!s) return;
+    
+    // Update button to show loading
+    var acceptBtn = document.getElementById('pulsebox-accept-btn');
+    if (acceptBtn) {
+        acceptBtn.disabled = true;
+        acceptBtn.textContent = 'Applying...';
+    }
+    
+    // Create merge inference
+    var ga = new GlideAjax('PulseBoxAIAB');
+    ga.addParam('sysparm_name', 'createMergeInference');
+    ga.addParam('sysparm_suggestion_id', sysId);
+    ga.getXMLAnswer(function(answer) {
+        try {
+            var result = JSON.parse(answer);
+            if (result.error) {
+                alert('Error: ' + result.error);
+                closePulseBoxModal();
+                return;
+            }
+            // Poll for completion
+            pollMergeStatus(result.inference_id, sysId, s.field_name);
+        } catch (e) {
+            alert('Error creating merge: ' + e);
+            closePulseBoxModal();
+        }
+    });
+}
+
+function pollMergeStatus(inferenceId, suggestionId, fieldName) {
+    var ga = new GlideAjax('PulseBoxAIAB');
+    ga.addParam('sysparm_name', 'checkMergeStatus');
+    ga.addParam('sysparm_inference_id', inferenceId);
+    ga.getXMLAnswer(function(answer) {
+        try {
+            var result = JSON.parse(answer);
+            if (result.error) {
+                alert('Error: ' + result.error);
+                closePulseBoxModal();
+                return;
+            }
+            
+            if (result.state === 'finished') {
+                // Apply to form using g_form.setValue
+                if (typeof g_form !== 'undefined' && g_form.setValue) {
+                    // Normalize field name to lowercase (ServiceNow convention)
+                    var normalizedField = fieldName.toLowerCase();
+                    g_form.setValue(normalizedField, result.result);
+                }
+                
+                // Mark suggestion as accepted
+                markSuggestionAccepted(suggestionId);
+                
+                // Remove from local list and update badge
+                var newSuggestions = [];
+                for (var i = 0; i < window.g_pulseboxSuggestions.length; i++) {
+                    if (window.g_pulseboxSuggestions[i].sys_id !== suggestionId) {
+                        newSuggestions.push(window.g_pulseboxSuggestions[i]);
+                    }
+                }
+                window.g_pulseboxSuggestions = newSuggestions;
+                updateBadgeCount();
+                
+                closePulseBoxModal();
+                
+                // Show next suggestion if any
+                if (window.g_pulseboxSuggestions.length > 0) {
+                    window.g_pulseboxIndex = Math.min(window.g_pulseboxIndex, window.g_pulseboxSuggestions.length - 1);
+                    showPulseBoxModal();
+                }
+            } else if (result.state === 'cancelled' || result.state === 'error') {
+                alert('Merge failed: ' + result.state);
+                closePulseBoxModal();
+            } else {
+                // Still processing, poll again
+                setTimeout(function() {
+                    pollMergeStatus(inferenceId, suggestionId, fieldName);
+                }, 1000);
+            }
+        } catch (e) {
+            alert('Error checking status: ' + e);
+            closePulseBoxModal();
+        }
+    });
+}
+
+function markSuggestionAccepted(sysId) {
+    var ga = new GlideAjax('PulseBoxAIAB');
+    ga.addParam('sysparm_name', 'acceptSuggestion');
+    ga.addParam('sysparm_suggestion_id', sysId);
+    ga.getXMLAnswer(function(answer) {
+        console.log('PulseBox: Marked suggestion ' + sysId + ' as accepted');
+    });
+}
+
+function updateBadgeCount() {
+    var badge = document.getElementById('pulsebox-badge');
+    var count = window.g_pulseboxSuggestions.length;
+    if (count === 0) {
+        if (badge) badge.remove();
+    } else {
+        badge.innerHTML = '<span style="font-size:16px;">&#129302;</span> ' + count + ' AI suggestion' + (count > 1 ? 's' : '');
+    }
+}
+
+function pulseboxReject(sysId) {
+    var ga = new GlideAjax('PulseBoxAIAB');
+    ga.addParam('sysparm_name', 'rejectSuggestion');
+    ga.addParam('sysparm_suggestion_id', sysId);
+    ga.getXMLAnswer(function(answer) {
+        // Remove from local list
+        var newSuggestions = [];
+        for (var i = 0; i < window.g_pulseboxSuggestions.length; i++) {
+            if (window.g_pulseboxSuggestions[i].sys_id !== sysId) {
+                newSuggestions.push(window.g_pulseboxSuggestions[i]);
+            }
+        }
+        window.g_pulseboxSuggestions = newSuggestions;
+        updateBadgeCount();
+        closePulseBoxModal();
+        
+        // Show next suggestion if any
+        if (window.g_pulseboxSuggestions.length > 0) {
+            window.g_pulseboxIndex = Math.min(window.g_pulseboxIndex, window.g_pulseboxSuggestions.length - 1);
+            showPulseBoxModal();
+        }
+    });
+}]]></script>
+        <script_name/>
+        <sys_class_name>sys_ui_script</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-02-22 06:14:24</sys_created_on>
+        <sys_id>63170d94831772106873b7a6feaad389</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>PulseBox</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_ui_script_63170d94831772106873b7a6feaad389</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-22 06:14:24</sys_updated_on>
+        <ui_type>0</ui_type>
+        <use_scoped_format>false</use_scoped_format>
+    </sys_ui_script>
+</record_update>

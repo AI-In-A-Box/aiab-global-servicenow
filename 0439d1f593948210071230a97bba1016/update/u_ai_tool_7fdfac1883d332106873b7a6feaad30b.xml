@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="u_ai_tool">
+    <u_ai_tool action="INSERT_OR_UPDATE">
+        <sys_class_name>u_ai_tool</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-02-22 04:32:50</sys_created_on>
+        <sys_id>7fdfac1883d332106873b7a6feaad30b</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>get_sla_analysis</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>u_ai_tool_7fdfac1883d332106873b7a6feaad30b</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-22 04:32:50</sys_updated_on>
+        <u_active>true</u_active>
+        <u_description>Analyze SLA compliance, breaches, and performance trends for incidents</u_description>
+        <u_execute_in>servicenow</u_execute_in>
+        <u_name>get_sla_analysis</u_name>
+        <u_parameters>{
+  "type": "object",
+  "properties": {
+    "time_period": {
+      "type": "string",
+      "enum": [
+        "last_7_days",
+        "last_30_days",
+        "last_90_days",
+        "this_month",
+        "last_month"
+      ],
+      "description": "Time period to analyze"
+    },
+    "sla_type": {
+      "type": "string",
+      "enum": [
+        "resolution",
+        "response",
+        "both"
+      ],
+      "description": "Which SLA to analyze (resolution time, response time, or both)"
+    },
+    "group_by": {
+      "type": "string",
+      "enum": [
+        "priority",
+        "category",
+        "agent",
+        "none"
+      ],
+      "description": "How to group the results"
+    },
+    "include_breaches_only": {
+      "type": "boolean",
+      "description": "Only return breached SLAs (for breach analysis)"
+    }
+  },
+  "required": [
+    "time_period"
+  ]
+}</u_parameters>
+        <u_script><![CDATA[(function(args, userId) {
+    // Validate required fields
+    if (!args.time_period) {
+        return {
+            success: false,
+            error: 'Missing required field: time_period'
+        };
+    }
+    
+    // Calculate date range
+    var now = new GlideDateTime();
+    var startDate = new GlideDateTime();
+    
+    switch(args.time_period) {
+        case 'last_7_days':
+            startDate.addDays(-7);
+            break;
+        case 'last_30_days':
+            startDate.addDays(-30);
+            break;
+        case 'last_90_days':
+            startDate.addDays(-90);
+            break;
+        case 'this_month':
+            startDate.setDayOfMonthLocalTime(1);
+            break;
+        case 'last_month':
+            startDate.addMonths(-1);
+            startDate.setDayOfMonthLocalTime(1);
+            break;
+        default:
+            startDate.addDays(-30);
+    }
+    
+    var slaType = args.sla_type || 'both';
+    var groupBy = args.group_by || 'none';
+    
+    // Query task_sla table
+    var slaGR = new GlideRecord('task_sla');
+    slaGR.addQuery('task.sys_class_name', 'incident');
+    slaGR.addQuery('sys_created_on', '>=', startDate);
+    
+    if (args.include_breaches_only) {
+        slaGR.addQuery('has_breached', true);
+    }
+    
+    if (slaType === 'resolution') {
+        slaGR.addQuery('sla.name', 'CONTAINS', 'resolution');
+    } else if (slaType === 'response') {
+        slaGR.addQuery('sla.name', 'CONTAINS', 'response');
+    }
+    
+    slaGR.query();
+    
+    var totalSLAs = 0;
+    var breachedSLAs = 0;
+    var atRiskSLAs = 0;
+    var compliantSLAs = 0;
+    var breachTimeTotal = 0;
+    
+    var groupData = {};
+    
+    while (slaGR.next()) {
+        totalSLAs++;
+        
+        var hasBreached = slaGR.getValue('has_breached') === 'true';
+        var percentage = parseFloat(slaGR.getValue('percentage')) || 0;
+        var stage = slaGR.getValue('stage');
+        
+        if (hasBreached) {
+            breachedSLAs++;
+            // Calculate breach time if possible
+            var breachTime = slaGR.getValue('business_time_left');
+            if (breachTime) {
+                breachTimeTotal += parseInt(breachTime);
+            }
+        } else if (percentage > 80 || stage === 'breached') {
+            atRiskSLAs++;
+        } else {
+            compliantSLAs++;
+        }
+        
+        // Group data if requested
+        if (groupBy !== 'none') {
+            var groupKey = 'Unknown';
+            var taskGR = new GlideRecord('incident');
+            if (taskGR.get(slaGR.getValue('task'))) {
+                if (groupBy === 'priority') {
+                    groupKey = taskGR.getDisplayValue('priority') || 'Unknown';
+                } else if (groupBy === 'category') {
+                    groupKey = taskGR.getValue('category') || 'Uncategorized';
+                } else if (groupBy === 'agent') {
+                    groupKey = taskGR.getDisplayValue('assigned_to') || 'Unassigned';
+                }
+            }
+            
+            if (!groupData[groupKey]) {
+                groupData[groupKey] = {
+                    total: 0,
+                    breached: 0,
+                    at_risk: 0,
+                    compliant: 0
+                };
+            }
+            
+            groupData[groupKey].total++;
+            if (hasBreached) {
+                groupData[groupKey].breached++;
+            } else if (percentage > 80 || stage === 'breached') {
+                groupData[groupKey].at_risk++;
+            } else {
+                groupData[groupKey].compliant++;
+            }
+        }
+    }
+    
+    var complianceRate = totalSLAs > 0 ? Math.round((compliantSLAs / totalSLAs) * 100) : 0;
+    var breachRate = totalSLAs > 0 ? Math.round((breachedSLAs / totalSLAs) * 100) : 0;
+    
+    var result = {
+        success: true,
+        analysis: {
+            time_period: args.time_period,
+            sla_type: slaType,
+            total_slas: totalSLAs,
+            compliance: {
+                compliant: compliantSLAs,
+                at_risk: atRiskSLAs,
+                breached: breachedSLAs,
+                compliance_rate: complianceRate,
+                breach_rate: breachRate
+            },
+            summary: complianceRate >= 90 ? 'Excellent SLA compliance' :
+                     complianceRate >= 80 ? 'Good SLA compliance with room for improvement' :
+                     complianceRate >= 70 ? 'SLA compliance needs attention' :
+                     'Critical SLA compliance issues - immediate action required'
+        }
+    };
+    
+    if (groupBy !== 'none') {
+        result.analysis.grouped_by = groupBy;
+        result.analysis.group_data = groupData;
+    }
+    
+    // Add breach details if there are breaches
+    if (breachedSLAs > 0) {
+        result.analysis.breach_insights = {
+            total_breaches: breachedSLAs,
+            average_breach_time: breachTimeTotal > 0 ? Math.round(breachTimeTotal / breachedSLAs) : 0,
+            top_breach_reasons: 'Run detailed report for specific breach reasons'
+        };
+    }
+    
+    return result;
+})(args, userId);]]></u_script>
+    </u_ai_tool>
+</record_update>

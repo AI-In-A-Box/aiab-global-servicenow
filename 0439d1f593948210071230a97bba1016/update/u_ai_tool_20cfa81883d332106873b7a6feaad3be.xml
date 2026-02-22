@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="u_ai_tool">
+    <u_ai_tool action="INSERT_OR_UPDATE">
+        <sys_class_name>u_ai_tool</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-02-22 04:32:20</sys_created_on>
+        <sys_id>20cfa81883d332106873b7a6feaad3be</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>create_change</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>u_ai_tool_20cfa81883d332106873b7a6feaad3be</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-22 04:32:20</sys_updated_on>
+        <u_active>true</u_active>
+        <u_description>Create a change request for controlled implementation of fixes or infrastructure changes</u_description>
+        <u_execute_in>servicenow</u_execute_in>
+        <u_name>create_change</u_name>
+        <u_parameters>{
+  "type": "object",
+  "properties": {
+    "short_description": {
+      "type": "string",
+      "description": "Brief description of the change"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of what will change and why"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "normal",
+        "standard",
+        "emergency"
+      ],
+      "description": "Change type (normal=requires approval, standard=pre-approved, emergency=urgent)"
+    },
+    "category": {
+      "type": "string",
+      "description": "Change category (e.g., Hardware, Software, Network, Database)"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "description": "Change priority (1=Critical, 2=High, 3=Moderate, 4=Low)"
+    },
+    "risk": {
+      "type": "string",
+      "enum": [
+        "low",
+        "moderate",
+        "high",
+        "very_high"
+      ],
+      "description": "Risk level of the change"
+    },
+    "implementation_plan": {
+      "type": "string",
+      "description": "Step-by-step implementation plan"
+    },
+    "backout_plan": {
+      "type": "string",
+      "description": "Plan to revert if change fails"
+    },
+    "test_plan": {
+      "type": "string",
+      "description": "How the change will be tested (optional)"
+    },
+    "cmdb_ci": {
+      "type": "string",
+      "description": "Affected Configuration Item name or sys_id"
+    },
+    "assigned_to": {
+      "type": "string",
+      "description": "Implementer (optional)"
+    },
+    "requested_by": {
+      "type": "string",
+      "description": "Requester if different from current user (optional)"
+    },
+    "related_incident": {
+      "type": "string",
+      "description": "Incident number that prompted this change (optional)"
+    }
+  },
+  "required": [
+    "short_description",
+    "description",
+    "type",
+    "category",
+    "priority",
+    "risk",
+    "implementation_plan",
+    "backout_plan"
+  ]
+}</u_parameters>
+        <u_script><![CDATA[(function(args, userId) {
+    // Validate required fields
+    if (!args.short_description || !args.description || !args.type || !args.category || 
+        !args.priority || !args.risk || !args.implementation_plan || !args.backout_plan) {
+        return {
+            success: false,
+            error: 'Missing required fields. Need: short_description, description, type, category, priority, risk, implementation_plan, backout_plan'
+        };
+    }
+    
+    // Create the change request
+    var chgGR = new GlideRecord('change_request');
+    chgGR.initialize();
+    
+    // Set basic fields
+    chgGR.short_description = args.short_description;
+    chgGR.description = args.description;
+    chgGR.type = args.type;
+    chgGR.category = args.category;
+    chgGR.priority = args.priority;
+    chgGR.risk = args.risk;
+    chgGR.state = '-5'; // New state
+    
+    // Set implementation and backout plans
+    chgGR.implementation_plan = args.implementation_plan;
+    chgGR.backout_plan = args.backout_plan;
+    if (args.test_plan) {
+        chgGR.test_plan = args.test_plan;
+    }
+    
+    // Set CI if provided
+    if (args.cmdb_ci) {
+        var ciGR = new GlideRecord('cmdb_ci');
+        if (ciGR.get(args.cmdb_ci)) {
+            chgGR.cmdb_ci = args.cmdb_ci;
+        } else {
+            ciGR.addQuery('name', args.cmdb_ci);
+            ciGR.setLimit(1);
+            ciGR.query();
+            if (ciGR.next()) {
+                chgGR.cmdb_ci = ciGR.getUniqueValue();
+            }
+        }
+    }
+    
+    // Set assigned_to if provided
+    if (args.assigned_to) {
+        var assignGR = new GlideRecord('sys_user');
+        if (assignGR.get(args.assigned_to)) {
+            chgGR.assigned_to = args.assigned_to;
+        } else {
+            assignGR.addQuery('user_name', args.assigned_to);
+            assignGR.setLimit(1);
+            assignGR.query();
+            if (assignGR.next()) {
+                chgGR.assigned_to = assignGR.getUniqueValue();
+            }
+        }
+    }
+    
+    // Set requester
+    if (args.requested_by) {
+        var reqGR = new GlideRecord('sys_user');
+        if (reqGR.get(args.requested_by)) {
+            chgGR.requested_by = args.requested_by;
+        } else {
+            reqGR.addQuery('user_name', args.requested_by);
+            reqGR.setLimit(1);
+            reqGR.query();
+            if (reqGR.next()) {
+                chgGR.requested_by = reqGR.getUniqueValue();
+            }
+        }
+    } else {
+        chgGR.requested_by = userId;
+    }
+    
+    // Insert the change
+    var chgSysId = chgGR.insert();
+    
+    if (!chgSysId) {
+        return {
+            success: false,
+            error: 'Failed to create change request'
+        };
+    }
+    
+    // Link to related incident if provided
+    if (args.related_incident) {
+        var incGR = new GlideRecord('incident');
+        incGR.addQuery('number', args.related_incident);
+        incGR.setLimit(1);
+        incGR.query();
+        if (incGR.next()) {
+            incGR.rfc = chgSysId;
+            incGR.work_notes = 'Change ' + chgGR.number + ' created to address this incident';
+            incGR.update();
+        }
+    }
+    
+    return {
+        success: true,
+        change_number: chgGR.number.toString(),
+        change_sys_id: chgSysId,
+        type: args.type,
+        state: 'New',
+        requires_approval: args.type === 'normal' || args.type === 'emergency',
+        message: 'Change ' + chgGR.number + ' created successfully. ' + 
+                 (args.type === 'normal' ? 'Requires CAB approval.' : 
+                  args.type === 'emergency' ? 'Emergency change - expedite approval.' : 
+                  'Standard change - pre-approved.')
+    };
+})(args, userId);]]></u_script>
+    </u_ai_tool>
+</record_update>

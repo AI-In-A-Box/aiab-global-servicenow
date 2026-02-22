@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_script">
+    <sys_script action="INSERT_OR_UPDATE">
+        <abort_action>false</abort_action>
+        <access>package_private</access>
+        <action_delete>false</action_delete>
+        <action_insert>false</action_insert>
+        <action_query>false</action_query>
+        <action_update>true</action_update>
+        <active>false</active>
+        <add_message>false</add_message>
+        <advanced>true</advanced>
+        <change_fields>false</change_fields>
+        <client_callable>false</client_callable>
+        <collection/>
+        <condition/>
+        <description/>
+        <execute_function>false</execute_function>
+        <filter_condition>u_state=finished^u_ai_sessionISEMPTY</filter_condition>
+        <is_rest>false</is_rest>
+        <message/>
+        <name>Process Summary Inference</name>
+        <order>100</order>
+        <priority>100</priority>
+        <rest_method/>
+        <rest_method_text/>
+        <rest_service/>
+        <rest_service_text/>
+        <rest_variables/>
+        <role_conditions/>
+        <script><![CDATA[(function executeRule(current, previous /*null when async*/) {
+    try {
+        // This rule handles summary inferences (those with no session)
+        // When they finish, we need to copy the response to the session
+        
+        var response = current.getValue('u_response');
+        if (!response) return;
+        
+        // Check if this looks like a summary (contains summary indicators)
+        if (response.indexOf('summarize') === -1 && response.indexOf('conversation') === -1 && response.indexOf('Summary') === -1) {
+            // Not a summary inference, skip
+            return;
+        }
+        
+        gs.info('AIAB: Processing summary inference ' + current.getValue('sys_id'));
+        
+        // Find the session this summary is for
+        // We look for sessions that have exactly 4, 8, 12, etc. finished inferences
+        // and no compacted_summary yet
+        var sessionGR = new GlideRecord('u_ai_session');
+        sessionGR.addQuery('u_compacted_summary', '');
+        sessionGR.orderByDesc('sys_updated_on');
+        sessionGR.setLimit(1);
+        sessionGR.query();
+        
+        if (sessionGR.next()) {
+            var sessionId = sessionGR.getUniqueValue();
+            
+            // Count inferences to verify
+            var countAgg = new GlideAggregate('u_ai_inference');
+            countAgg.addQuery('u_ai_session', sessionId);
+            countAgg.addQuery('u_state', 'finished');
+            countAgg.addAggregate('COUNT');
+            countAgg.query();
+            
+            var count = 0;
+            if (countAgg.next()) {
+                count = parseInt(countAgg.getAggregate('COUNT'));
+            }
+            
+            // Only update if count is multiple of 4
+            if (count % 4 === 0) {
+                sessionGR.u_compacted_summary = response;
+                sessionGR.update();
+                
+                gs.info('AIAB: Updated session ' + sessionId + ' compacted_summary with ' + response.substring(0, 100) + '...');
+            }
+        }
+        
+    } catch (error) {
+        gs.error('AIAB: Error processing summary inference: ' + error);
+    }
+})(current, previous);]]></script>
+        <sys_class_name>sys_script</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-02-22 05:03:53</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>6ef6389c835f32106873b7a6feaad32b</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>Process Summary Inference</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_script_6ef6389c835f32106873b7a6feaad32b</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-02-22 05:13:12</sys_updated_on>
+        <template/>
+        <when>after</when>
+    </sys_script>
+    <sys_translated_text action="delete_multiple" query="documentkey=6ef6389c835f32106873b7a6feaad32b"/>
+</record_update>
