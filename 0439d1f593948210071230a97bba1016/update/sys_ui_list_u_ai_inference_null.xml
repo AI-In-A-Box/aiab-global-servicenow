@@ -3,92 +3,62 @@
         <sys_ui_list_element action="INSERT_OR_UPDATE">
             <average_value>false</average_value>
             <element>u_number</element>
-            <list_id display_value="u_ai_inference" element="NULL" name="u_ai_inference" parent="NULL" relationship="NULL" sys_domain="global" view="Default view">968d7858839372106873b7a6feaad378</list_id>
+            <list_id display_value="u_ai_inference" element="NULL" name="u_ai_inference" parent="NULL" relationship="NULL" sys_domain="global" view="Default view">16c9b691c3769210594e12f1b4013147</list_id>
             <max_value>false</max_value>
             <min_value>false</min_value>
             <position>0</position>
             <sum>false</sum>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2026-02-22 05:32:32</sys_created_on>
-            <sys_id>528d7858839372106873b7a6feaad3ab</sys_id>
+            <sys_created_on>2024-12-30 04:15:37</sys_created_on>
+            <sys_id>9ac9b691c3769210594e12f1b4013149</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2026-02-22 05:32:32</sys_updated_on>
+            <sys_updated_on>2024-12-30 04:15:37</sys_updated_on>
         </sys_ui_list_element>
         <sys_ui_list_element action="INSERT_OR_UPDATE">
             <average_value>false</average_value>
-            <element>u_ai_session</element>
-            <list_id display_value="u_ai_inference" element="NULL" name="u_ai_inference" parent="NULL" relationship="NULL" sys_domain="global" view="Default view">968d7858839372106873b7a6feaad378</list_id>
+            <element>u_target</element>
+            <list_id display_value="u_ai_inference" element="NULL" name="u_ai_inference" parent="NULL" relationship="NULL" sys_domain="global" view="Default view">16c9b691c3769210594e12f1b4013147</list_id>
             <max_value>false</max_value>
             <min_value>false</min_value>
             <position>1</position>
             <sum>false</sum>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2026-02-22 05:32:32</sys_created_on>
-            <sys_id>d68d7858839372106873b7a6feaad3ab</sys_id>
+            <sys_created_on>2024-12-30 04:15:37</sys_created_on>
+            <sys_id>92c9b691c3769210594e12f1b401314a</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2026-02-22 05:32:32</sys_updated_on>
+            <sys_updated_on>2024-12-30 04:15:37</sys_updated_on>
         </sys_ui_list_element>
         <sys_ui_list_element action="INSERT_OR_UPDATE">
             <average_value>false</average_value>
-            <element>u_state</element>
-            <list_id display_value="u_ai_inference" element="NULL" name="u_ai_inference" parent="NULL" relationship="NULL" sys_domain="global" view="Default view">968d7858839372106873b7a6feaad378</list_id>
+            <element>u_response</element>
+            <list_id display_value="u_ai_inference" element="NULL" name="u_ai_inference" parent="NULL" relationship="NULL" sys_domain="global" view="Default view">16c9b691c3769210594e12f1b4013147</list_id>
             <max_value>false</max_value>
             <min_value>false</min_value>
             <position>2</position>
             <sum>false</sum>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2026-02-22 05:32:32</sys_created_on>
-            <sys_id>5e8d7858839372106873b7a6feaad3ab</sys_id>
+            <sys_created_on>2024-12-30 04:15:37</sys_created_on>
+            <sys_id>96c9b691c3769210594e12f1b401314a</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2026-02-22 05:32:32</sys_updated_on>
+            <sys_updated_on>2024-12-30 04:15:37</sys_updated_on>
         </sys_ui_list_element>
         <sys_ui_list_element action="INSERT_OR_UPDATE">
             <average_value>false</average_value>
-            <element>u_type</element>
-            <list_id display_value="u_ai_inference" element="NULL" name="u_ai_inference" parent="NULL" relationship="NULL" sys_domain="global" view="Default view">968d7858839372106873b7a6feaad378</list_id>
+            <element>u_state</element>
+            <list_id display_value="u_ai_inference" element="NULL" name="u_ai_inference" parent="NULL" relationship="NULL" sys_domain="global" view="Default view">16c9b691c3769210594e12f1b4013147</list_id>
             <max_value>false</max_value>
             <min_value>false</min_value>
             <position>3</position>
             <sum>false</sum>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2026-02-22 05:32:32</sys_created_on>
-            <sys_id>d28d7858839372106873b7a6feaad3ac</sys_id>
+            <sys_created_on>2024-12-30 04:15:37</sys_created_on>
+            <sys_id>9ac9b691c3769210594e12f1b401314a</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2026-02-22 05:32:32</sys_updated_on>
-        </sys_ui_list_element>
-        <sys_ui_list_element action="INSERT_OR_UPDATE">
-            <average_value>false</average_value>
-            <element>u_target</element>
-            <list_id display_value="u_ai_inference" element="NULL" name="u_ai_inference" parent="NULL" relationship="NULL" sys_domain="global" view="Default view">968d7858839372106873b7a6feaad378</list_id>
-            <max_value>false</max_value>
-            <min_value>false</min_value>
-            <position>4</position>
-            <sum>false</sum>
-            <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2026-02-22 05:32:32</sys_created_on>
-            <sys_id>5a8d7858839372106873b7a6feaad3ac</sys_id>
-            <sys_mod_count>0</sys_mod_count>
-            <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2026-02-22 05:32:32</sys_updated_on>
-        </sys_ui_list_element>
-        <sys_ui_list_element action="INSERT_OR_UPDATE">
-            <average_value>false</average_value>
-            <element>u_response</element>
-            <list_id display_value="u_ai_inference" element="NULL" name="u_ai_inference" parent="NULL" relationship="NULL" sys_domain="global" view="Default view">968d7858839372106873b7a6feaad378</list_id>
-            <max_value>false</max_value>
-            <min_value>false</min_value>
-            <position>5</position>
-            <sum>false</sum>
-            <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2026-02-22 05:32:32</sys_created_on>
-            <sys_id>de8d7858839372106873b7a6feaad3ac</sys_id>
-            <sys_mod_count>0</sys_mod_count>
-            <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2026-02-22 05:32:32</sys_updated_on>
+            <sys_updated_on>2024-12-30 04:15:37</sys_updated_on>
         </sys_ui_list_element>
         <sys_ui_list action="INSERT_OR_UPDATE">
             <average_value>false</average_value>
@@ -102,10 +72,10 @@
             <sum>false</sum>
             <sys_class_name>sys_ui_list</sys_class_name>
             <sys_created_by>admin</sys_created_by>
-            <sys_created_on>2026-02-22 05:32:32</sys_created_on>
+            <sys_created_on>2024-12-30 04:15:37</sys_created_on>
             <sys_domain>global</sys_domain>
             <sys_domain_path>/</sys_domain_path>
-            <sys_id>968d7858839372106873b7a6feaad378</sys_id>
+            <sys_id>16c9b691c3769210594e12f1b4013147</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_name>u_ai_inference</sys_name>
             <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
@@ -113,7 +83,7 @@
             <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
             <sys_update_name>sys_ui_list_u_ai_inference_null</sys_update_name>
             <sys_updated_by>admin</sys_updated_by>
-            <sys_updated_on>2026-02-22 05:32:32</sys_updated_on>
+            <sys_updated_on>2024-12-30 04:15:37</sys_updated_on>
             <sys_user/>
             <view display_value="Default view" name="NULL">Default view</view>
             <view_name/>

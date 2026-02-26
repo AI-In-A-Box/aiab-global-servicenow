@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?><database>
-    <element db_object_id="4f4c9498831332106873b7a6feaad39c" label="Session" max_length="40" name="u_ai_session" type="collection">
-        <element label="User" max_length="32" name="u_user" reference="sys_user" type="reference"/>
-        <element display="true" label="Title" max_length="40" name="u_title" type="string"/>
-        <index name="index">
-            <element name="u_user"/>
-        </index>
-    </element>
-</database>

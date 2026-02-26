@@ -12,7 +12,7 @@
         <script><![CDATA[var UtilBaseAIAB = Class.create();
 UtilBaseAIAB.prototype = {
     initialize: function() {},
-
+    
     getUserName: function(userId) {
         var sys_user = new GlideRecord("sys_user");
         if (sys_user.get(userId)) {
@@ -92,290 +92,7 @@ UtilBaseAIAB.prototype = {
             }
         }
     },
-    /**
-     * Build messages array for table-based inference (summarize-simple type)
-     * Looks for a summarize tool for the table and executes it to build prompt
-     * @param {GlideRecord} inferenceGR - The u_ai_inference record
-     * @param {string} table - Table name
-     * @param {string} target - Target record sys_id
-     * @param {string} userId - Requesting user sys_id
-     * @returns {Array} Messages array for LLM
-     */
-    buildTableMessages: function(inferenceGR, table, target, userId) {
-        var task = new GlideRecord(table);
-        if (!task.get(target)) {
-            return [{
-                role: 'system',
-                content: 'Error: Could not find target record'
-            }];
-        }
-
-        // Look for a summarize tool for this table
-        var toolName = 'summarize_' + table;
-        var toolGR = new GlideRecord('u_ai_tool');
-        toolGR.addQuery('u_name', toolName);
-        toolGR.addQuery('u_active', true);
-        toolGR.setLimit(1);
-        toolGR.query();
-
-        if (toolGR.next()) {
-            // Add this tool to the inference's u_tools_included list
-            var toolsList = inferenceGR.u_tools_included || '';
-            if (toolsList) {
-                toolsList += ',';
-            }
-            toolsList += toolGR.getUniqueValue();
-            inferenceGR.u_tools_included = toolsList;
-
-            // Execute the tool to get the prompt
-            var evaluator = new GlideScopedEvaluator();
-            evaluator.putVariable('args', {
-                sys_id: target
-            });
-            evaluator.putVariable('userId', userId);
-
-            try {
-                var result = evaluator.evaluateScript(toolGR, 'u_script');
-
-                if (result && result.found && result.prompt) {
-                    // Build messages array from tool output
-                    return [{
-                        role: 'system',
-                        content: 'You are a helpful assistant that summarizes records concisely.'
-                    }, {
-                        role: 'user',
-                        content: result.prompt
-                    }];
-                } else if (result && result.error) {
-                    gs.warn('AIAB: Tool execution error for ' + toolName + ': ' + result.error);
-                }
-            } catch (e) {
-                gs.warn('AIAB: Failed to execute tool ' + toolName + ': ' + e);
-            }
-        }
-
-        // Fallback: return basic error if no tool found
-        return [{
-            role: 'system',
-            content: 'Error: No summarize tool available for table ' + table
-        }];
-    },
-    /**
-     * Convert prompt string to JSON message array
-     * Handles both simple prompts and pre-formatted JSON arrays
-     * @param {string} prompt - The prompt string
-     * @returns {Array} Messages array
-     */
-    setPromptToJSON: function(prompt) {
-        var messages = [{
-            role: "system",
-            content: "You are a helpful assistant."
-        }, {
-            role: "user",
-            content: prompt
-        }];
-        try {
-            var parsedPrompt = JSON.parse(prompt);
-            if (Array.isArray(parsedPrompt)) {
-                messages = parsedPrompt;
-            }
-            return messages;
-        } catch (e) {
-            return messages;
-        }
-    },
-    /**
-     * Get all active tools for an inference
-     * Dynamically injects skill list into the skill tool description
-     * @param {GlideRecord} inferenceGR - The u_ai_inference record
-     * @returns {Array} Array of tool objects for OpenAI API
-     */
-    getActiveTools: function(inferenceGR) {
-        var tools = [];
-        var toolIds = [];
-        
-        // First, build the dynamic skill list
-        var skillList = [];
-        var skillGR = new GlideRecord('u_ai_skill');
-        skillGR.addQuery('u_active', true);
-        skillGR.query();
-        while (skillGR.next()) {
-            var skillName = skillGR.getValue('u_name');
-            var skillDesc = skillGR.getValue('u_description') || 'No description';
-            skillList.push('- ' + skillName + ': ' + skillDesc);
-        }
-        var skillListText = skillList.length > 0 ? 
-            skillList.join('\n') : 
-            'No skills currently available';
-        
-        // First check if u_tools_included is set and use those specific tools
-        if (inferenceGR.u_tools_included) {
-            var includedIds = inferenceGR.u_tools_included.toString().split(',');
-            for (var i = 0; i < includedIds.length; i++) {
-                var toolGR = new GlideRecord('u_ai_tool');
-                if (toolGR.get(includedIds[i].trim())) {
-                    if (toolGR.u_active == true) {
-                        try {
-                            var toolDescription = toolGR.getValue('u_description');
-                            
-                            // If this is the skill tool, inject the dynamic list
-                            if (toolGR.getValue('u_name') === 'skill') {
-                                toolDescription = toolDescription.replace('{{SKILL_LIST}}', skillListText);
-                            }
-                            
-                            tools.push({
-                                type: "function",
-                                "function": {
-                                    name: toolGR.getValue('u_name'),
-                                    description: toolDescription,
-                                    parameters: JSON.parse(toolGR.getValue('u_parameters'))
-                                }
-                            });
-                            toolIds.push(toolGR.getUniqueValue());
-                        } catch (e) {
-                            gs.warn('AIAB: Failed to parse tool parameters for ' + toolGR.getValue('u_name') + ': ' + e);
-                        }
-                    }
-                }
-            }
-        }
-        
-        // If no specific tools included, fall back to all active tools
-        if (tools.length === 0) {
-            var toolGR = new GlideRecord('u_ai_tool');
-            toolGR.addQuery('u_active', true);
-            toolGR.query();
-            while (toolGR.next()) {
-                try {
-                    var toolDescription = toolGR.getValue('u_description');
-                    
-                    // If this is the skill tool, inject the dynamic list
-                    if (toolGR.getValue('u_name') === 'skill') {
-                        toolDescription = toolDescription.replace('{{SKILL_LIST}}', skillListText);
-                    }
-                    
-                    tools.push({
-                        type: "function",
-                        "function": {
-                            name: toolGR.getValue('u_name'),
-                            description: toolDescription,
-                            parameters: JSON.parse(toolGR.getValue('u_parameters'))
-                        }
-                    });
-                    toolIds.push(toolGR.getUniqueValue());
-                } catch (e) {
-                    gs.warn('AIAB: Failed to parse tool parameters for ' + toolGR.getValue('u_name') + ': ' + e);
-                }
-            }
-            
-            // Record which tools were implicitly used
-            if (toolIds.length > 0) {
-                inferenceGR.u_tools_included = toolIds.join(',');
-                gs.info('AIAB: Implicitly set ' + toolIds.length + ' tools on inference ' + inferenceGR.getValue('sys_id'));
-            }
-        }
-        
-        // Log the skill list for debugging
-        if (skillList.length > 0) {
-            gs.info('AIAB: Injected ' + skillList.length + ' skills into skill tool description');
-        }
-        
-        return tools;
-    },
-    /**
-     * Check and update tool call count for a session
-     * Prevents infinite loops by limiting tool calls per session
-     * @param {string} sessionId - u_ai_session sys_id
-     * @param {number} maxCalls - Maximum allowed calls (default 10)
-     * @param {number} increment - Number to increment by (default 1)
-     * @returns {Object} { allowed: boolean, current: number, remaining: number }
-     */
-    checkToolCallLimit: function(sessionId, maxCalls, increment) {
-        maxCalls = maxCalls || 10;
-        increment = increment || 1;
-
-        var sessionGR = new GlideRecord('u_ai_session');
-        if (!sessionGR.get(sessionId)) {
-            return {
-                allowed: false,
-                error: 'Session not found: ' + sessionId
-            };
-        }
-
-        var currentCount = parseInt(sessionGR.u_tool_call_count || 0);
-        var remaining = maxCalls - currentCount;
-
-        if (currentCount >= maxCalls) {
-            return {
-                allowed: false,
-                current: currentCount,
-                remaining: 0,
-                error: 'Maximum tool call limit (' + maxCalls + ') exceeded'
-            };
-        }
-
-        // Increment the count
-        sessionGR.u_tool_call_count = currentCount + increment;
-        sessionGR.update();
-
-        return {
-            allowed: true,
-            current: currentCount + increment,
-            remaining: remaining - increment
-        };
-    },
-    executeTool: function(toolName, toolArgs, userId) {
-        if (toolName === 'skill') {
-            // Handle skill tool specially
-            var skillGR = new GlideRecord('u_ai_skill');
-            skillGR.addQuery('u_name', toolArgs.name);
-            skillGR.addQuery('u_active', true);
-            skillGR.setLimit(1);
-            skillGR.query();
-            if (skillGR.next()) {
-                return {
-                    loaded: true,
-                    skill_name: '' + skillGR.u_name,
-                    content: '' + skillGR.u_content
-                };
-            }
-            return {
-                error: 'Skill not found: ' + toolArgs.name
-            };
-        }
-
-        // Execute regular tool
-        var toolGR = new GlideRecord('u_ai_tool');
-        toolGR.addQuery('u_name', toolName);
-        toolGR.addQuery('u_active', true);
-        toolGR.setLimit(1);
-        toolGR.query();
-        if (!toolGR.next()) {
-            return {
-                error: 'Tool not found: ' + toolName
-            };
-        }
-
-        var evaluator = new GlideScopedEvaluator();
-        evaluator.putVariable('args', toolArgs);
-        evaluator.putVariable('userId', userId);
-        return evaluator.evaluateScript(toolGR, 'u_script');
-    },
-    getOrCreateSession: function(inferenceGR, userId) {
-        if (inferenceGR.u_ai_session) {
-            return inferenceGR.u_ai_session;
-        }
-        // Create new session
-        var sessionGR = new GlideRecord('u_ai_session');
-        sessionGR.initialize();
-        sessionGR.u_user = userId;
-        sessionGR.u_title = 'AI Session ' + new GlideDateTime().getDisplayValue();
-        sessionGR.u_tool_call_count = 0;
-        var sessionId = sessionGR.insert();
-        inferenceGR.u_ai_session = sessionId;
-        return sessionId;
-    },
-
+    
     /**
      * Chunk text into an array of smaller strings
      * @param {string} text - The text to chunk
@@ -397,7 +114,7 @@ UtilBaseAIAB.prototype = {
         }
         return chunkedText;
     },
-
+    
     /**
      * Convert HTML to Markdown
      * @param {string} html - The HTML to convert
@@ -591,14 +308,14 @@ UtilBaseAIAB.prototype = {
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2026-02-14 06:32:55</sys_created_on>
         <sys_id>939e336183cf36504d4fccb6feaad392</sys_id>
-        <sys_mod_count>10</sys_mod_count>
+        <sys_mod_count>6</sys_mod_count>
         <sys_name>UtilBaseAIAB</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_script_include_939e336183cf36504d4fccb6feaad392</sys_update_name>
         <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-02-22 03:57:23</sys_updated_on>
+        <sys_updated_on>2026-02-16 07:33:11</sys_updated_on>
     </sys_script_include>
     <sys_es_latest_script action="INSERT_OR_UPDATE">
         <id>939e336183cf36504d4fccb6feaad392</id>
