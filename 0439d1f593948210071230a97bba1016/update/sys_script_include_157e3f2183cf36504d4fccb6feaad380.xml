@@ -11,532 +11,512 @@
         <sandbox_callable>false</sandbox_callable>
         <script><![CDATA[var StatusBaseAIAB = Class.create();
 StatusBaseAIAB.prototype = {
-  initialize: function () { },
-  canSummarize: function (table) {
-    var enabled = gs.getProperty('ai_in_a_box.feature.summarize.enabled') == "true";
-    if (enabled === false) return false;
-    var userHasRole = gs.hasRole(gs.getProperty('ai_in_a_box.feature.summarize.roles'.split(',')));
-    if (userHasRole === false) return false;
-    return true;
-  },
-  featuresAndProperties: [
-    {
-      enabled: gs.getProperty('ai_in_a_box.config.midserver.enabled') == "true",
-      properties: [
-        'ai_in_a_box.config.midserver.enabled',
-        'ai_in_a_box.config.midserver'
-      ],
-      label: "Midserver"
+    initialize: function() {},
+    
+    canSummarize: function(table) {
+        var enabled = gs.getProperty('ai_in_a_box.feature.summarize.enabled') == "true";
+        if (enabled === false) return false;
+        var userHasRole = gs.hasRole(gs.getProperty('ai_in_a_box.feature.summarize.roles'.split(',')));
+        if (userHasRole === false) return false;
+        return true;
     },
-    {
-      enabled: gs.getProperty('ai_in_a_box.feature.summarize.enabled') == "true",
-      roles: gs.getProperty('ai_in_a_box.feature.summarize.roles').split(','),
-      properties: [
-        'ai_in_a_box.feature.summarize.enabled',
-        'ai_in_a_box.feature.summarize.roles',
-      ],
-      label: "Summarize"
-    },
-  {
-    enabled: gs.getProperty('ai_in_a_box.feature.chat.enabled') == "true",
-    roles: gs.getProperty('ai_in_a_box.feature.chat.roles').split(','),
-    properties: [
-      'ai_in_a_box.feature.chat.enabled',
-      'ai_in_a_box.feature.chat.roles',
+    
+    featuresAndProperties: [{
+            enabled: gs.getProperty('ai_in_a_box.config.midserver.enabled') == "true",
+            properties: [
+                'ai_in_a_box.config.midserver.enabled',
+                'ai_in_a_box.config.midserver'
+            ],
+            label: "Midserver"
+        },
+        {
+            enabled: gs.getProperty('ai_in_a_box.feature.summarize.enabled') == "true",
+            roles: gs.getProperty('ai_in_a_box.feature.summarize.roles').split(','),
+            properties: [
+                'ai_in_a_box.feature.summarize.enabled',
+                'ai_in_a_box.feature.summarize.roles',
+            ],
+            label: "Summarize",
+            dependsOn: "toolCalling"
+        },
+        {
+            enabled: gs.getProperty('ai_in_a_box.feature.chat.enabled') == "true",
+            roles: gs.getProperty('ai_in_a_box.feature.chat.roles').split(','),
+            properties: [
+                'ai_in_a_box.feature.chat.enabled',
+                'ai_in_a_box.feature.chat.roles',
+            ],
+            label: "Chat"
+        }
     ],
-    label: "Chat"
-  }
-  ],
-  status: function () {
-    var summarize = (function () {
-      var property = 'ai_in_a_box.feature.summarize.enabled';
-      var returnObject = {
-        "className": "btn btn-danger",
-        "label": "Summarize",
-        "buttonText": "Disabled",
-        "url": "/sys_properties_list.do?sysparm_query=name=" + property
-      };
-      var value = gs.getProperty(property);
-      if (value == null) {
-        returnObject.buttonText = "Not Set";
-        return returnObject;
-      }
-      if (value == "false") {
-        returnObject.buttonText = "Disabled";
-        returnObject.className = "btn btn-warning";
-        return returnObject;
-      }
-      returnObject.className = "btn btn-success";
-      returnObject.buttonText = 'Done';
-      return returnObject;
-    })();
-    var chat = (function () {
-      var property = 'ai_in_a_box.feature.chat.enabled';
-      var returnObject = {
-        "className": "btn btn-danger",
-        "label": "Chat",
-        "buttonText": "Disabled",
-        "url": "/sys_properties_list.do?sysparm_query=name=" + property
-      };
-      var value = gs.getProperty(property);
-      if (value == null) {
-        returnObject.buttonText = "Not Set";
-        return returnObject;
-      }
-      if (value == "false") {
-        returnObject.buttonText = "Disabled";
-        returnObject.className = "btn btn-warning";
-        return returnObject;
-      }
-      returnObject.className = "btn btn-success";
-      returnObject.buttonText = 'Done';
-      return returnObject;
-    })();
-    var callbackAuth = (function () {
-      var returnObject = {
-        "className": "btn btn-warning",
-        "label": "Callback Auth",
-        "buttonText": "Not Set",
-        "url": "/sys_properties_list.do?sysparm_query=name=ai_in_a_box.config.server.callback.auth",
-        "description": "Authentication for AI server callbacks"
-      };
-      var authValue = gs.getProperty('ai_in_a_box.config.server.callback.auth');
-      if (!authValue || authValue == '') {
-        returnObject.className = 'btn btn-secondary';
-        returnObject.buttonText = 'Not Set';
-        return returnObject;
-      }
-      var parts = authValue.split(':');
-      if (parts.length < 2) {
-        returnObject.className = 'btn btn-danger';
-        returnObject.buttonText = 'Invalid Format';
-        returnObject.description = 'Should be username:password';
-        return returnObject;
-      }
-      returnObject.className = 'btn btn-success';
-      returnObject.buttonText = 'Set';
-      returnObject.description = 'Callback auth is configured';
-      return returnObject;
-    })();
-    var serviceAccount = (function () {
-      var returnObject = {
-        "className": "btn btn-warning",
-        "label": "Service Account",
-        "buttonText": "Not Configured",
-        "url": "https://getaiinabox.com/docs/tools-acl",
-        "description": "User account for tool execution"
-      };
-      var authValue = gs.getProperty('ai_in_a_box.config.server.callback.auth');
-      if (!authValue || authValue == '') {
-        returnObject.className = 'btn btn-secondary';
-        returnObject.buttonText = 'N/A';
-        returnObject.description = 'Set callback auth first';
-        return returnObject;
-      }
-      var parts = authValue.split(':');
-      if (parts.length < 2) {
-        returnObject.className = 'btn btn-secondary';
-        returnObject.buttonText = 'N/A';
-        return returnObject;
-      }
-      var username = parts[0];
-      var userRecord = new GlideRecord('sys_user');
-      userRecord.addQuery('user_name', username);
-      userRecord.addQuery('active', true);
-      userRecord.setLimit(1);
-      userRecord.query();
-      if (!userRecord.next()) {
-        returnObject.className = 'btn btn-danger';
-        returnObject.buttonText = 'Not Found';
-        returnObject.description = 'User "' + username + '" not found or inactive';
-        returnObject.url = '/sys_user_list.do?sysparm_query=user_name=' + username;
-        return returnObject;
-      }
-      returnObject.url = '/sys_user.do?sys_id=' + userRecord.sys_id;
-      var hasAdminRole = new GlideRecord('sys_user_has_role');
-      hasAdminRole.addQuery('user', userRecord.sys_id);
-      hasAdminRole.addQuery('role.name', 'admin');
-      hasAdminRole.setLimit(1);
-      hasAdminRole.query();
-      if (!hasAdminRole.hasNext()) {
-        returnObject.className = 'btn btn-danger';
-        returnObject.buttonText = 'No Admin Role';
-        returnObject.description = 'User "' + username + '" needs admin role';
-        return returnObject;
-      }
-      try {
-        var instanceUrl = gs.getProperty('glide.servlet.uri', '');
-        if (!instanceUrl) {
-          instanceUrl = 'https://' + gs.getProperty('instance_name') + '.service-now.com/';
+    
+    // ===== INDIVIDUAL STATUS CHECKS =====
+    
+    getSummarizeStatus: function() {
+        var property = 'ai_in_a_box.feature.summarize.enabled';
+        var returnObject = {
+            "className": "btn btn-danger",
+            "label": "Summarize",
+            "buttonText": "Disabled",
+            "url": "/sys_properties_list.do?sysparm_query=name=" + property
+        };
+        var value = gs.getProperty(property);
+        if (value == null) {
+            returnObject.buttonText = "Not Set";
+            return returnObject;
         }
-        var testEndpoint = instanceUrl + 'api/now/table/sys_user?sysparm_query=user_name=' + username + '&sysparm_limit=1&sysparm_fields=user_name';
-        var restMessage = new sn_ws.RESTMessageV2();
-        restMessage.setHttpMethod('GET');
-        restMessage.setEndpoint(testEndpoint);
-        restMessage.setRequestHeader('Accept', 'application/json');
-        restMessage.setRequestHeader('Authorization', 'Basic ' + GlideStringUtil.base64Encode(authValue));
-        var response = restMessage.execute();
-        var statusCode = response.getStatusCode();
-        if (statusCode == 401 || statusCode == 403) {
-          returnObject.className = 'btn btn-danger';
-          returnObject.buttonText = 'Auth Failed';
-          returnObject.description = 'Invalid password for "' + username + '"';
-          return returnObject;
-        }
-        if (statusCode != 200) {
-          returnObject.className = 'btn btn-warning';
-          returnObject.buttonText = 'Test Error';
-          returnObject.description = 'Could not verify (HTTP ' + statusCode + ')';
-          return returnObject;
-        }
-      } catch (e) {
-        returnObject.className = 'btn btn-warning';
-        returnObject.buttonText = 'Test Error';
-        returnObject.description = 'Error: ' + e.message;
-        return returnObject;
-      }
-      returnObject.className = 'btn btn-success';
-      returnObject.buttonText = username;
-      returnObject.description = 'Verified with admin role';
-      return returnObject;
-    })();
-    var helperScript = (function () {
-      var returnObject = {
-        "className": "btn btn-warning",
-        "label": "Helper Script",
-        "buttonText": "Not Found",
-        "url": "https://getaiinabox.com/docs/tools-acl",
-        "description": "Global script include for tool execution"
-      };
-      var scriptInclude = new GlideRecord('sys_script_include');
-      scriptInclude.addQuery('name', 'AIABGlobalHelper');
-      scriptInclude.addQuery('sys_scope', 'global');
-      scriptInclude.addQuery('active', true);
-      scriptInclude.setLimit(1);
-      scriptInclude.query();
-      if (scriptInclude.next()) {
-        returnObject.className = 'btn btn-success';
-        returnObject.buttonText = 'Installed';
-        returnObject.description = 'AIABGlobalHelper is active';
-        returnObject.url = '/sys_script_include.do?sys_id=' + scriptInclude.sys_id;
-      } else {
-        var inactiveCheck = new GlideRecord('sys_script_include');
-        inactiveCheck.addQuery('name', 'AIABGlobalHelper');
-        inactiveCheck.addQuery('sys_scope', 'global');
-        inactiveCheck.setLimit(1);
-        inactiveCheck.query();
-        if (inactiveCheck.next()) {
-          returnObject.className = 'btn btn-warning';
-          returnObject.buttonText = 'Inactive';
-          returnObject.description = 'Script exists but is not active';
-          returnObject.url = '/sys_script_include.do?sys_id=' + inactiveCheck.sys_id;
-        } else {
-          returnObject.className = 'btn btn-secondary';
-          returnObject.buttonText = 'Not Installed';
-          returnObject.description = 'AIABGlobalHelper not found';
-        }
-      }
-      return returnObject;
-    })();
-    var midserver = (function () {
-      var enabled = gs.getProperty('ai_in_a_box.config.midserver.enabled', 'true');
-      var returnObject = {
-        "className": "btn btn-danger",
-        "label": "Mid Server",
-        "buttonText": "Down",
-        "url": "/sys_properties_list.do?sysparm_query=name=ai_in_a_box.config.midserver"
-      };
-      if(enabled == 'false') {
-        returnObject.buttonText = "Not Used";
-        returnObject.className = "btn btn-secondary";
-        return returnObject;
-      }
-      var property = 'ai_in_a_box.config.midserver';
-      var value = gs.getProperty(property);
-      if (value == null) {
-        returnObject.buttonText = "Not Set";
-        return returnObject;
-      }
-      var eccAgent = new GlideRecord('ecc_agent');
-      eccAgent.setLimit(1);
-      eccAgent.addQuery('name', value);
-      eccAgent.query();
-      if (eccAgent.hasNext() == false) {
-        returnObject.buttonText = "Missing";
-        return returnObject;
-      }
-      if (eccAgent.next()) {
-        if (eccAgent.status != 'Up') {
-          returnObject.buttonText = "Down";
-          return returnObject;
-        }
-        if (eccAgent.validated != 'true') {
-          returnObject.buttonText = "Not Validated";
-          returnObject.className = "btn btn-warning";
-          returnObject.url = "/ecc_agent_list.do?sysparm_query=" + eccAgent.getEncodedQuery();
-          return returnObject;
-        }
-        var eccAgentIssues = new GlideRecord('ecc_agent_issue');
-        eccAgentIssues.addQuery('mid_server.name', value);
-        eccAgentIssues.addQuery('state', '=', 'new');
-        eccAgentIssues.query();
-        if (eccAgentIssues.next()) {
-          returnObject.className = "btn btn-warning";
-          returnObject.buttonText = 'Address Issues';
-          returnObject.url = "/ecc_agent_list.do?sysparm_query=" + eccAgent.getEncodedQuery();
-          return returnObject;
+        if (value == "false") {
+            returnObject.buttonText = "Disabled";
+            returnObject.className = "btn btn-warning";
+            return returnObject;
         }
         returnObject.className = "btn btn-success";
+        returnObject.buttonText = 'Done';
+        return returnObject;
+    },
+    
+    getChatStatus: function() {
+        var property = 'ai_in_a_box.feature.chat.enabled';
+        var returnObject = {
+            "className": "btn btn-danger",
+            "label": "Chat",
+            "buttonText": "Disabled",
+            "url": "/sys_properties_list.do?sysparm_query=name=" + property
+        };
+        var value = gs.getProperty(property);
+        if (value == null) {
+            returnObject.buttonText = "Not Set";
+            return returnObject;
+        }
+        if (value == "false") {
+            returnObject.buttonText = "Disabled";
+            returnObject.className = "btn btn-warning";
+            return returnObject;
+        }
+        returnObject.className = "btn btn-success";
+        returnObject.buttonText = 'Done';
+        return returnObject;
+    },
+    
+    getCallbackAuthStatus: function() {
+        var returnObject = {
+            "className": "btn btn-warning",
+            "label": "Callback Auth",
+            "buttonText": "Not Set",
+            "url": "/sys_properties_list.do?sysparm_query=name=ai_in_a_box.config.server.callback.auth",
+            "description": "Authentication for AI server callbacks"
+        };
+        var authValue = gs.getProperty('ai_in_a_box.config.server.callback.auth');
+        if (!authValue || authValue == '') {
+            returnObject.className = 'btn btn-secondary';
+            returnObject.buttonText = 'Not Set';
+            return returnObject;
+        }
+        var parts = authValue.split(':');
+        if (parts.length < 2) {
+            returnObject.className = 'btn btn-danger';
+            returnObject.buttonText = 'Invalid Format';
+            returnObject.description = 'Should be username:password';
+            return returnObject;
+        }
+        returnObject.className = 'btn btn-success';
+        returnObject.buttonText = 'Set';
+        returnObject.description = 'Callback auth is configured';
+        return returnObject;
+    },
+    
+    getServiceAccountStatus: function() {
+        var returnObject = {
+            "className": "btn btn-warning",
+            "label": "Service Account",
+            "buttonText": "Not Configured",
+            "url": "https://getaiinabox.com/docs/tools-acl",
+            "description": "User account for tool execution"
+        };
+        var authValue = gs.getProperty('ai_in_a_box.config.server.callback.auth');
+        if (!authValue || authValue == '') {
+            returnObject.className = 'btn btn-secondary';
+            returnObject.buttonText = 'N/A';
+            returnObject.description = 'Set callback auth first';
+            return returnObject;
+        }
+        var parts = authValue.split(':');
+        if (parts.length < 2) {
+            returnObject.className = 'btn btn-secondary';
+            returnObject.buttonText = 'N/A';
+            return returnObject;
+        }
+        var username = parts[0];
+        var userRecord = new GlideRecord('sys_user');
+        userRecord.addQuery('user_name', username);
+        userRecord.addQuery('active', true);
+        userRecord.setLimit(1);
+        userRecord.query();
+        if (!userRecord.next()) {
+            returnObject.className = 'btn btn-danger';
+            returnObject.buttonText = 'Not Found';
+            returnObject.description = 'User "' + username + '" not found or inactive';
+            returnObject.url = '/sys_user_list.do?sysparm_query=user_name=' + username;
+            return returnObject;
+        }
+        returnObject.url = '/sys_user.do?sys_id=' + userRecord.sys_id;
+        var hasAdminRole = new GlideRecord('sys_user_has_role');
+        hasAdminRole.addQuery('user', userRecord.sys_id);
+        hasAdminRole.addQuery('role.name', 'admin');
+        hasAdminRole.setLimit(1);
+        hasAdminRole.query();
+        if (!hasAdminRole.hasNext()) {
+            returnObject.className = 'btn btn-danger';
+            returnObject.buttonText = 'No Admin Role';
+            returnObject.description = 'User "' + username + '" needs admin role';
+            return returnObject;
+        }
+        try {
+            var instanceUrl = gs.getProperty('glide.servlet.uri', '');
+            if (!instanceUrl) {
+                instanceUrl = 'https://' + gs.getProperty('instance_name') + '.service-now.com/';
+            }
+            var testEndpoint = instanceUrl + 'api/now/table/sys_user?sysparm_query=user_name=' + username + '&sysparm_limit=1&sysparm_fields=user_name';
+            var restMessage = new sn_ws.RESTMessageV2();
+            restMessage.setHttpMethod('GET');
+            restMessage.setEndpoint(testEndpoint);
+            restMessage.setRequestHeader('Accept', 'application/json');
+            restMessage.setRequestHeader('Authorization', 'Basic ' + GlideStringUtil.base64Encode(authValue));
+            var response = restMessage.execute();
+            var statusCode = response.getStatusCode();
+            if (statusCode == 401 || statusCode == 403) {
+                returnObject.className = 'btn btn-danger';
+                returnObject.buttonText = 'Auth Failed';
+                returnObject.description = 'Invalid password for "' + username + '"';
+                return returnObject;
+            }
+            if (statusCode != 200) {
+                returnObject.className = 'btn btn-warning';
+                returnObject.buttonText = 'Test Error';
+                returnObject.description = 'Could not verify (HTTP ' + statusCode + ')';
+                return returnObject;
+            }
+        } catch (e) {
+            returnObject.className = 'btn btn-warning';
+            returnObject.buttonText = 'Test Error';
+            returnObject.description = 'Error: ' + e.message;
+            return returnObject;
+        }
+        returnObject.className = 'btn btn-success';
+        returnObject.buttonText = username;
+        returnObject.description = 'Verified with admin role';
+        return returnObject;
+    },
+    
+    getMidServerStatus: function() {
+        var enabled = gs.getProperty('ai_in_a_box.config.midserver.enabled', 'true');
+        var returnObject = {
+            "className": "btn btn-danger",
+            "label": "Mid Server",
+            "buttonText": "Down",
+            "url": "/sys_properties_list.do?sysparm_query=name=ai_in_a_box.config.midserver"
+        };
+        if (enabled == 'false') {
+            returnObject.buttonText = "Not Used";
+            returnObject.className = "btn btn-secondary";
+            return returnObject;
+        }
+        var property = 'ai_in_a_box.config.midserver';
+        var value = gs.getProperty(property);
+        if (value == null) {
+            returnObject.buttonText = "Not Set";
+            return returnObject;
+        }
+        var eccAgent = new GlideRecord('ecc_agent');
+        eccAgent.setLimit(1);
+        eccAgent.addQuery('name', value);
+        eccAgent.query();
+        if (eccAgent.hasNext() == false) {
+            returnObject.buttonText = "Missing";
+            return returnObject;
+        }
+        if (eccAgent.next()) {
+            if (eccAgent.status != 'Up') {
+                returnObject.buttonText = "Down";
+                return returnObject;
+            }
+            if (eccAgent.validated != 'true') {
+                returnObject.buttonText = "Not Validated";
+                returnObject.className = "btn btn-warning";
+                returnObject.url = "/ecc_agent_list.do?sysparm_query=" + eccAgent.getEncodedQuery();
+                return returnObject;
+            }
+            var eccAgentIssues = new GlideRecord('ecc_agent_issue');
+            eccAgentIssues.addQuery('mid_server.name', value);
+            eccAgentIssues.addQuery('state', '=', 'new');
+            eccAgentIssues.query();
+            if (eccAgentIssues.next()) {
+                returnObject.className = "btn btn-warning";
+                returnObject.buttonText = 'Address Issues';
+                returnObject.url = "/ecc_agent_list.do?sysparm_query=" + eccAgent.getEncodedQuery();
+                return returnObject;
+            }
+            returnObject.className = "btn btn-success";
+            returnObject.buttonText = 'Up';
+            return returnObject;
+        }
+    },
+    
+    getAIABServerStatus: function() {
+        var property = 'ai_in_a_box.config.server.aiab.url';
+        var value = gs.getProperty(property);
+        var returnObject = {
+            "className": "btn btn-danger",
+            "label": "AI In A Box",
+            "buttonText": "Down",
+            "url": "/sys_properties_list.do?sysparm_query=name=" + property,
+            "value": value
+        };
+
+        if (value == null || value == "") {
+            returnObject.buttonText = "URL Not Set";
+            return returnObject;
+        }
+        var authProperty = 'ai_in_a_box.config.server.aiiab.auth';
+        var authValue = gs.getProperty(authProperty);
+        var url = value + "/meta/status";
+        var midEnabled = gs.getProperty('ai_in_a_box.config.midserver.enabled', 'true');
+        if (midEnabled == 'true') {
+            var eccAgent = new GlideRecord('ecc_agent');
+            eccAgent.setLimit(1);
+            eccAgent.addQuery('name', gs.getProperty('ai_in_a_box.config.midserver'));
+            eccAgent.addQuery('status', 'Up');
+            eccAgent.addQuery('validated', 'true');
+            eccAgent.query();
+            if (eccAgent.hasNext() == false) {
+                returnObject.buttonText = "Mid Server Down";
+                returnObject.url = "/ecc_agent_list.do?sysparm_query=name=" + gs.getProperty('ai_in_a_box.config.midserver');
+                returnObject.value = gs.getProperty('ai_in_a_box.config.midserver');
+                return returnObject;
+            }
+        }
+        var restMessage = new sn_ws.RESTMessageV2();
+        restMessage.setHttpMethod('get');
+        restMessage.setEndpoint(url);
+        if (midEnabled == 'true') {
+            restMessage.setMIDServer(gs.getProperty('ai_in_a_box.config.midserver'));
+        }
+        restMessage.setRequestHeader('Content-Type', 'application/json');
+        restMessage.setRequestHeader('Authorization', 'Basic ' + GlideStringUtil.base64Encode(authValue));
+        var response = restMessage.execute();
+        if (response.getStatusCode() == 401) {
+            returnObject.buttonText = 'Invalid Auth';
+            return returnObject;
+        }
+        if (response.getStatusCode() != 200) {
+            returnObject.buttonText = 'Down';
+            return returnObject;
+        }
         returnObject.buttonText = 'Up';
+        returnObject.className = 'btn btn-success';
         return returnObject;
-      }
-    })();
-    var aiiabServer = (function () {
-      var property = 'ai_in_a_box.config.server.aiab.url';
-      var returnObject = {
-        "className": "btn btn-danger",
-        "label": "AI In A Box",
-        "buttonText": "Down",
-        "url": "/sys_properties_list.do?sysparm_query=name=" + property
-      };
-      var value = gs.getProperty(property);
-      if (value == null || value == "") {
-        returnObject.buttonText = "URL Not Set";
+    },
+    
+    getLLMServerStatus: function() {
+        var property = 'ai_in_a_box.config.server.llm.url';
+        var returnObject = {
+            "className": "btn btn-danger",
+            "label": "LLM Server",
+            "buttonText": "Down",
+            "url": "/sys_properties_list.do?sysparm_query=name=" + property
+        };
+        var value = gs.getProperty(property);
+        var urlRegex = new RegExp('^(http|https)://.*$');
+        if (!urlRegex.test(value) || value == null) {
+            returnObject.buttonText = 'Invalid URL';
+            return returnObject;
+        }
+        var authProperty = 'ai_in_a_box.config.server.llm.auth';
+        var authValue = gs.getProperty(authProperty);
+        if (authValue == null || authValue == "") {
+            returnObject.buttonText = 'Auth not set';
+            returnObject.url = "/sys_properties_list.do?sysparm_query=name=" + authProperty;
+            return returnObject;
+        }
+        var midEnabled = gs.getProperty('ai_in_a_box.config.midserver.enabled', 'true');
+        if (midEnabled == 'true') {
+            var eccAgent = new GlideRecord('ecc_agent');
+            eccAgent.setLimit(1);
+            eccAgent.addQuery('name', gs.getProperty('ai_in_a_box.config.midserver'));
+            eccAgent.addQuery('status', 'Up');
+            eccAgent.addQuery('validated', 'true');
+            eccAgent.query();
+            if (eccAgent.hasNext() == false) {
+                returnObject.buttonText = "Mid Server Down";
+                returnObject.url = "/ecc_agent_list.do?sysparm_query=name=" + gs.getProperty('ai_in_a_box.config.midserver');
+                return returnObject;
+            }
+        }
+        var restMessage = new sn_ws.RESTMessageV2();
+        restMessage.setHttpMethod('get');
+        restMessage.setEndpoint(value + '/models');
+        if (midEnabled == 'true') {
+            restMessage.setMIDServer(gs.getProperty('ai_in_a_box.config.midserver'));
+        }
+        restMessage.setRequestHeader('Content-Type', 'application/json');
+        restMessage.setRequestHeader('Authorization', 'Bearer ' + authValue);
+        var response = restMessage.execute();
+        var responseBody = response.getBody();
+        if (response.getStatusCode() == 401) {
+            returnObject.buttonText = 'Invalid Auth';
+            return returnObject;
+        }
+        if (response.getStatusCode() != 200) {
+            returnObject.buttonText = 'Down';
+            return returnObject;
+        }
+
+        var responseJSON = JSON.parse(responseBody);
+        var isLlamaCpp = false;
+        var models = [];
+        if (responseJSON.data) {
+            for (var i = 0; i < responseJSON.data.length; i++) {
+                models.push(responseJSON.data[i].id);
+                if (responseJSON.data[i].owned_by == 'llamacpp') {
+                    isLlamaCpp = true;
+                }
+            }
+        }
+        if (isLlamaCpp == false) {
+            var modelProperty = 'ai_in_a_box.config.server.llm.model';
+            var modelValue = gs.getProperty(modelProperty);
+            if (models.indexOf(modelValue) == -1) {
+                returnObject.className = 'btn btn-warning';
+                returnObject.buttonText = 'Model(' + modelValue + ') not found.  Models: ' + models.join(', ');
+                returnObject.url = "/sys_properties_list.do?sysparm_query=name=" + modelProperty;
+                return returnObject;
+            }
+        }
+
+        returnObject.buttonText = 'Up';
+        returnObject.className = 'btn btn-success';
         return returnObject;
-      }
-      var authProperty = 'ai_in_a_box.config.server.aiiab.auth';
-      var authValue = gs.getProperty(authProperty);
-      var url = value + "/meta/status";
-      var midEnabled = gs.getProperty('ai_in_a_box.config.midserver.enabled', 'true');
-      if (midEnabled == 'true') {
+    },
+    
+    // ===== AGGREGATE (for backwards compat) =====
+    status: function() {
+        return {
+            summarize: this.getSummarizeStatus(),
+            chat: this.getChatStatus(),
+            callbackAuth: this.getCallbackAuthStatus(),
+            serviceAccount: this.getServiceAccountStatus(),
+            midserver: this.getMidServerStatus(),
+            aiiabServer: this.getAIABServerStatus(),
+            llmServer: this.getLLMServerStatus(),
+            meet: {
+                "label": "Let's Meet",
+                "buttonText": "Schedule it",
+                "url": "https://meetings.hubspot.com/jace-benson",
+                "className": "btn btn-primary"
+            },
+            docs: {
+                "label": "Docs",
+                "buttonText": "Help yourself",
+                "url": "https://getaiinabox.com/docs",
+                "className": "btn btn-success"
+            },
+            email: {
+                "label": "Email",
+                "buttonText": "Email Us",
+                "url": "mailto:team@getaiinabox.com",
+                "className": "btn btn-outline-primary"
+            },
+            up: this.getMidServerStatus().buttonText == 'Up' && 
+                this.getAIABServerStatus().buttonText == 'Up' && 
+                this.getLLMServerStatus().buttonText == 'Up'
+        };
+    },
+    
+    // ===== LEGACY (keep for compat) =====
+    statusMidServer: function() {
+        var midservername = gs.getProperty('ai_in_a_box.config.midserver', 'aiinabox-mid');
+        var enabled = gs.getProperty('ai_in_a_box.config.midserver.enabled', 'true');
+        if (enabled != 'true') {
+            return {
+                status: "disabled",
+                message: "Mid Server is disabled"
+            };
+        }
         var eccAgent = new GlideRecord('ecc_agent');
-        eccAgent.setLimit(1);
-        eccAgent.addQuery('name', gs.getProperty('ai_in_a_box.config.midserver'));
-        eccAgent.addQuery('status', 'Up');
-        eccAgent.addQuery('validated', 'true');
+        eccAgent.addQuery('name', midservername);
         eccAgent.query();
-        if (eccAgent.hasNext() == false) {
-          returnObject.buttonText = "Mid Server Down";
-          returnObject.url = "/ecc_agent_list.do?sysparm_query=name=" + gs.getProperty('ai_in_a_box.config.midserver');
-          return returnObject;
+        if (eccAgent.next()) {
+            if (eccAgent.status != 'Up') {
+                return {
+                    status: "down",
+                    message: "Mid Server is down"
+                };
+            }
+            if (eccAgent.validated != 'true') {
+                return {
+                    status: "not_validated",
+                    message: "Mid Server is not validated"
+                };
+            }
+            var eccAgentIssues = new GlideRecord('ecc_agent_issue');
+            eccAgentIssues.addQuery('mid_server.name', 'aiinabox-mid');
+            eccAgentIssues.addQuery('state', '=', 'new');
+            eccAgentIssues.query();
+            if (eccAgentIssues.next()) {
+                return {
+                    status: "issues",
+                    message: "Mid Server has issues"
+                };
+            }
+            return {
+                status: "up",
+                message: "Mid Server is up"
+            };
+        } else {
+            return {
+                status: "down",
+                message: "Mid Server is down"
+            };
         }
-      }
-      var restMessage = new sn_ws.RESTMessageV2();
-      restMessage.setHttpMethod('get');
-      restMessage.setEndpoint(url);
-      if (midEnabled == 'true') {
-        restMessage.setMIDServer(gs.getProperty('ai_in_a_box.config.midserver'));
-      }
-      restMessage.setRequestHeader('Content-Type', 'application/json');
-      restMessage.setRequestHeader('Authorization', 'Basic ' + GlideStringUtil.base64Encode(authValue));
-      var response = restMessage.execute();
-      if (response.getStatusCode() == 401) {
-        returnObject.buttonText = 'Invalid Auth';
-        return returnObject;
-      }
-      if (response.getStatusCode() != 200) {
-        returnObject.buttonText = 'Down';
-        return returnObject;
-      }
-      returnObject.buttonText = 'Up';
-      returnObject.className = 'btn btn-success';
-      return returnObject;
-    })();
-    var llmServer = (function () {
-      var property = 'ai_in_a_box.config.server.llm.url';
-      var returnObject = {
-        "className": "btn btn-danger",
-        "label": "LLM Server",
-        "buttonText": "Down",
-        "url": "/sys_properties_list.do?sysparm_query=name=" + property
-      };
-      var value = gs.getProperty(property);
-      var urlRegex = new RegExp('^(http|https)://.*$');
-      if (!urlRegex.test(value) || value == null) {
-        returnObject.buttonText = 'Invalid URL';
-        return returnObject;
-      }
-      var authProperty = 'ai_in_a_box.config.server.llm.auth';
-      var authValue = gs.getProperty(authProperty);
-      if (authValue == null || authValue == "") {
-        returnObject.buttonText = 'Auth not set';
-        returnObject.url = "/sys_properties_list.do?sysparm_query=name=" + authProperty;
-        return returnObject;
-      }
-      var midEnabled = gs.getProperty('ai_in_a_box.config.midserver.enabled', 'true');
-      if (midEnabled == 'true') {
-        var eccAgent = new GlideRecord('ecc_agent');
-        eccAgent.setLimit(1);
-        eccAgent.addQuery('name', gs.getProperty('ai_in_a_box.config.midserver'));
-        eccAgent.addQuery('status', 'Up');
-        eccAgent.addQuery('validated', 'true');
-        eccAgent.query();
-        if (eccAgent.hasNext() == false) {
-          returnObject.buttonText = "Mid Server Down";
-          returnObject.url = "/ecc_agent_list.do?sysparm_query=name=" + gs.getProperty('ai_in_a_box.config.midserver');
-          return returnObject;
+    },
+    
+    statusAIABServer: function() {
+        var aiabStatusServer = gs.getProperty('ai_in_a_box.config.server.aiab.url', 'http://localhost:5000');
+        var response = new RestAIAB().send({
+            host: aiabStatusServer,
+            path: '/meta/status',
+        });
+        var statusCode = JSON.parse(response.body).status;
+
+        if (statusCode === "ok") {
+            return {
+                status: "up",
+                message: "AIAB Server is up",
+                url: gs.getProperty('ai_in_a_box.config.server.aiab.url')
+            };
+        } else {
+            return {
+                status: "down",
+                message: "AIAB Server is down",
+                url: gs.getProperty('ai_in_a_box.config.server.aiab.url')
+            };
         }
-      }
-      var restMessage = new sn_ws.RESTMessageV2();
-      returnObject.gottorest = true;
-      restMessage.setHttpMethod('get');
-      restMessage.setEndpoint(value + '/models');
-      if (midEnabled == 'true') {
-        restMessage.setMIDServer(gs.getProperty('ai_in_a_box.config.midserver'));
-      }
-      restMessage.setRequestHeader('Content-Type', 'application/json');
-      restMessage.setRequestHeader('Authorization', 'Bearer ' + authValue);
-      var response = restMessage.execute();
-      var responseBody = response.getBody();
-      if (response.getStatusCode() == 401) {
-        returnObject.buttonText = 'Invalid Auth';
-        return returnObject;
-      }
-      if (response.getStatusCode() != 200) {
-        returnObject.buttonText = 'Down';
-        return returnObject;
-      }
-
-      var responseJSON = JSON.parse(responseBody);
-      var isLlamaCpp = false;
-      var models = [];
-      if (responseJSON.data) {
-        for (var i = 0; i < responseJSON.data.length; i++) {
-          models.push(responseJSON.data[i].id);
-          if (responseJSON.data[i].owned_by == 'llamacpp') {
-            isLlamaCpp = true;
-          }
-        }
-      }
-      if (isLlamaCpp == false) {
-        var modelProperty = 'ai_in_a_box.config.server.llm.model';
-        var modelValue = gs.getProperty(modelProperty);
-        if (models.indexOf(modelValue) == -1) {
-          returnObject.className = 'btn btn-warning';
-          returnObject.buttonText = 'Model(' + modelValue + ') not found.  Models: ' + models.join(', ');
-          returnObject.url = "/sys_properties_list.do?sysparm_query=name=" + modelProperty;
-          return returnObject;
-        }
-      }
-
-      returnObject.buttonText = 'Up';
-      returnObject.className = 'btn btn-success';
-      return returnObject;
-    })();
-    var meet = {
-      "label": "Let's Meet",
-      "buttonText": "Schedule it",
-      "url": "https://meetings.hubspot.com/jace-benson",
-      "className": "btn btn-primary"
-    };
-    var docs = {
-      "label": "Docs",
-      "buttonText": "Help yourself",
-      "url": "https://getaiinabox.com/docs",
-      "className": "btn btn-success"
-    };
-    var email = {
-      "label": "Email",
-      "buttonText": "Email Us",
-      "url": "mailto:team@getaiinabox.com",
-      "className": "btn btn-outline-primary"
-    };
-    return {
-      summarize: summarize,
-      chat: chat,
-      callbackAuth: callbackAuth,
-      serviceAccount: serviceAccount,
-      helperScript: helperScript,
-      midserver: midserver,
-      aiiabServer: aiiabServer,
-      llmServer: llmServer,
-      meet: meet,
-      docs: docs,
-      email: email,
-      up: midserver.buttonText == 'Up' && aiiabServer.buttonText == 'Up' && llmServer.buttonText == 'Up'
-    };
-
-  },
-  statusMidServer: function () {
-    var midservername = gs.getProperty('ai_in_a_box.config.midserver', 'aiinabox-mid');
-    var enabled = gs.getProperty('ai_in_a_box.config.midserver.enabled', 'true');
-    if(enabled != 'true'){
-      return {
-        status: "disabled",
-        message: "Mid Server is disabled"
-      };
-    }
-    var eccAgent = new GlideRecord('ecc_agent');
-    eccAgent.addQuery('name', midservername);
-    eccAgent.query();
-    if (eccAgent.next()) {
-      if (eccAgent.status != 'Up') {
-        return {
-          status: "down",
-          message: "Mid Server is down"
-        };
-      }
-      if (eccAgent.validated != 'true') {
-        return {
-          status: "not_validated",
-          message: "Mid Server is not validated"
-        };
-      }
-      var eccAgentIssues = new GlideRecord('ecc_agent_issue');
-      eccAgentIssues.addQuery('mid_server.name', 'aiinabox-mid');
-      eccAgentIssues.addQuery('state', '=', 'new');
-      eccAgentIssues.query();
-      if (eccAgentIssues.next()) {
-        return {
-          status: "issues",
-          message: "Mid Server has issues"
-        };
-      }
-      return {
-        status: "up",
-        message: "Mid Server is up"
-      };
-    } else {
-      return {
-        status: "down",
-        message: "Mid Server is down"
-      };
-    }
-  },
-  statusAIABServer: function () {
-    var aiabStatusServer = gs.getProperty('ai_in_a_box.config.server.aiab.url', 'http://localhost:5000');
-    var response = new RestAIAB().send({
-      host: aiabStatusServer,
-      path: '/meta/status',
-    });
-    var statusCode = JSON.parse(response.body).status;
-
-    if (statusCode === "ok") {
-      return {
-        status: "up",
-        message: "AIAB Server is up"
-      };
-    } else {
-      return {
-        status: "down",
-        message: "AIAB Server is down"
-      };
-    }
-  },
-  type: 'StatusBaseAIAB'
+    },
+    
+    type: 'StatusBaseAIAB'
 };]]></script>
         <sys_class_name>sys_script_include</sys_class_name>
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2026-02-14 06:32:17</sys_created_on>
         <sys_id>157e3f2183cf36504d4fccb6feaad380</sys_id>
-        <sys_mod_count>2</sys_mod_count>
+        <sys_mod_count>6</sys_mod_count>
         <sys_name>StatusBaseAIAB</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_script_include_157e3f2183cf36504d4fccb6feaad380</sys_update_name>
-        <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-02-14 06:44:59</sys_updated_on>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-03-01 19:29:24</sys_updated_on>
     </sys_script_include>
     <sys_es_latest_script action="INSERT_OR_UPDATE">
         <id>157e3f2183cf36504d4fccb6feaad380</id>

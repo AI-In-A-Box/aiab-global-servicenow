@@ -30,147 +30,86 @@
   };
 };]]></client_script>
         <controller_as>c</controller_as>
-        <css>// AIAB Server Widget Styles&#13;
-&#13;
-.aiab-server-widget {&#13;
-  .panel {&#13;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);&#13;
-    border-radius: 8px;&#13;
-    border: none;&#13;
-    transition: all 0.2s ease;&#13;
-&#13;
-    &amp;:hover {&#13;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);&#13;
-    }&#13;
-  }&#13;
-&#13;
-  .panel-heading {&#13;
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);&#13;
-    color: white;&#13;
-    border-radius: 8px 8px 0 0;&#13;
-  }&#13;
-&#13;
-  .panel-title {&#13;
-    display: flex;&#13;
-    align-items: center;&#13;
-    margin: 0;&#13;
-    font-size: 18px;&#13;
-    &#13;
-    i {&#13;
-      margin-right: 10px;&#13;
-      font-size: 1.2em;&#13;
-    }&#13;
-  }&#13;
-&#13;
-  .panel-body {&#13;
-    padding: 20px;&#13;
-  }&#13;
-&#13;
-  .description {&#13;
-    margin-bottom: 20px;&#13;
-  }&#13;
-&#13;
-  // Server status lines matching AIAB Settings style&#13;
-  .server-status-section {&#13;
-    margin-bottom: 20px;&#13;
-  }&#13;
-&#13;
-  .server-status-line {&#13;
-    border: 1px solid #e0e0e0;&#13;
-    border-radius: 6px;&#13;
-    margin-bottom: 8px;&#13;
-    padding: 12px 15px;&#13;
-    transition: all 0.2s ease;&#13;
-    background: #fff;&#13;
-&#13;
-    &amp;:hover {&#13;
-      background-color: #f8f9fa;&#13;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);&#13;
-    }&#13;
-&#13;
-    .row {&#13;
-      display: flex;&#13;
-      align-items: center;&#13;
-    }&#13;
-&#13;
-    strong {&#13;
-      margin-right: 10px;&#13;
-    }&#13;
-&#13;
-    .text-success,&#13;
-    .text-danger,&#13;
-    .text-warning,&#13;
-    .text-info,&#13;
-    .text-muted {&#13;
-      font-weight: 500;&#13;
-    }&#13;
-  }&#13;
-&#13;
-  .btn {&#13;
-    transition: all 0.2s ease;&#13;
-&#13;
-    &amp;:hover {&#13;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);&#13;
-    }&#13;
-  }&#13;
-&#13;
-  // Communication Flow Animation Styles&#13;
-  .communication-flow {&#13;
-    margin-top: 20px;&#13;
-    padding: 15px;&#13;
-    background-color: #f8f9fa;&#13;
-    border-radius: 8px;&#13;
-    border: 1px solid #e9ecef;&#13;
-&#13;
-    .flow-title {&#13;
-      color: #333;&#13;
-      margin-bottom: 15px;&#13;
-      font-size: 16px;&#13;
-      &#13;
-      i {&#13;
-        color: #007bff;&#13;
-        margin-right: 8px;&#13;
-      }&#13;
-    }&#13;
-&#13;
-    .flow-diagram {&#13;
-      max-width: 100%;&#13;
-      height: auto;&#13;
-      border-radius: 6px;&#13;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);&#13;
-      margin-bottom: 10px;&#13;
-    }&#13;
-&#13;
-    .flow-description {&#13;
-      font-size: 12px;&#13;
-      margin: 10px 0 0 0;&#13;
-      font-style: italic;&#13;
-    }&#13;
-&#13;
-    .flow-with-mid {&#13;
-      .flow-title {&#13;
-        color: #28a745; // Green for enabled&#13;
-      }&#13;
-    }&#13;
-&#13;
-    .flow-without-mid {&#13;
-      .flow-title {&#13;
-        color: #6c757d; // Gray for disabled/direct&#13;
-      }&#13;
-    }&#13;
-  }&#13;
-&#13;
-  .footer-note {&#13;
-    margin-top: 20px;&#13;
-    padding-top: 15px;&#13;
-    border-top: 1px solid #eee;&#13;
-    text-align: center;&#13;
-    &#13;
-    .refresh-icon {&#13;
-      color: #28a745;&#13;
-      margin-right: 5px;&#13;
-    }&#13;
-  }&#13;
+        <css>// AIAB Infrastructure Widget Styles
+
+.aiab-server-widget {
+  .panel {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    border: none;
+  }
+
+  .panel-heading {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .panel-title {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    font-size: 18px;
+    
+    i {
+      margin-right: 10px;
+    }
+  }
+
+  .server-status-section {
+    margin-bottom: 20px;
+  }
+
+  .server-status-line {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    padding: 12px 15px;
+    transition: all 0.2s ease;
+    background: #fff;
+
+    &amp;:hover {
+      background-color: #f8f9fa;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+    }
+
+    strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    span {
+      font-weight: 500;
+    }
+    
+    // Demo server note styling
+    &amp;.demo-note {
+      background: #e3f2fd;
+      border-color: #2196f3;
+      
+      strong {
+        color: #1976d2;
+      }
+      
+      i {
+        color: #2196f3;
+        margin-right: 5px;
+      }
+    }
+  }
+
+  .btn {
+    transition: all 0.2s ease;
+
+    &amp;:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+  }
 }</css>
         <data_table>sp_instance</data_table>
         <demo_data/>
@@ -191,106 +130,31 @@
   /*global gs, data*/
   
   try {
-    // Initialize widget data
-    data.title = 'AI Server Status';
-    data.description = 'Monitor your AI infrastructure servers';
+    // Use StatusBaseAIAB for all infrastructure checks
+    var status = new global.StatusAIAB();
     
-    // Get configuration - use same logic as AIAB Settings widget
-    var midserverEnabled = gs.getProperty('ai_in_a_box.config.midserver.enabled') == 'true';
-    data.midserverEnabled = midserverEnabled;
+    // Get all infrastructure statuses using new individual methods
+    data.aiabServer = status.getAIABServerStatus();
+    data.llmServer = status.getLLMServerStatus();
+    data.callbackAuth = status.getCallbackAuthStatus();
+    data.serviceAccount = status.getServiceAccountStatus();
+    data.midserver = status.getMidServerStatus();
     
-    // Initialize status checker
-    var aiabStatus = new global.StatusAIAB();
+    // Check if using demo server (getaiinabox.com)
+    var aiabUrl = gs.getProperty('ai_in_a_box.config.server.aiab.url', '');
+    data.isDemoServer = aiabUrl.indexOf('getaiinabox.com') >= 0;
     
-    // Initialize default server data
-    data.aiabServer = { name: "AIAB Server" };
-    data.midserver = { name: "MID Server" };
+    // Check LLM auth status
+    var llmAuth = gs.getProperty('ai_in_a_box.config.server.llm.auth', '');
+    data.llmAuthSet = llmAuth && llmAuth.length > 0;
     
-    // Get midserver status based on configuration
-    if (!midserverEnabled) {
-      // If midserver is explicitly disabled in configuration
-      data.midserver.status = '⚙️ Disabled';
-      data.midserver.message = 'MID Server is disabled in configuration';
-    } else {
-      // If midserver is enabled, check the actual MID server directly
-      // Don't rely on statusMidServer() since it has its own disabled logic
-      var midservername = gs.getProperty('ai_in_a_box.config.midserver', 'aiinabox-mid');
-      data.midserver.name = midservername;
-      var eccAgent = new GlideRecord('ecc_agent');
-      eccAgent.addQuery('name', midservername);
-      eccAgent.query();
-      
-      if (eccAgent.next()) {
-        // Found a midserver with this name - check its status
-        if (eccAgent.status == 'Up' && eccAgent.validated == 'true') {
-          // Check for issues
-          var eccAgentIssues = new GlideRecord('ecc_agent_issue');
-          eccAgentIssues.addQuery('mid_server.name', midservername);
-          eccAgentIssues.addQuery('state', 'new');
-          eccAgentIssues.query();
-          
-          if (eccAgentIssues.next()) {
-            data.midserver.status = '⚠️ Issues';
-            data.midserver.message = 'MID Server has unresolved issues';
-          } else {
-            data.midserver.status = '✅ Up';
-            data.midserver.message = 'MID Server is running normally';
-          }
-        } else if (eccAgent.status != 'Up') {
-          data.midserver.status = ']]>🔥<![CDATA[ Down';
-          data.midserver.message = 'MID Server is not running';
-        } else if (eccAgent.validated != 'true') {
-          data.midserver.status = '⚠️ Not Validated';
-          data.midserver.message = 'MID Server is not validated';
-        }
-      } else {
-        data.midserver.status = '❓ Missing';
-        data.midserver.message = 'MID Server "' + midservername + '" not found';
-      }
-    }
-    
-    // Check AIAB Server status based on midserver mode
-    if (!midserverEnabled) {
-      // Direct connection mode - check AIAB server directly
-      var aiabState = aiabStatus.statusAIABServer();
-      
-      if (aiabState && aiabState.status == 'up') {
-        data.aiabServer.status = '✅ Up';
-        data.aiabServer.message = 'Server is running normally';
-      } else {
-        data.aiabServer.status = ']]>🔥<![CDATA[ Down';
-        data.aiabServer.message = 'Server is not responding - check configuration';
-      }
-      
-    } else {
-      // Midserver mode - check midserver first, then AIAB server
-      var midState = aiabStatus.statusMidServer();
-      var midServerIsUp = midState && midState.status == 'up';
-      
-      if (!midServerIsUp) {
-        data.aiabServer.status = '❓ Unknown';
-        data.aiabServer.message = 'Cannot check - MID Server is down';
-      } else {
-        // Midserver is up, check AIAB server through it
-        var aiabState = aiabStatus.statusAIABServer();
-        
-        if (aiabState && aiabState.status == 'up') {
-          data.aiabServer.status = '✅ Up';
-          data.aiabServer.message = 'Server is running normally via MID Server';
-        } else {
-          data.aiabServer.status = ']]>🔥<![CDATA[ Down';
-          data.aiabServer.message = 'Server is not responding through MID Server';
-        }
-      }
-    }
+    // Check if LLM URL is set (if not set, and using demo, it's handled by server)
+    var llmUrl = gs.getProperty('ai_in_a_box.config.server.llm.url', '');
+    data.llmUrlSet = llmUrl && llmUrl.length > 0;
     
   } catch (error) {
-    data.error = 'Error checking server status: ' + error.message;
-    data.aiabServer = {
-      name: "AIAB Server",
-      status: '⚠️ Error',
-      message: 'Unable to determine server status'
-    };
+    data.error = 'Error checking infrastructure: ' + error.message;
+    gs.error('AIAB Infrastructure Widget Error: ' + error.message);
   }
   
 })();]]></script>
@@ -299,14 +163,14 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2025-08-31 18:31:34</sys_created_on>
         <sys_id>1191ae04c33be21052e098bc0501315c</sys_id>
-        <sys_mod_count>38</sys_mod_count>
+        <sys_mod_count>56</sys_mod_count>
         <sys_name>AIAB Server</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sp_widget_1191ae04c33be21052e098bc0501315c</sys_update_name>
         <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-02-16 06:30:33</sys_updated_on>
+        <sys_updated_on>2026-03-02 03:56:57</sys_updated_on>
         <template><![CDATA[<div class="aiab-server-widget">
   <div class="panel panel-default">
     
@@ -314,17 +178,19 @@
     <div class="panel-heading">
       <h3 class="panel-title">
         <i class="fa fa-server"></i>
-        {{data.title}}
+        AIAB Infrastructure
       </h3>
     </div>
     
     <!-- Body -->
     <div class="panel-body">
       
-      <!-- Description -->
-      <p class="text-muted description">{{data.description}}</p>
+      <!-- Error Display -->
+      <div ng-if="data.error" class="alert alert-danger">
+        <i class="fa fa-exclamation-triangle"></i> {{data.error}}
+      </div>
       
-      <!-- Server Status Lines -->
+      <!-- Infrastructure Status Lines -->
       <div class="server-status-section">
         
         <!-- AIAB Server Status -->
@@ -332,16 +198,89 @@
           <div class="row">
             <div class="col-sm-8">
               <strong>AIAB Server</strong>
-              <span class="{{c.getStatusClass(data.aiabServer.status)}}">
-                {{c.getCleanStatus(data.aiabServer.status)}}
+              <span class="{{c.getStatusClass(data.aiabServer.buttonText)}}">
+                {{data.aiabServer.buttonText}}
               </span>
+              <br>
+              <small class="text-muted">{{data.aiabServer.value}}</small>
             </div>
             <div class="col-sm-4 text-right">
-              <a href="/nav_to.do?uri=sys_properties.do?sys_id=e08cdf21c3561e10594e12f1b401317c" 
+              <a href="/sys_properties_list.do?sysparm_query=name%3Dai_in_a_box.config.server.aiab.url%5EORname%3Dai_in_a_box.config.server.aiiab.auth" 
                  class="btn btn-default btn-sm"
                  target="_blank">
                 Configure
               </a>
+            </div>
+          </div>
+        </div>
+        
+        <!-- LLM Server Status - Only show if NOT using demo server OR if custom LLM is configured -->
+        <div class="server-status-line" ng-if="!data.isDemoServer || data.llmUrlSet">
+          <div class="row">
+            <div class="col-sm-8">
+              <strong>LLM Server</strong>
+              <span class="{{c.getStatusClass(data.llmServer.buttonText)}}">
+                {{data.llmServer.buttonText}}
+              </span>
+              <br>
+              <small class="text-muted" ng-if="!data.isDemoServer && !data.llmAuthSet" style="color: #dc3545;">
+                Auth required for custom LLM
+              </small>
+              <small class="text-muted" ng-if="!data.isDemoServer && data.llmAuthSet">
+                Custom LLM configured
+              </small>
+            </div>
+            <div class="col-sm-4 text-right">
+              <a href="/sys_properties_list.do?sysparm_query=name%3Dai_in_a_box.config.server.llm.url%5EORname%3Dai_in_a_box.config.server.llm.auth%5EORname%3Dai_in_a_box.config.server.llm.model" 
+                 class="btn btn-default btn-sm"
+                 target="_blank">
+                Configure
+              </a>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Demo Server Note - Show when using demo server without custom LLM -->
+        <div class="server-status-line demo-note" ng-if="data.isDemoServer && !data.llmUrlSet">
+          <div class="row">
+            <div class="col-sm-12">
+              <strong><i class="fa fa-info-circle"></i> Demo Server Active</strong>
+              <br>
+              <small class="text-muted">
+                Using getaiinabox.com demo LLM. No configuration needed.
+              </small>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Callback Authentication -->
+        <div class="server-status-line">
+          <div class="row">
+            <div class="col-sm-8">
+              <strong>Callback Auth</strong>
+              <small class="text-muted">
+                Handles responses and tool calling
+              </small>
+              <br>
+              <small class="text-muted" style="font-size: 11px;">
+                {{data.serviceAccount.description}}
+              </small>
+            </div>
+            <div class="col-sm-4 text-right">
+              <div style="display: inline-flex; flex-direction: column; gap: 5px;">
+                <a href="/sys_properties_list.do?sysparm_query=name%3Dai_in_a_box.config.server.callback.auth" 
+                   class="btn btn-default btn-sm"
+                   target="_blank"
+                   style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">
+                  Auth
+                </a>
+                <a href="{{data.serviceAccount.url}}" 
+                   class="btn btn-default btn-sm"
+                   target="_blank"
+                   style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">
+                  Account
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -351,12 +290,12 @@
           <div class="row">
             <div class="col-sm-8">
               <strong>MID Server</strong>
-              <span class="{{c.getStatusClass(data.midserver.status)}}">
-                {{c.getCleanStatus(data.midserver.status)}}
+              <span class="{{c.getStatusClass(data.midserver.buttonText)}}">
+                {{data.midserver.buttonText}}
               </span>
             </div>
             <div class="col-sm-4 text-right">
-              <a href="/sys_properties_list.do?sysparm_query=nameSTARTSWITHai_in_a_box.config.midserver" 
+              <a href="/sys_properties_list.do?sysparm_query=name%3Dai_in_a_box.config.midserver%5EORname%3Dai_in_a_box.config.midserver.enabled" 
                  class="btn btn-default btn-sm"
                  target="_blank">
                 Configure
@@ -365,47 +304,6 @@
           </div>
         </div>
         
-      </div>
-      
-      <!-- Communication Flow Animation -->
-      <div class="communication-flow">
-        <div class="text-center">
-          <div ng-if="data.midserverEnabled" class="flow-with-mid">
-            <h5 class="flow-title">
-              <i class="fa fa-exchange"></i> Communication Flow (with MID Server)
-            </h5>
-            <img src="aiab-with-mid.gif" 
-                 alt="Communication flow with MID Server" 
-                 class="flow-diagram"
-                 width="384" 
-                 height="216"/>
-            <p class="text-muted flow-description">
-              ServiceNow → MID Server → AI in a Box → LLM
-            </p>
-          </div>
-          
-          <div ng-if="!data.midserverEnabled" class="flow-without-mid">
-            <h5 class="flow-title">
-              <i class="fa fa-arrow-right"></i> Communication Flow (direct)
-            </h5>
-            <img src="aiab-without-mid.gif" 
-                 alt="Direct communication flow" 
-                 class="flow-diagram"
-                 width="384" 
-                 height="216"/>
-            <p class="text-muted flow-description">
-              ServiceNow → AI in a Box → LLM (direct)
-            </p>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Footer Note -->
-      <div class="footer-note">
-        <small class="text-muted">
-          <i class="fa fa-refresh refresh-icon"></i>
-          Status updates automatically
-        </small>
       </div>
       
     </div>
