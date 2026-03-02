@@ -31,7 +31,7 @@
         <sys_domain>global</sys_domain>
         <sys_domain_path>/</sys_domain_path>
         <sys_id>41893f0383e796107f36c5b5eeaad3c8</sys_id>
-        <sys_mod_count>2</sys_mod_count>
+        <sys_mod_count>0</sys_mod_count>
         <sys_name>Generic Inference (multiple message)</sys_name>
         <sys_overrides/>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
@@ -39,7 +39,7 @@
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_hub_action_type_definition_41893f0383e796107f36c5b5eeaad3c8</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-02-16 21:18:23</sys_updated_on>
+        <sys_updated_on>2026-02-18 21:10:44</sys_updated_on>
         <system_level>false</system_level>
         <type/>
     </sys_hub_action_type_definition>
@@ -716,11 +716,11 @@
         <sys_created_on>2025-02-11 02:13:01</sys_created_on>
         <sys_id>fff220f293fa2210e1bd7fbcebba1084</sys_id>
         <sys_mod_count>0</sys_mod_count>
-        <sys_name/>
+        <sys_name>messages</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
-        <sys_update_name/>
+        <sys_update_name>sys_documentation_var__m_sys_hub_action_input_41893f0383e796107f36c5b5eeaad3c8_messages_en</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
         <sys_updated_on>2025-02-11 02:13:01</sys_updated_on>
         <url/>
@@ -740,11 +740,11 @@
         <sys_created_on>2025-02-11 02:13:02</sys_created_on>
         <sys_id>3bf220f293fa2210e1bd7fbcebba10cb</sys_id>
         <sys_mod_count>0</sys_mod_count>
-        <sys_name/>
+        <sys_name>Don't Treat as Error</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
-        <sys_update_name/>
+        <sys_update_name>sys_documentation_var__m_sys_hub_action_output_41893f0383e796107f36c5b5eeaad3c8___dont_treat_as_error___en</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
         <sys_updated_on>2025-02-11 02:13:02</sys_updated_on>
         <url/>
@@ -763,11 +763,11 @@
         <sys_created_on>2025-02-11 02:13:02</sys_created_on>
         <sys_id>3ff220f293fa2210e1bd7fbcebba10c7</sys_id>
         <sys_mod_count>0</sys_mod_count>
-        <sys_name/>
+        <sys_name>Action Status</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
-        <sys_update_name/>
+        <sys_update_name>sys_documentation_var__m_sys_hub_action_output_41893f0383e796107f36c5b5eeaad3c8___action_status___en</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
         <sys_updated_on>2025-02-11 02:13:02</sys_updated_on>
         <url/>
@@ -786,11 +786,11 @@
         <sys_created_on>2025-02-11 02:14:52</sys_created_on>
         <sys_id>4c0320f293fa2210e1bd7fbcebba10ce</sys_id>
         <sys_mod_count>0</sys_mod_count>
-        <sys_name/>
+        <sys_name>response</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
-        <sys_update_name/>
+        <sys_update_name>sys_documentation_var__m_sys_hub_action_output_41893f0383e796107f36c5b5eeaad3c8_response_en</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
         <sys_updated_on>2025-02-11 02:14:52</sys_updated_on>
         <url/>

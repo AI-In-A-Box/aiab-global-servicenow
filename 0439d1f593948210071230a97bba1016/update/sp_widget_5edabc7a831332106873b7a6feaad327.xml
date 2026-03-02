@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller=function() {
+  /* widget controller */
+  var c = this;
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>// AIAB How It Works Widget - Simple Horizontal Layout
+
+.aiab-how-it-works {
+  width: 100%;
+  
+  .panel {
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    border: none;
+    margin-bottom: 20px;
+  }
+
+  .panel-heading {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px 8px 0 0;
+    padding: 15px 20px;
+  }
+
+  .panel-title {
+    display: flex;
+    align-items: center;
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    
+    i {
+      margin-right: 10px;
+      font-size: 20px;
+    }
+  }
+
+  .panel-body {
+    padding: 40px 30px;
+  }
+
+  // Simple Flow Layout
+  .simple-flow {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+
+  // Flow Nodes
+  .flow-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-width: 200px;
+  }
+
+  // Node Icons
+  .node-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    color: white;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transition: transform 0.2s ease;
+    
+    &amp;:hover {
+      transform: scale(1.1);
+    }
+    
+    &amp;.sn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    &amp;.aiab {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    }
+    
+    &amp;.llm {
+      background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%);
+    }
+  }
+
+  // Node Labels
+  .node-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 4px;
+  }
+
+  // Node URLs
+  .node-url {
+    font-size: 11px;
+    color: #6c757d;
+    font-family: monospace;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // Flow Lines
+  .flow-line {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 10px;
+    margin-top: 25px;
+  }
+
+  .line-arrow {
+    font-size: 36px;
+    color: #adb5bd;
+    font-weight: bold;
+    line-height: 1;
+  }
+
+  .line-label {
+    font-size: 11px;
+    color: #6c757d;
+    margin-top: 5px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  // Description
+  .flow-description {
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+    
+    p {
+      margin-bottom: 10px;
+      color: #495057;
+      line-height: 1.5;
+      
+      &amp;:last-child {
+        margin-bottom: 0;
+      }
+    }
+    
+    strong {
+      color: #333;
+    }
+  }
+
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    .simple-flow {
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .flow-node {
+      max-width: 100%;
+    }
+    
+    .node-url {
+      max-width: 250px;
+    }
+    
+    .flow-line {
+      margin-top: 10px;
+      margin-bottom: 10px;
+      
+      .line-arrow {
+        transform: rotate(90deg);
+      }
+    }
+  }
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>false</has_preview>
+        <id>aiab_how_it_works</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>AIAB How it works</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+  // Get instance and server information
+  data.instanceName = gs.getProperty('instance_name');
+  
+  // Get URLs and strip https:// prefix
+  var aiabUrl = gs.getProperty('ai_in_a_box.config.server.aiab.url') || '';
+  var llmUrl = gs.getProperty('ai_in_a_box.config.server.llm.url') || '';
+  
+  // Remove https:// and http:// prefixes
+  data.aiabUrl = aiabUrl.replace(/^https?:\/\//, '');
+  data.llmUrl = llmUrl.replace(/^https?:\/\//, '');
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-03-01 23:45:57</sys_created_on>
+        <sys_id>5edabc7a831332106873b7a6feaad327</sys_id>
+        <sys_mod_count>6</sys_mod_count>
+        <sys_name>AIAB How it works</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sp_widget_5edabc7a831332106873b7a6feaad327</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-03-01 23:55:44</sys_updated_on>
+        <template><![CDATA[<div class="aiab-how-it-works">
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      <h3 class="panel-title">
+        <i class="fa fa-exchange"></i>
+        How It Works
+      </h3>
+    </div>
+    <div class="panel-body">
+      
+      <!-- Simple Flow -->
+      <div class="simple-flow">
+        
+        <!-- ServiceNow -->
+        <div class="flow-node">
+          <div class="node-icon sn">
+            <i class="fa fa-building"></i>
+          </div>
+          <div class="node-label">ServiceNow</div>
+          <div class="node-url">{{data.instanceName}}</div>
+        </div>
+        
+        <!-- Connection Line -->
+        <div class="flow-line">
+          <div class="line-arrow">→</div>
+          <div class="line-label">REST API</div>
+        </div>
+        
+        <!-- AIAB Server -->
+        <div class="flow-node">
+          <div class="node-icon aiab">
+            <i class="fa fa-server"></i>
+          </div>
+          <div class="node-label">AIAB Server</div>
+          <div class="node-url">{{data.aiabUrl}}</div>
+        </div>
+        
+        <!-- Connection Line -->
+        <div class="flow-line">
+          <div class="line-arrow">→</div>
+          <div class="line-label">OpenAI API</div>
+        </div>
+        
+        <!-- LLM Server -->
+        <div class="flow-node">
+          <div class="node-icon llm">
+            <i class="fa fa-brain"></i>
+          </div>
+          <div class="node-label">LLM Server</div>
+          <div class="node-url">{{data.llmUrl}}</div>
+        </div>
+        
+      </div>
+      
+      <!-- Simple Description -->
+      <div class="flow-description">
+        <p>
+          <strong>Normal flow:</strong> ServiceNow sends requests to AIAB Server, which forwards them to your LLM. Responses stream back in real-time.
+        </p>
+        <p>
+          <strong>With Tool Calling:</strong> When the LLM needs ServiceNow data, AIAB Server calls back to run tools as the requesting user.
+        </p>
+      </div>
+      
+    </div>
+  </div>
+</div>]]></template>
+    </sp_widget>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>5edabc7a831332106873b7a6feaad327</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-03-01 23:45:56</sys_created_on>
+        <sys_id>1beabc7a831332106873b7a6feaad3c4</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-03-01 23:45:56</sys_updated_on>
+        <table>sp_widget</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
+</record_update>

@@ -4,14 +4,14 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2026-02-14 03:31:45</sys_created_on>
         <sys_id>59251fad834b36504d4fccb6feaad33a</sys_id>
-        <sys_mod_count>10</sys_mod_count>
+        <sys_mod_count>11</sys_mod_count>
         <sys_name>build_report</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>u_ai_tool_59251fad834b36504d4fccb6feaad33a</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-02-16 06:09:43</sys_updated_on>
+        <sys_updated_on>2026-02-26 23:20:21</sys_updated_on>
         <u_active>true</u_active>
         <u_description>Creates a bar chart report in ServiceNow. Groups records by a specified field and optionally filters them. Use this when users ask for reports, charts, or breakdowns of data.</u_description>
         <u_execute_in>servicenow</u_execute_in>
@@ -40,10 +40,14 @@
         <u_script><![CDATA[(function(args, userId) {
     // Validate required parameters
     if (!args.table) {
-        return { error: "No table identified" };
+        return {
+            error: "No table identified"
+        };
     }
     if (!args.field) {
-        return { error: "No field identified for grouping" };
+        return {
+            error: "No field identified for grouping"
+        };
     }
 
     var returnObj = {};
@@ -55,7 +59,7 @@
     grDBObj.addQuery('name', args.table);
     grDBObj.setLimit(1);
     grDBObj.query();
-    
+
     if (!grDBObj.next()) {
         // Try label match if exact name fails
         grDBObj = new GlideRecord('sys_db_object');
@@ -63,10 +67,12 @@
         grDBObj.setLimit(1);
         grDBObj.query();
         if (!grDBObj.next()) {
-            return { error: "Table not found: " + args.table };
+            return {
+                error: "Table not found: " + args.table
+            };
         }
     }
-    
+
     tableName = grDBObj.name.toString();
     var tableLabel = grDBObj.label.toString();
     returnObj.resolved_table = tableName;
@@ -76,14 +82,14 @@
     var currentTableName = tableName;
     var maxDepth = 10;
     var depth = 0;
-    
+
     while (currentTableName && depth < maxDepth) {
         tableHierarchy.push(currentTableName);
-        
+
         var parentCheck = new GlideRecord('sys_db_object');
         parentCheck.addQuery('name', currentTableName);
         parentCheck.query();
-        
+
         if (parentCheck.next() && parentCheck.super_class) {
             var parentGR = new GlideRecord('sys_db_object');
             if (parentGR.get(parentCheck.super_class.toString())) {
@@ -96,7 +102,7 @@
         }
         depth++;
     }
-    
+
     returnObj.table_hierarchy = tableHierarchy;
 
     // Search for field across table hierarchy
@@ -107,7 +113,7 @@
     grDict.addQuery('active', true);
     grDict.setLimit(1);
     grDict.query();
-    
+
     var fieldName = null;
     var fieldLabel = null;
     if (grDict.next()) {
@@ -117,7 +123,7 @@
         returnObj.field_label = fieldLabel;
         returnObj.field_defined_on = grDict.name.toString();
     } else {
-        return { 
+        return {
             error: "Field not found: " + args.field + " on table or parent tables",
             searched_tables: tableHierarchy
         };
@@ -126,7 +132,9 @@
     // Get user info for the report
     var userGR = new GlideRecord('sys_user');
     if (!userGR.get(userId)) {
-        return { error: "User not found" };
+        return {
+            error: "User not found"
+        };
     }
     var userName = userGR.getDisplayValue('name');
 
@@ -151,7 +159,7 @@
     reportGR.user = userId;
     reportGR.is_published = true;
     reportGR.sys_scope = 'global';
-    
+
     // Add filter if provided
     if (args.query) {
         reportGR.filter = args.query;
@@ -161,17 +169,19 @@
     var reportSysId = reportGR.insert();
 
     if (!reportSysId) {
-        return { error: "Failed to create report" };
+        return {
+            error: "Failed to create report"
+        };
     }
 
     // Build the direct report link
-	var reportURL = '/sys_report_template.do?jvar_report_id=' + reportSysId;
+    var reportURL = gs.getProperty('instance_name') + '.service-now.com' + '/sys_report_template.do?jvar_report_id=' + reportSysId;
 
     returnObj.report_name = reportName;
     returnObj.report_sys_id = reportSysId;
     returnObj.report_url = reportURL;
     returnObj.summary = "Created bar chart report on " + tableLabel + " grouped by " + fieldLabel;
-    
+
     return returnObj;
 })(args, userId);]]></u_script>
     </u_ai_tool>

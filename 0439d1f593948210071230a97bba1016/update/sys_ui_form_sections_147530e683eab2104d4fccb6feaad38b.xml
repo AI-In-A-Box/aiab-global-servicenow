@@ -10,7 +10,7 @@
             <sys_mod_count>0</sys_mod_count>
             <sys_overrides/>
             <sys_ui_form display_value="sys_hub_step_ext_input" name="sys_hub_step_ext_input" sys_domain="global" view="7966be310a0a0b8c00bd504090503227">147530e683eab2104d4fccb6feaad38b</sys_ui_form>
-            <sys_ui_section caption="NULL" display_value="" name="sys_hub_step_ext_input" sys_domain="global" view="7966be310a0a0b8c00bd504090503227">e07530e683eab2104d4fccb6feaad3ad</sys_ui_section>
+            <sys_ui_section display_value="">e07530e683eab2104d4fccb6feaad3ad</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
             <sys_updated_on>2026-01-22 21:56:25</sys_updated_on>
         </sys_ui_form_section>
@@ -24,7 +24,7 @@
             <sys_mod_count>0</sys_mod_count>
             <sys_overrides/>
             <sys_ui_form display_value="sys_hub_step_ext_input" name="sys_hub_step_ext_input" sys_domain="global" view="7966be310a0a0b8c00bd504090503227">147530e683eab2104d4fccb6feaad38b</sys_ui_form>
-            <sys_ui_section caption="Reference Specification" display_value="Reference Specification" name="sys_hub_step_ext_input" sys_domain="global" view="7966be310a0a0b8c00bd504090503227">287530e683eab2104d4fccb6feaad3c6</sys_ui_section>
+            <sys_ui_section display_value="">287530e683eab2104d4fccb6feaad3c6</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
             <sys_updated_on>2026-01-22 21:56:26</sys_updated_on>
         </sys_ui_form_section>
@@ -38,7 +38,7 @@
             <sys_mod_count>0</sys_mod_count>
             <sys_overrides/>
             <sys_ui_form display_value="sys_hub_step_ext_input" name="sys_hub_step_ext_input" sys_domain="global" view="7966be310a0a0b8c00bd504090503227">147530e683eab2104d4fccb6feaad38b</sys_ui_form>
-            <sys_ui_section caption="Choice List Specification" display_value="Choice List Specification" name="sys_hub_step_ext_input" sys_domain="global" view="7966be310a0a0b8c00bd504090503227">187530e683eab2104d4fccb6feaad38f</sys_ui_section>
+            <sys_ui_section display_value="">187530e683eab2104d4fccb6feaad38f</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
             <sys_updated_on>2026-01-22 21:56:25</sys_updated_on>
         </sys_ui_form_section>
@@ -52,7 +52,7 @@
             <sys_mod_count>0</sys_mod_count>
             <sys_overrides/>
             <sys_ui_form display_value="sys_hub_step_ext_input" name="sys_hub_step_ext_input" sys_domain="global" view="7966be310a0a0b8c00bd504090503227">147530e683eab2104d4fccb6feaad38b</sys_ui_form>
-            <sys_ui_section caption="Dependent Field" display_value="Dependent Field" name="sys_hub_step_ext_input" sys_domain="global" view="7966be310a0a0b8c00bd504090503227">6c7530e683eab2104d4fccb6feaad399</sys_ui_section>
+            <sys_ui_section display_value="">6c7530e683eab2104d4fccb6feaad399</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
             <sys_updated_on>2026-01-22 21:56:25</sys_updated_on>
         </sys_ui_form_section>
@@ -66,7 +66,7 @@
             <sys_mod_count>0</sys_mod_count>
             <sys_overrides/>
             <sys_ui_form display_value="sys_hub_step_ext_input" name="sys_hub_step_ext_input" sys_domain="global" view="7966be310a0a0b8c00bd504090503227">147530e683eab2104d4fccb6feaad38b</sys_ui_form>
-            <sys_ui_section caption="Calculated Value" display_value="Calculated Value" name="sys_hub_step_ext_input" sys_domain="global" view="7966be310a0a0b8c00bd504090503227">207530e683eab2104d4fccb6feaad3a4</sys_ui_section>
+            <sys_ui_section display_value="">207530e683eab2104d4fccb6feaad3a4</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
             <sys_updated_on>2026-01-22 21:56:25</sys_updated_on>
         </sys_ui_form_section>
@@ -80,7 +80,7 @@
             <sys_mod_count>0</sys_mod_count>
             <sys_overrides/>
             <sys_ui_form display_value="sys_hub_step_ext_input" name="sys_hub_step_ext_input" sys_domain="global" view="7966be310a0a0b8c00bd504090503227">147530e683eab2104d4fccb6feaad38b</sys_ui_form>
-            <sys_ui_section caption="Default Value" display_value="Default Value" name="sys_hub_step_ext_input" sys_domain="global" view="7966be310a0a0b8c00bd504090503227">6c7530e683eab2104d4fccb6feaad3db</sys_ui_section>
+            <sys_ui_section display_value="">6c7530e683eab2104d4fccb6feaad3db</sys_ui_section>
             <sys_updated_by>admin</sys_updated_by>
             <sys_updated_on>2026-01-22 21:56:26</sys_updated_on>
         </sys_ui_form_section>
