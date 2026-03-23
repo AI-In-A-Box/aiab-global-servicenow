@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="3e56dde5c3b376103c71770d05013155" label="AI Agent" max_length="40" name="u_ai_agent" type="collection">
+        <element label="Target Table" max_length="80" name="u_target_table" type="table_name"/>
+        <element dependent="u_target_table" dependent_on_field="u_target_table" label="Filter" max_length="1000" name="u_filter" type="conditions" use_dependent_field="true"/>
+        <element label="System Prompt" max_length="4000" name="u_system_prompt" type="string"/>
+        <element label="Last Heartbeat" max_length="40" name="u_last_heartbeat" type="glide_date_time"/>
+        <element attributes="edge_encryption_enabled=true" label="Active" max_length="40" name="u_active" type="boolean"/>
+        <element label="Model" max_length="100" name="u_model" type="string"/>
+        <element attributes="edge_encryption_enabled=true" label="Heartbeat Minutes" max_length="40" name="u_heartbeat_minutes" type="integer"/>
+        <element label="Name" max_length="100" name="u_name" type="string"/>
+    </element>
+</database>

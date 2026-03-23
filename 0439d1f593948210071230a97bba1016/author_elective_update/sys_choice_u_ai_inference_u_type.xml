@@ -6,7 +6,6 @@
             <sys_class_name>sys_choice_set</sys_class_name>
             <sys_created_by>admin</sys_created_by>
             <sys_created_on>2025-01-15 01:29:01</sys_created_on>
-            <sys_id>abf2ecb293fa2210e1bd7fbcebba10e1</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_name>u_type</sys_name>
             <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
@@ -30,7 +29,6 @@
             <sys_created_on>2025-01-15 01:29:01</sys_created_on>
             <sys_domain>global</sys_domain>
             <sys_domain_path>/</sys_domain_path>
-            <sys_id>2203a4f293fa2210e1bd7fbcebba109a</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_updated_by>admin</sys_updated_by>
             <sys_updated_on>2025-01-15 01:29:01</sys_updated_on>
@@ -50,7 +48,6 @@
             <sys_created_on>2025-01-15 01:29:28</sys_created_on>
             <sys_domain>global</sys_domain>
             <sys_domain_path>/</sys_domain_path>
-            <sys_id>ae03a4f293fa2210e1bd7fbcebba109a</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_updated_by>admin</sys_updated_by>
             <sys_updated_on>2025-01-15 01:29:28</sys_updated_on>
@@ -70,7 +67,6 @@
             <sys_created_on>2025-01-15 04:30:02</sys_created_on>
             <sys_domain>global</sys_domain>
             <sys_domain_path>/</sys_domain_path>
-            <sys_id>aa03a4f293fa2210e1bd7fbcebba109c</sys_id>
             <sys_mod_count>0</sys_mod_count>
             <sys_updated_by>admin</sys_updated_by>
             <sys_updated_on>2025-01-15 04:30:02</sys_updated_on>
