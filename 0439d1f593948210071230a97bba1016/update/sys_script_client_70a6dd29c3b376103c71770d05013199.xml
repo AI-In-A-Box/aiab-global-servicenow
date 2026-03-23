@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_script_client">
+    <sys_script_client action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <applies_extended>false</applies_extended>
+        <condition/>
+        <description/>
+        <field/>
+        <global>true</global>
+        <isolate_script>false</isolate_script>
+        <messages/>
+        <name>PulseBox - Show Pending Reviews</name>
+        <order/>
+        <script><![CDATA[function onLoad() {
+    var ga = new GlideAjax('PulseBoxAIAB');
+    ga.addParam('sysparm_name', 'getPendingSuggestions');
+    ga.addParam('sysparm_target_table', g_form.getTableName());
+    ga.addParam('sysparm_target_sys_id', g_form.getUniqueValue());
+    ga.getXMLAnswer(function(answer) {
+        if (!answer) return;
+        var suggestions;
+        try { suggestions = JSON.parse(answer); } catch (e) { return; }
+        if (!suggestions || suggestions.length === 0) return;
+
+        suggestions.forEach(function(s) {
+            var funcName = s.field_name ? s.field_name.replace('script:', '') : '';
+            var label = funcName ? funcName + '()': 'this record';
+            var msg = '<b>' + s.agent_name + '</b> suggests changes to <b>' + label + '</b>';
+            if (s.explanation) msg += ' &mdash; ' + s.explanation;
+            msg += '&nbsp;&nbsp;<button type="button" class="btn btn-xs btn-primary" onclick="pulseReview(\x27' + s.sys_id + '\x27); return false;">Review</button>';
+            g_form.addInfoMessage(msg);
+        });
+    });
+}
+
+window.pulseReview = function(sysId) {
+    window.pulse_suggestion_id = sysId;
+    var dialog = new GlideModal('pulsebox_review');
+    dialog.setTitle('Code Review');
+    dialog.setPreference('sysparm_suggestion_id', sysId);
+    dialog.setWidth(900);
+    dialog.render();
+};]]></script>
+        <sys_class_name>sys_script_client</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-03-23 01:06:01</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>70a6dd29c3b376103c71770d05013199</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>PulseBox - Show Pending Reviews</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_script_client_70a6dd29c3b376103c71770d05013199</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-03-23 01:06:09</sys_updated_on>
+        <table>sys_script_include</table>
+        <type>onLoad</type>
+        <ui_type>0</ui_type>
+        <view/>
+    </sys_script_client>
+</record_update>

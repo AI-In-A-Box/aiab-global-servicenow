@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_page">
+    <sys_ui_page action="INSERT_OR_UPDATE">
+        <category>general</category>
+        <client_script><![CDATA[// PulseBox Review — handles both code diffs and new content proposals
+
+(function() {
+    var suggestionId = window.pulse_suggestion_id || '';
+    if (!suggestionId) { pbError('No suggestion ID found.'); return; }
+
+    // Load jsdiff, then fetch data (jsdiff only needed for diff mode but load anyway — it's tiny)
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/diff@5.1.0/dist/diff.min.js';
+    s.onload = function() { pbLoad(suggestionId); };
+    s.onerror = function() { pbError('Failed to load diff library.'); };
+    document.head.appendChild(s);
+})();
+
+function pbLoad(suggestionId) {
+    var ga = new GlideAjax('PulseBoxAIAB');
+    ga.addParam('sysparm_name', 'getSuggestionDetails');
+    ga.addParam('sysparm_suggestion_id', suggestionId);
+    ga.getXMLAnswer(function(answer) {
+        document.getElementById('pb_loading').style.display = 'none';
+        if (!answer) { pbError('Empty response from server.'); return; }
+        try {
+            var data = JSON.parse(answer);
+            if (data.error) { pbError(data.error); return; }
+            pbRender(data);
+        } catch (e) { pbError('Parse error: ' + e); }
+    });
+}
+
+// Field labels for human-readable display
+var FIELD_LABELS = {
+    comments: 'Additional Comment',
+    work_notes: 'Work Note',
+    short_description: 'Short Description',
+    description: 'Description',
+    script: 'Script'
+};
+
+function pbRender(data) {
+    document.getElementById('pb_body').style.display = 'block';
+
+    var fieldName = data.field_name || '';
+    var agent = data.agent_name || 'Agent';
+    var explanation = data.explanation || '';
+
+    // Parse out the target field and suggested content
+    var targetField = '';
+    var currentContent = '';
+    var suggestedContent = '';
+
+    if (fieldName.indexOf('script:') === 0 && data.changes) {
+        // Function-level code change (Cody)
+        var funcName = fieldName.split(':')[1];
+        var ch = typeof data.changes === 'string' ? JSON.parse(data.changes) : data.changes;
+        suggestedContent = ch[funcName] ? ch[funcName].suggested : '';
+        currentContent = (data.current_values && data.current_values[funcName]) || '';
+        targetField = funcName + '()';
+    } else if (data.changes) {
+        // Field-level change (Fred or other agents)
+        var ch2 = typeof data.changes === 'string' ? JSON.parse(data.changes) : data.changes;
+        for (var f in ch2) {
+            if (ch2.hasOwnProperty(f)) {
+                targetField = f;
+                suggestedContent = ch2[f].suggested || '';
+                currentContent = (data.current_values && data.current_values[f]) || '';
+                break;
+            }
+        }
+    } else {
+        // Legacy single-field
+        targetField = fieldName;
+        currentContent = (data.current_values && data.current_values[fieldName]) || '';
+        suggestedContent = data.suggested_content || '';
+    }
+
+    var fieldLabel = FIELD_LABELS[targetField] || targetField;
+    var isCodeChange = fieldName.indexOf('script:') === 0;
+    var isNewContent = !currentContent || currentContent === 'null';
+
+    // Header
+    if (isNewContent) {
+        document.getElementById('pb_header_text').innerHTML =
+            '<strong>' + agent + '</strong> <span style="color:#666">wants to post a</span> <strong>' + fieldLabel + '</strong>';
+    } else {
+        document.getElementById('pb_header_text').innerHTML =
+            '<strong>' + agent + '</strong> <span style="color:#666">suggests changes to</span> <strong><code>' + fieldLabel + '</code></strong>';
+    }
+
+    document.getElementById('pb_explain').textContent = explanation;
+
+    var container = document.getElementById('pb_diff');
+    container.innerHTML = '';
+
+    if (isNewContent) {
+        // Propose mode — just show the content nicely
+        container.className = '';
+        container.style.fontFamily = 'inherit';
+        container.style.fontSize = '13px';
+        container.style.lineHeight = '1.6';
+        container.style.padding = '12px 16px';
+        container.style.background = '#f8fdf5';
+        container.style.border = '1px solid #c3e6cb';
+        container.style.borderLeft = '4px solid #28a745';
+        container.style.borderRadius = '4px';
+        container.style.whiteSpace = 'pre-wrap';
+        container.style.maxHeight = '400px';
+        container.style.overflow = 'auto';
+        container.textContent = suggestedContent;
+    } else {
+        // Diff mode — run jsdiff
+        container.className = 'pb-diff-container';
+        container.style.maxHeight = '400px';
+        container.style.overflow = 'auto';
+        if (typeof Diff === 'undefined') {
+            pbError('Diff library not loaded.');
+            return;
+        }
+        var diff = Diff.diffLines(currentContent, suggestedContent);
+        diff.forEach(function(part) {
+            if (!part.added && !part.removed) {
+                var lines = part.value.split('\n');
+                if (lines[lines.length - 1] === '') lines.pop();
+                if (lines.length > 6) {
+                    pbLines(container, lines.slice(0, 3), 'pb-diff-eq');
+                    var hunk = document.createElement('div');
+                    hunk.className = 'pb-diff-hunk';
+                    var n = lines.length - 6;
+                    hunk.textContent = '  ... ' + n + ' unchanged lines (click to expand) ...';
+                    var hidden = document.createElement('div');
+                    hidden.style.display = 'none';
+                    pbLines(hidden, lines.slice(3, lines.length - 3), 'pb-diff-eq');
+                    hunk.onclick = function() {
+                        hidden.style.display = hidden.style.display === 'none' ? 'block' : 'none';
+                        hunk.textContent = hidden.style.display === 'none'
+                            ? '  ... ' + n + ' unchanged lines (click to expand) ...'
+                            : '  ... ' + n + ' unchanged lines (click to collapse) ...';
+                    };
+                    container.appendChild(hunk);
+                    container.appendChild(hidden);
+                    pbLines(container, lines.slice(lines.length - 3), 'pb-diff-eq');
+                } else {
+                    pbLines(container, lines, 'pb-diff-eq');
+                }
+            } else {
+                var cls = part.added ? 'pb-diff-add' : 'pb-diff-del';
+                var pfx = part.added ? '+' : '-';
+                var ls = part.value.split('\n');
+                if (ls[ls.length - 1] === '') ls.pop();
+                ls.forEach(function(line) {
+                    var d = document.createElement('div');
+                    d.className = 'pb-diff-line ' + cls;
+                    d.textContent = pfx + ' ' + line;
+                    container.appendChild(d);
+                });
+            }
+        });
+    }
+}
+
+function pbLines(container, lines, cls) {
+    lines.forEach(function(line) {
+        var d = document.createElement('div');
+        d.className = 'pb-diff-line ' + cls;
+        d.textContent = '  ' + line;
+        container.appendChild(d);
+    });
+}
+
+function pbError(msg) {
+    document.getElementById('pb_loading').style.display = 'none';
+    document.getElementById('pb_error').style.display = 'block';
+    document.getElementById('pb_error').innerHTML = msg;
+}
+
+function pulseboxAccept() {
+    var id = window.pulse_suggestion_id;
+    if (!id) return;
+    document.getElementById('pb_accept').disabled = true;
+    document.getElementById('pb_reject').disabled = true;
+    document.getElementById('pb_accept').innerHTML = 'Applying...';
+    var ga = new GlideAjax('PulseBoxAIAB');
+    ga.addParam('sysparm_name', 'applyReview');
+    ga.addParam('sysparm_suggestion_id', id);
+    ga.getXMLAnswer(function(answer) {
+        try {
+            var data = JSON.parse(answer);
+            if (data.error) {
+                alert('Error: ' + data.error);
+                document.getElementById('pb_accept').disabled = false;
+                document.getElementById('pb_reject').disabled = false;
+                document.getElementById('pb_accept').innerHTML = 'Accept';
+                return;
+            }
+            document.getElementById('pb_accept').innerHTML = 'Accepted';
+            document.getElementById('pb_accept').className = 'btn btn-success';
+            document.getElementById('pb_reject').style.display = 'none';
+            setTimeout(function() { pulseboxClose(); window.location.reload(); }, 1200);
+        } catch (e) { alert('Error: ' + e); }
+    });
+}
+
+function pulseboxReject() {
+    var id = window.pulse_suggestion_id;
+    if (!id) return;
+    document.getElementById('pb_accept').disabled = true;
+    document.getElementById('pb_reject').disabled = true;
+    document.getElementById('pb_reject').innerHTML = 'Rejecting...';
+    var ga = new GlideAjax('PulseBoxAIAB');
+    ga.addParam('sysparm_name', 'rejectSuggestion');
+    ga.addParam('sysparm_suggestion_id', id);
+    ga.getXMLAnswer(function(answer) {
+        try {
+            var data = JSON.parse(answer);
+            if (data.error) {
+                alert('Error: ' + data.error);
+                document.getElementById('pb_accept').disabled = false;
+                document.getElementById('pb_reject').disabled = false;
+                document.getElementById('pb_reject').innerHTML = 'Reject';
+                return;
+            }
+            document.getElementById('pb_reject').innerHTML = 'Rejected';
+            document.getElementById('pb_accept').style.display = 'none';
+            setTimeout(function() { pulseboxClose(); window.location.reload(); }, 1200);
+        } catch (e) { alert('Error: ' + e); }
+    });
+}
+
+function pulseboxClose() {
+    try { GlideDialogWindow.get().destroy(); } catch(e) {}
+    try {
+        var b = document.querySelectorAll('.modal-backdrop');
+        for (var i = 0; i < b.length; i++) b[i].parentNode.removeChild(b[i]);
+    } catch(e) {}
+}
+]]></client_script>
+        <description/>
+        <direct>false</direct>
+        <endpoint/>
+        <html><![CDATA[<?xml version="1.0" encoding="utf-8" ?>
+<j:jelly trim="false" xmlns:j="jelly:core" xmlns:g="glide" xmlns:j2="null" xmlns:g2="null">
+<style>
+.pb-diff-container { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 12px; line-height: 1.5; }
+.pb-diff-line { padding: 1px 8px; white-space: pre-wrap; word-wrap: break-word; border-left: 3px solid transparent; }
+.pb-diff-add { background: #d4f4be; border-left-color: #28a745; }
+.pb-diff-del { background: #f9c0c0; border-left-color: #dc3545; text-decoration: line-through; }
+.pb-diff-eq { background: #fff; }
+.pb-diff-hunk { background: #f0f0f0; color: #666; padding: 2px 8px; cursor: pointer; font-style: italic; font-size: 11px; }
+.pb-diff-hunk:hover { background: #e0e0e0; }
+</style>
+<div id="pb_root" style="padding: 12px;">
+    <div id="pb_loading" style="text-align: center; padding: 40px;">
+        <span style="font-size: 14px;">Loading review...</span>
+    </div>
+    <div id="pb_error" style="display: none; color: #c00; padding: 20px; text-align: center;"></div>
+    <div id="pb_body" style="display: none;">
+        <div style="margin-bottom: 10px; padding: 8px 12px; background: #f0f0f0; border-radius: 4px;">
+            <span id="pb_header_text"></span>
+        </div>
+        <div id="pb_explain" style="margin-bottom: 10px; padding: 8px 12px; background: #fffde7; border-left: 3px solid #ffc107; font-style: italic;"></div>
+        <div style="margin-bottom: 10px; text-align: right;">
+            <button id="pb_accept" class="btn btn-primary" style="margin-right: 8px;" onclick="pulseboxAccept()">Accept</button>
+            <button id="pb_reject" class="btn btn-default" style="margin-right: 8px;" onclick="pulseboxReject()">Reject</button>
+            <button class="btn btn-default" onclick="pulseboxClose()">Close</button>
+        </div>
+        <div id="pb_diff" class="pb-diff-container" style="overflow: auto; max-height: 400px; border: 1px solid #ddd; border-radius: 4px;"></div>
+    </div>
+</div>
+</j:jelly>
+]]></html>
+        <name>pulsebox_review</name>
+        <processing_script/>
+        <sys_class_name>sys_ui_page</sys_class_name>
+        <sys_created_by>opencode</sys_created_by>
+        <sys_created_on>2026-03-23 01:05:53</sys_created_on>
+        <sys_id>8f965d29c3b376103c71770d050131e8</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>pulsebox_review</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_ui_page_8f965d29c3b376103c71770d050131e8</sys_update_name>
+        <sys_updated_by>opencode</sys_updated_by>
+        <sys_updated_on>2026-03-23 01:05:53</sys_updated_on>
+    </sys_ui_page>
+</record_update>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="4866d129c3b376103c71770d05013133" label="AI Review" max_length="40" name="u_ai_file" type="collection">
+        <element label="Explanation" max_length="1000" name="u_explanation" type="string"/>
+        <element label="Target Table" max_length="80" name="u_target_table" type="string"/>
+        <element label="Field Name" max_length="200" name="u_field_name" type="string"/>
+        <element label="Target Sys ID" max_length="32" name="u_target_sys_id" type="string"/>
+        <element label="Changes" max_length="4000" name="u_changes" type="string"/>
+        <element label="Suggested Content" max_length="4000" name="u_suggested_content" type="string"/>
+        <element label="Agent" max_length="32" name="u_agent" reference="u_ai_agent" type="reference"/>
+        <element label="Original Content" max_length="4000" name="u_original_content" type="string"/>
+        <element label="Status" max_length="40" name="u_status" type="string"/>
+        <index name="index">
+            <element name="u_agent"/>
+        </index>
+    </element>
+</database>
