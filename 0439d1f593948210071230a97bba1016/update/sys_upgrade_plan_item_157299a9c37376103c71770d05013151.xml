@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_upgrade_plan_item">
+    <sys_upgrade_plan_item action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <additional_parameters/>
+        <auto_generated>false</auto_generated>
+        <customization_version/>
+        <id>0439d1f593948210071230a97bba1016</id>
+        <last_published/>
+        <last_refreshed/>
+        <name>AI in a Box</name>
+        <notes/>
+        <scope>global</scope>
+        <source/>
+        <state/>
+        <status_message/>
+        <sys_class_name>sys_upgrade_plan_item</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-03-23 00:47:45</sys_created_on>
+        <sys_id>157299a9c37376103c71770d05013151</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>AI in a Box</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>sys_upgrade_plan_item_157299a9c37376103c71770d05013151</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-03-23 00:47:45</sys_updated_on>
+        <type>application</type>
+        <upgrade_plan/>
+        <version>3.1.5</version>
+    </sys_upgrade_plan_item>
+</record_update>

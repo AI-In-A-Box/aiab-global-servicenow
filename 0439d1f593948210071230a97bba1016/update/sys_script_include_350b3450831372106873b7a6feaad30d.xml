@@ -55,6 +55,9 @@ PulseBoxAIAB.prototype = Object.extendsObject(AbstractAjaxProcessor, {
      * Get full details for a review including current field content
      * Supports both old single-field and new multi-field formats
      * @returns {string} JSON object with review details and current content
+     */    /**
+     * Retrieves suggestion details based on the provided suggestion ID.
+     * @returns {String} JSON string with suggestion details or error message.
      */
     getSuggestionDetails: function() {
         var suggestionId = this.getParameter('sysparm_suggestion_id');
@@ -74,26 +77,51 @@ PulseBoxAIAB.prototype = Object.extendsObject(AbstractAjaxProcessor, {
 
         // Get current values from target record
         var currentValues = {};
+        var fieldNameVal = '' + fileGR.getValue('u_field_name');
         var targetGR = new GlideRecord(targetTable);
-        if (targetGR.get(targetSysId)) {
-            if (isMultiField) {
-                // Multi-field: get current value for each changed field
-                try {
-                    var changesObj = JSON.parse(changes);
-                    for (var field in changesObj) {
-                        if (changesObj.hasOwnProperty(field)) {
-                            currentValues[field] = '' + targetGR.getValue(field);
-                        }
+        if (!targetGR.get(targetSysId)) {
+            return JSON.stringify({
+                sys_id: fileGR.getUniqueValue(),
+                is_multi_field: isMultiField,
+                field_name: '' + fileGR.getValue('u_field_name'),
+                explanation: '' + fileGR.getValue('u_explanation'),
+                suggested_content: '' + fileGR.getValue('u_suggested_content'),
+                changes: isMultiField ? changes : null,
+                current_values: currentValues,
+                agent_name: fileGR.u_agent.getDisplayValue(),
+                target_table: targetTable,
+                target_sys_id: targetSysId
+            });
+        }
+
+        if (fieldNameVal.indexOf('script:') === 0) {
+            // Function-level: extract just the current function body
+            var funcName = fieldNameVal.split(':')[1];
+            var script = '' + targetGR.getValue('script');
+            var funcs = this.extractFunctions(script);
+            for (var fi = 0; fi < funcs.length; fi++) {
+                if (funcs[fi].name === funcName) {
+                    currentValues[funcName] = funcs[fi].body;
+                    break;
+                }
+            }
+        } else if (isMultiField) {
+            // Multi-field: get current value for each changed field
+            try {
+                var changesObj = JSON.parse(changes);
+                for (var field in changesObj) {
+                    if (changesObj.hasOwnProperty(field)) {
+                        currentValues[field] = '' + targetGR.getValue(field);
                     }
-                } catch (e) {
-                    gs.error('PulseBox: Error parsing changes JSON: ' + e);
                 }
-            } else {
-                // Single-field (legacy)
-                var fieldName = '' + fileGR.u_field_name;
-                if (fieldName) {
-                    currentValues[fieldName] = '' + targetGR.getValue(fieldName);
-                }
+            } catch (e) {
+                gs.error('PulseBox: Error parsing changes JSON: ' + e);
+            }
+        } else {
+            // Single-field (legacy)
+            var fieldName = '' + fileGR.u_field_name;
+            if (fieldName) {
+                currentValues[fieldName] = '' + targetGR.getValue(fieldName);
             }
         }
 
@@ -112,8 +140,12 @@ PulseBoxAIAB.prototype = Object.extendsObject(AbstractAjaxProcessor, {
     },
 
     /**
-     * Apply a review - handles both single-field and multi-field formats
+     * Apply a review - handles field-level, function-level, and legacy formats
      * @returns {string} JSON with success/error
+     */    /**
+     * Applies a review based on the given suggestion ID.
+     *
+     * @returns {string} A JSON string indicating success or error.
      */
     applyReview: function() {
         var reviewId = this.getParameter('sysparm_suggestion_id');
@@ -134,6 +166,7 @@ PulseBoxAIAB.prototype = Object.extendsObject(AbstractAjaxProcessor, {
         var targetSysId = '' + fileGR.u_target_sys_id;
         var changes = '' + fileGR.getValue('u_changes');
         var isMultiField = changes && changes.length > 0;
+        var fieldName = '' + fileGR.getValue('u_field_name');
 
         // Get target record
         var targetGR = new GlideRecord(targetTable);
@@ -144,14 +177,56 @@ PulseBoxAIAB.prototype = Object.extendsObject(AbstractAjaxProcessor, {
         var fieldsUpdated = [];
         var originalValues = {};
 
-        if (isMultiField) {
-            // New multi-field format
+        if (isMultiField && fieldName.indexOf('script:') === 0) {
+            // Single-function change: field_name is "script:functionName"
+            var targetFuncName = fieldName.split(':')[1];
             try {
                 var changesObj = JSON.parse(changes);
-                for (var field in changesObj) {
-                    if (changesObj.hasOwnProperty(field) && changesObj[field].suggested) {
+                var script = '' + targetGR.getValue('script');
+                originalValues.script = script;
+                // Get the suggested replacement — key is the function name
+                var suggested = changesObj[targetFuncName] ? changesObj[targetFuncName].suggested : null;
+                if (!suggested) {
+                    return JSON.stringify({ error: 'No suggested change found for function ' + targetFuncName });
+                }
+
+                // Find the original function in the script using indexOf (no regex needed)
+                var sigIdx = script.indexOf(targetFuncName + ': function(');
+                if (sigIdx < 0) sigIdx = script.indexOf(targetFuncName + ': function (');
+                if (sigIdx < 0) {
+                    return JSON.stringify({ error: 'Function ' + targetFuncName + ' not found in script' });
+                }
+                // Walk back to include leading whitespace
+                var startIdx = sigIdx;
+                while (startIdx > 0 && script[startIdx - 1] === ' ') startIdx--;
+                var braceDepth = 0;
+                var endIdx = startIdx;
+                var foundOpen = false;
+                for (var ci = startIdx; ci < script.length; ci++) {
+                    if (script[ci] === '{') { braceDepth++; foundOpen = true; }
+                    if (script[ci] === '}') braceDepth--;
+                    if (foundOpen && braceDepth === 0) {
+                        endIdx = ci + 1;
+                        if (ci + 1 < script.length && script[ci + 1] === ',') endIdx = ci + 2;
+                        break;
+                    }
+                }
+
+                var originalFunc = script.substring(startIdx, endIdx);
+                script = script.replace(originalFunc, suggested);
+                targetGR.setValue('script', script);
+                fieldsUpdated.push('script');
+            } catch (e) {
+                return JSON.stringify({ error: 'Failed to apply function change: ' + e });
+            }
+        } else if (isMultiField) {
+            // Field-level changes (original multi-field format)
+            try {
+                var changesObj2 = JSON.parse(changes);
+                for (var field in changesObj2) {
+                    if (changesObj2.hasOwnProperty(field) && changesObj2[field].suggested) {
                         originalValues[field] = '' + targetGR.getValue(field);
-                        targetGR.setValue(field, changesObj[field].suggested);
+                        targetGR.setValue(field, changesObj2[field].suggested);
                         fieldsUpdated.push(field);
                     }
                 }
@@ -160,13 +235,14 @@ PulseBoxAIAB.prototype = Object.extendsObject(AbstractAjaxProcessor, {
             }
         } else {
             // Legacy single-field format
-            var fieldName = '' + fileGR.u_field_name;
+            var legacyField = '' + fileGR.u_field_name;
             var suggestedContent = '' + fileGR.u_suggested_content;
-            if (fieldName && suggestedContent) {
-                originalValues[fieldName] = '' + targetGR.getValue(fieldName);
-                targetGR.setValue(fieldName, suggestedContent);
-                fieldsUpdated.push(fieldName);
+            if (!legacyField || !suggestedContent) {
+                return JSON.stringify({ error: 'No legacy field or content provided' });
             }
+            originalValues[legacyField] = '' + targetGR.getValue(legacyField);
+            targetGR.setValue(legacyField, suggestedContent);
+            fieldsUpdated.push(legacyField);
         }
 
         if (fieldsUpdated.length === 0) {
@@ -217,10 +293,13 @@ PulseBoxAIAB.prototype = Object.extendsObject(AbstractAjaxProcessor, {
     },
 
     /**
-     * Run heartbeat for all active agents
+     * Run heartbeat for all active agents. Also cancels stale inferences (>60s).
      * @returns {object} summary of processed, skipped, and errors
      */
     runHeartbeat: function() {
+        // Cancel stale pulsebox inferences older than 60 seconds
+        this.cancelStaleInferences(60);
+
         var summary = { processed: 0, skipped: 0, errors: 0, agents: [] };
         var agentGR = new GlideRecord('u_ai_agent');
         agentGR.addQuery('u_active', true);
@@ -256,48 +335,92 @@ PulseBoxAIAB.prototype = Object.extendsObject(AbstractAjaxProcessor, {
     },
 
     /**
-     * Process a single agent - creates at most 1 inference per heartbeat
+     * Cancel pulsebox inferences stuck in new/requested for longer than maxSeconds
+     * @param {number} maxSeconds - Max age in seconds before cancelling
+     */
+    cancelStaleInferences: function(maxSeconds) {
+        var cutoff = new GlideDateTime();
+        cutoff.addSeconds(-maxSeconds);
+        var gr = new GlideRecord('u_ai_inference');
+        gr.addQuery('u_type', 'pulsebox');
+        gr.addQuery('u_state', 'IN', 'new,requested');
+        gr.addQuery('sys_created_on', '<', cutoff.getValue());
+        gr.query();
+        while (gr.next()) {
+            gs.warn('PulseBox: Cancelling stale inference ' + gr.getUniqueValue() + ' (age > ' + maxSeconds + 's)');
+            gr.u_state = 'cancelled';
+            gr.update();
+        }
+    },
+
+    /**
+     * Process a single agent - for script tables, creates one inference per function (max 3 per heartbeat)
+     * @param {GlideRecord} agentGR - The agent record
+     * @returns {object} - { recordsFound, inferencesCreated }
      */
     processAgent: function(agentGR) {
         var result = { recordsFound: 0, inferencesCreated: 0 };
         var targetTable = '' + agentGR.u_target_table;
         var filter = '' + agentGR.u_filter;
+        var maxInferences = 3;
         if (!targetTable) return result;
 
+        var isScriptTable = (targetTable === 'sys_script_include' || targetTable === 'sys_script');
         var targetGR = new GlideRecord(targetTable);
         if (filter) targetGR.addEncodedQuery(filter);
         targetGR.query();
 
-        while (targetGR.next()) {
+        while (targetGR.next() && result.inferencesCreated < maxInferences) {
             result.recordsFound++;
-            
-            // Check if already has pending review
-            var existingFile = new GlideRecord('u_ai_file');
-            existingFile.addQuery('u_agent', agentGR.getUniqueValue());
-            existingFile.addQuery('u_target_table', targetTable);
-            existingFile.addQuery('u_target_sys_id', targetGR.getUniqueValue());
-            existingFile.addQuery('u_status', 'pending');
-            existingFile.setLimit(1);
-            existingFile.query();
-            if (existingFile.hasNext()) continue;
+            var recordSysId = targetGR.getUniqueValue();
 
-            // Check if inference already in progress
+            // Check if inference already in progress for this record
             var existingInf = new GlideRecord('u_ai_inference');
             existingInf.addQuery('u_type', 'pulsebox');
             existingInf.addQuery('u_table', targetTable);
-            existingInf.addQuery('u_target', targetGR.getUniqueValue());
+            existingInf.addQuery('u_target', recordSysId);
             existingInf.addQuery('u_state', 'IN', 'new,requested');
             existingInf.setLimit(1);
             existingInf.query();
             if (existingInf.hasNext()) continue;
 
-            // Create inference for this record and STOP (only 1 per heartbeat)
-            var inferenceId = this.createInference(agentGR, targetGR);
-            if (inferenceId) {
-                result.inferencesCreated++;
-                gs.info('PulseBox: Created 1 inference for agent ' + agentGR.u_name + ', stopping heartbeat');
-                break;
+            if (isScriptTable) {
+                // Split script into functions and create one inference per function
+                var script = '' + targetGR.getValue('script');
+                var funcs = this.extractFunctions(script);
+                var scriptName = '' + targetGR.getValue('name');
+                for (var fi = 0; fi < funcs.length && result.inferencesCreated < maxInferences; fi++) {
+                    var func = funcs[fi];
+                    // Check if this function already has a pending review
+                    var existingFuncFile = new GlideRecord('u_ai_file');
+                    existingFuncFile.addQuery('u_agent', agentGR.getUniqueValue());
+                    existingFuncFile.addQuery('u_target_sys_id', recordSysId);
+                    existingFuncFile.addQuery('u_status', 'pending');
+                    existingFuncFile.addQuery('u_field_name', 'script:' + func.name);
+                    existingFuncFile.setLimit(1);
+                    existingFuncFile.query();
+                    if (existingFuncFile.hasNext()) continue;
+
+                    var inferenceId = this.createFunctionInference(agentGR, targetGR, func, scriptName);
+                    if (inferenceId) result.inferencesCreated++;
+                }
+            } else {
+                // Non-script tables: one inference per record (original behavior)
+                var existingFile = new GlideRecord('u_ai_file');
+                existingFile.addQuery('u_agent', agentGR.getUniqueValue());
+                existingFile.addQuery('u_target_table', targetTable);
+                existingFile.addQuery('u_target_sys_id', recordSysId);
+                existingFile.addQuery('u_status', 'pending');
+                existingFile.setLimit(1);
+                existingFile.query();
+                if (existingFile.hasNext()) continue;
+
+                var infId = this.createInference(agentGR, targetGR);
+                if (infId) result.inferencesCreated++;
             }
+        }
+        if (result.inferencesCreated > 0) {
+            gs.info('PulseBox: Created ' + result.inferencesCreated + ' inference(s) for agent ' + agentGR.u_name);
         }
         return result;
     },
@@ -326,13 +449,89 @@ PulseBoxAIAB.prototype = Object.extendsObject(AbstractAjaxProcessor, {
         inferenceGR.u_table = targetTable;
         inferenceGR.u_target = targetGR.getUniqueValue();
         inferenceGR.u_requested_by = gs.getUserID();
-        inferenceGR.u_metadata = 'agent_id=' + agentId;
+        inferenceGR.u_metadata = JSON.stringify({ agent_id: agentId });
+        return inferenceGR.insert();
+    },
+
+    /**
+     * Extract individual functions from a Class.create() style script
+     * @param {string} script - Full script content
+     * @returns {Array} - [{name, body}] for each function found
+     */
+    extractFunctions: function(script) {
+        var functions = [];
+        // Match "functionName: function(" patterns typical of Class.create()
+        var pattern = /(\w+)\s*:\s*function\s*\(/g;
+        var match;
+        while ((match = pattern.exec(script)) !== null) {
+            var funcName = match[1];
+            // Skip 'type' property and 'initialize' if empty
+            if (funcName === 'type') continue;
+
+            var startIdx = match.index;
+            // Find the full function body using brace counting
+            var braceDepth = 0;
+            var foundOpen = false;
+            var endIdx = startIdx;
+            for (var ci = startIdx; ci < script.length; ci++) {
+                if (script[ci] === '{') { braceDepth++; foundOpen = true; }
+                if (script[ci] === '}') braceDepth--;
+                if (foundOpen && braceDepth === 0) {
+                    endIdx = ci + 1;
+                    if (ci + 1 < script.length && script[ci + 1] === ',') endIdx = ci + 2;
+                    break;
+                }
+            }
+            var body = script.substring(startIdx, endIdx);
+            // Skip trivially small functions (< 100 chars, e.g. empty initialize)
+            if (body.length < 100) continue;
+            functions.push({ name: funcName, body: body });
+        }
+        return functions;
+    },
+
+    /**
+     * Create an inference for a single function within a script
+     * @param {GlideRecord} agentGR - Agent record
+     * @param {GlideRecord} targetGR - Target script include/business rule record
+     * @param {object} func - {name, body} of the function to review
+     * @param {string} scriptName - Name of the script include
+     * @returns {string} - sys_id of created inference, or null
+     */
+    createFunctionInference: function(agentGR, targetGR, func, scriptName) {
+        var agentId = agentGR.getUniqueValue();
+        var systemPrompt = '' + agentGR.u_system_prompt;
+        var model = '' + agentGR.u_model || 'gpt-4o-mini';
+        var targetTable = '' + agentGR.u_target_table;
+
+        var context = 'Script Include: ' + scriptName + '\n';
+        context += 'Function: ' + func.name + '\n\n';
+        context += func.body;
+
+        var messages = [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: 'Review this function:\n\n' + context }
+        ];
+
+        var inferenceGR = new GlideRecord('u_ai_inference');
+        inferenceGR.initialize();
+        inferenceGR.u_prompt = JSON.stringify(messages);
+        inferenceGR.u_type = 'pulsebox';
+        inferenceGR.u_state = 'new';
+        inferenceGR.u_model = model;
+        inferenceGR.u_table = targetTable;
+        inferenceGR.u_target = targetGR.getUniqueValue();
+        inferenceGR.u_requested_by = gs.getUserID();
+        inferenceGR.u_metadata = JSON.stringify({ agent_id: agentId, function_name: func.name });
         return inferenceGR.insert();
     },
 
     /**
      * Process a completed pulsebox inference - creates u_ai_file review record
-     * Now uses multi-field JSON format
+     * Handles these response formats:
+     *   1. Single-function review: metadata has function_name, response has one function change
+     *   2. Field-level changes: {"changes": {"fieldName": {"suggested": "value"}}}
+     *   3. Legacy single-field: {"hasSuggestion": true, "fieldName": "x", ...}
      */
     processCompletedInference: function(inferenceGR) {
         var response = '' + inferenceGR.u_response;
@@ -340,13 +539,16 @@ PulseBoxAIAB.prototype = Object.extendsObject(AbstractAjaxProcessor, {
         var targetSysId = '' + inferenceGR.u_target;
         var metadata = '' + inferenceGR.u_metadata;
 
-        // Extract agent_id from metadata
+        // Extract agent_id and function_name from metadata (stored as flat JSON)
         var agentId = '';
+        var functionName = '';
         if (metadata) {
-            var parts = metadata.split('&');
-            for (var i = 0; i < parts.length; i++) {
-                var pair = parts[i].split('=');
-                if (pair[0] === 'agent_id') { agentId = pair[1]; break; }
+            try {
+                var meta = JSON.parse(metadata);
+                agentId = meta.agent_id || '';
+                functionName = meta.function_name || '';
+            } catch (e) {
+                gs.warn('PulseBox: Could not parse metadata: ' + metadata);
             }
         }
         if (!agentId) {
@@ -371,7 +573,7 @@ PulseBoxAIAB.prototype = Object.extendsObject(AbstractAjaxProcessor, {
             
             var parsed = JSON.parse(cleanResponse);
             
-            // Check if there are changes (new format uses hasChanges, old uses hasSuggestion)
+            // Check if there are changes
             if (!parsed.hasChanges && !parsed.hasSuggestion) return;
 
             var fileGR = new GlideRecord('u_ai_file');
@@ -381,21 +583,24 @@ PulseBoxAIAB.prototype = Object.extendsObject(AbstractAjaxProcessor, {
             fileGR.u_target_sys_id = targetSysId;
             fileGR.u_status = 'pending';
 
-            // Check if this is new multi-field format or old single-field format
-            if (parsed.changes) {
-                // NEW multi-field format
+            if (functionName && parsed.changes) {
+                // Single-function review: store as function-level change
+                fileGR.u_field_name = 'script:' + functionName;
                 fileGR.u_changes = JSON.stringify(parsed.changes);
                 fileGR.u_explanation = parsed.summary || '';
-                // Leave u_field_name empty to signal multi-field
+            } else if (parsed.changes) {
+                // Field-level changes
+                fileGR.u_changes = JSON.stringify(parsed.changes);
+                fileGR.u_explanation = parsed.summary || '';
             } else {
-                // OLD single-field format (backward compat)
+                // Legacy single-field format
                 fileGR.u_field_name = parsed.fieldName || '';
                 fileGR.u_suggested_content = parsed.suggestedContent || '';
                 fileGR.u_explanation = parsed.explanation || '';
             }
 
             fileGR.insert();
-            gs.info('PulseBox: Created review for ' + targetTable + '/' + targetSysId);
+            gs.info('PulseBox: Created review for ' + targetTable + '/' + targetSysId + (functionName ? ' func=' + functionName : ''));
         } catch (e) {
             gs.error('PulseBox: Error parsing response: ' + e + '\nResponse: ' + response.substring(0, 500));
         }
@@ -406,10 +611,12 @@ PulseBoxAIAB.prototype = Object.extendsObject(AbstractAjaxProcessor, {
      */
     buildRecordContext: function(gr, tableName) {
         var context = 'Table: ' + tableName + '\nSys ID: ' + gr.getUniqueValue() + '\n\n';
+        var refFields = ['caller_id', 'assigned_to', 'opened_by', 'resolved_by', 'state', 'priority'];
         var fields = this.getRelevantFields(gr, tableName);
         for (var i = 0; i < fields.length; i++) {
-            var value = '' + gr.getValue(fields[i]);
-            if (value && value !== 'null') context += fields[i] + ': ' + value + '\n';
+            var field = fields[i];
+            var value = (refFields.indexOf(field) >= 0) ? gr.getDisplayValue(field) : '' + gr.getValue(field);
+            if (value && value !== 'null' && value !== '') context += field + ': ' + value + '\n';
         }
         return context;
     },
@@ -420,22 +627,25 @@ PulseBoxAIAB.prototype = Object.extendsObject(AbstractAjaxProcessor, {
     getRelevantFields: function(gr, tableName) {
         if (tableName === 'sys_script_include' || tableName === 'sys_script') return ['name', 'api_name', 'description', 'script', 'active'];
         if (tableName === 'kb_knowledge') return ['short_description', 'text', 'workflow_state'];
+        if (tableName === 'incident') return ['number', 'short_description', 'description', 'caller_id', 'assigned_to', 'state', 'priority', 'comments'];
         return ['name', 'short_description', 'description'];
     },
 
     type: 'PulseBoxAIAB'
-});]]></script>
+});
+
+]]></script>
         <sys_class_name>sys_script_include</sys_class_name>
         <sys_created_by>opencode</sys_created_by>
         <sys_created_on>2026-02-22 05:21:36</sys_created_on>
         <sys_id>350b3450831372106873b7a6feaad30d</sys_id>
-        <sys_mod_count>11</sys_mod_count>
+        <sys_mod_count>23</sys_mod_count>
         <sys_name>PulseBoxAIAB</sys_name>
         <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
         <sys_policy/>
         <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
         <sys_update_name>sys_script_include_350b3450831372106873b7a6feaad30d</sys_update_name>
         <sys_updated_by>opencode</sys_updated_by>
-        <sys_updated_on>2026-02-22 20:18:09</sys_updated_on>
+        <sys_updated_on>2026-03-23 00:38:08</sys_updated_on>
     </sys_script_include>
 </record_update>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="u_ai_tool">
+    <u_ai_tool action="INSERT_OR_UPDATE">
+        <sys_class_name>u_ai_tool</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-03-02 02:33:27</sys_created_on>
+        <sys_id>7090a1f6835732106873b7a6feaad33b</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>count_letters_in_word</sys_name>
+        <sys_package display_value="AI in a Box" source="0439d1f593948210071230a97bba1016">0439d1f593948210071230a97bba1016</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="AI in a Box">0439d1f593948210071230a97bba1016</sys_scope>
+        <sys_update_name>u_ai_tool_7090a1f6835732106873b7a6feaad33b</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-03-02 02:33:27</sys_updated_on>
+        <u_active>true</u_active>
+        <u_description>Counts the letters in a word</u_description>
+        <u_execute_in>servicenow</u_execute_in>
+        <u_name>count_letters_in_word</u_name>
+        <u_parameters>{
+  "type": "object",
+  "properties": {
+    "word": {
+      "type": "string",
+      "description": "The word we're going to search."
+    },
+    "letter": {
+      "type": "string",
+      "description": "the letter we're going to use to search the word."
+    }
+  },
+  "required": []
+}</u_parameters>
+        <u_script><![CDATA[(function(args, userId) {
+    var returnObj = {};
+    if (!args.word) return { error: "word is required" };
+    returnObj.count = 0;
+	var word = args.word.toLowerCase();
+	var letter = args.letter.toLowerCase();
+	var wordArr = word.split('');
+	wordArr.forEach(function(wordLetter){
+		if(wordLetter == letter){
+			returnObj.count++;
+		}
+	});
+    return returnObj;
+})(args, userId);]]></u_script>
+    </u_ai_tool>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>7090a1f6835732106873b7a6feaad33b</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-03-02 02:33:27</sys_created_on>
+        <sys_id>0d41e9f6835732106873b7a6feaad352</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-03-02 02:33:27</sys_updated_on>
+        <table>u_ai_tool</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
+</record_update>
